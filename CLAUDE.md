@@ -1,0 +1,102 @@
+# CLAUDE.md — Sünger Stok & Cari (Android, offline)
+
+Toptan sünger alım-satımı yapan işletme için **tek kullanıcılı, sunucusuz, tamamen cihaz
+üzerinde çalışan Android uygulaması**. Üretim yazılımı, demo değil.
+
+## Otorite sırası
+
+1. `docs/BRIEF.md` — müşteriyle netleşen kesin kararlar. **Çelişkide bu kazanır.**
+2. `docs/SPEC.md` — müşterinin orijinal spesifikasyonu. *(Şu an depoda yok — Bölüm "Bilinen boşluklar")*
+3. `docs/DECISIONS.md` — geliştirme sırasında alınan kararlar ve gerekçeleri.
+
+## Çalışma kuralları
+
+- **Faz sonunda dur.** Her fazın sonunda testler geçmeli, `flutter analyze` temiz olmalı,
+  migration'lar sıfırdan çalışmalı. Kısa özet yaz, onay bekle. Fazlar: `docs/BRIEF.md` Bölüm 9.
+- **Önce test.** Maliyet, stok, cari ve yedekleme kurallarında test kod'dan önce yazılır.
+- **Mock veri yok.** Ekranlar boş durumla açılır; demo verisi yalnızca geliştirici menüsünden.
+- **Dil:** Arayüz metinleri Türkçe; kod, tablo, kolon, değişken adları İngilizce.
+- **Paket sürümü ezberden yazılmaz** — `pub.dev`'den güncel kararlı sürüm doğrulanır.
+- Her mimari karar gerekçesiyle `docs/DECISIONS.md`'ye yazılır.
+
+## Komutlar
+
+Flutter projesi Faz 1'de oluşturulur; o ana kadar bu komutlar henüz çalışmaz.
+
+```bash
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs   # Drift + Riverpod kod üretimi
+flutter analyze                                            # uyarısız olmalı
+dart format --set-exit-if-changed .
+
+flutter test                                  # domain + data katmanı
+flutter test test/domain                      # saf Dart iş kuralları (hızlı)
+flutter test test/golden_scenario              # Altın Senaryo (docs/GOLDEN_SCENARIO.md)
+flutter test test/backup                      # yedekleme senaryoları (zorunlu)
+flutter test integration_test                 # cihaz/emülatör gerektirir
+
+flutter build apk --debug                     # Faz 2 test APK'sı
+flutter build apk --release                   # Faz 5 yayın APK'sı
+```
+
+Migration testleri için şema anlık görüntüleri `drift_schemas/` altında tutulur:
+
+```bash
+dart run drift_dev schema dump lib/data/db/app_database.dart drift_schemas/
+dart run drift_dev schema generate drift_schemas/ test/data/generated_migrations/
+```
+
+## Klasör yapısı
+
+```
+lib/
+  domain/     # saf Dart. Flutter importu YASAK. İş kuralları, maliyet motoru, KDV, m³.
+    core/     # money.dart, quantity.dart, rounding.dart, allocation.dart
+    costing/  # FIFO, ağırlıklı ortalama, masraf dağıtımı, kesim maliyeti
+    model/    # değer nesneleri ve saf domain entity'leri
+    service/  # iş akışı kuralları (satış, iade, tahsilat eşleştirme, evrak durumları)
+  data/       # Drift şeması, TypeConverter'lar, trigger'lar, repository'ler, yedekleme
+    db/       # tablolar, migration'lar, seed
+    repo/
+    backup/   # .sbk üretimi, şifreleme, geri yükleme, Drive
+  ui/         # Material 3 ekranlar, Riverpod provider'ları, go_router
+  l10n/       # tr_TR
+test/
+  domain/ data/ backup/ golden_scenario/
+integration_test/
+docs/
+```
+
+Bağımlılık yönü tek yönlüdür: `ui → data → domain`. `domain` hiçbir şeye bağlı değildir.
+
+## İş kurallarının kısa özeti
+
+Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
+
+- **Sayısal saklama:** her şey sabit ölçekli **INTEGER**. Para ×100 (kuruş), birim fiyat
+  ×10.000, m³ ×1.000.000, ölçü (cm) ×100, oran ×100, adet tamsayı. SQL'de yalnızca
+  toplama/çıkarma; çarpma/bölme **Dart'ta `Decimal` ile**. Para ve m³ hesabında `double` YASAK.
+- **m³** = (en/100) × (boy/100) × (kalınlık/100) × adet. Yuvarlama `ROUND_HALF_UP`, tek
+  yardımcı fonksiyonda. Bir tutar satırlara dağıtılırken kuruş farkı **son satıra** eklenir.
+- **KDV:** belge başlığında `price_mode` = `EXCL`/`INCL`. `INCL`'de girilen tutar aynen korunur
+  (`KDV = yuvarla(toplam − toplam/(1+oran))`, `net = toplam − KDV`). Maliyet, kâr ve ciro
+  **her zaman KDV hariç**; cariye **brüt** yazılır.
+- **Değiştirilemezlik:** hareket ve log tabloları append-only, SQLite trigger'ı ile UPDATE/DELETE
+  engellenir. Düzeltme yalnızca `reversal_of_id` ile **ters hareket**. Belge başlığında sadece
+  durum alanları güncellenir.
+- **Maliyet:** her alış satırı bir parti. FIFO varsayılan; ağırlıklı ortalama ürün (çeşit)
+  bazında. Yöntem ilk stok hareketinden sonra kilitlenir. `sale_items.cost_total` satış anında
+  sabitlenir, bir daha değişmez. Her çıkış `cost_allocations`'a parti bazlı yazılır.
+- **Negatif stok yasak.**
+- **Transaction:** her iş işlemi tek Drift transaction'ı. Her işlem form açılışında üretilen
+  UUID ile `command_log`'a yazılır; aynı UUID ikinci kez gelirse işlem tekrarlanmaz.
+- **Yedekleme kritik:** veri yalnızca telefonda. `.sbk` dosyası yedek şifresiyle AES-256-GCM
+  ile şifrelenir ve **cihaz anahtarına bağlı olmamalıdır**. Ayrıntı: `docs/BACKUP.md`.
+
+## Bilinen boşluklar
+
+- **`docs/SPEC.md` depoda yok.** BRIEF; SPEC Bölüm 18 (ana sayfa kartları), 19 (müşteri
+  analizi), 20 (ürün analizi), 25 (raporlar), 26 (tablolar) ve **12 ürün + fiyat katsayıları**
+  için SPEC'e atıf yapıyor. Bu başlıklar dokümanlarda `TODO(SPEC)` ile işaretlidir.
+  SPEC gelmeden seed verisi ve rapor listesi kesinleştirilemez.
+- Flutter SDK bu ortamda kurulu değil; Faz 1'de kurulum gerekir.

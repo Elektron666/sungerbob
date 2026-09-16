@@ -13,9 +13,64 @@ Faz 0 çıktısı. Ölçekler, kısıtlar ve trigger kuralları `docs/ARCHITECTU
 - Her iş kaydında `created_at`, `created_by` (users.id) ve `device_id` bulunur; diyagramlarda
   tekrar etmemek için yalnızca ilk tabloda gösterilmiştir.
 
-> **TODO(SPEC):** `docs/SPEC.md` depoda yok. SPEC Bölüm 26'daki tablo listesi bu modelle
-> karşılaştırılıp ad/kolon farkları giderilecek; 12 ürün ve fiyat katsayıları SPEC'ten
-> seed'lenecek. Bu doküman SPEC'in üst kümesi olacak şekilde tasarlandı.
+## 0. SPEC Bölüm 26 ile uyum
+
+`docs/SPEC.md` §26 "minimum tablolar" listesinin tamamı bu modelde karşılanır:
+
+| SPEC §26 tablosu | Bu modelde | Not |
+|---|---|---|
+| `users`, `roles`, `permissions` | aynı | v1'de tek ADMIN, arayüz gizli |
+| `products`, `product_variants` | aynı | |
+| `price_lists`, `price_list_items` | aynı | |
+| `suppliers`, `customers` | aynı | |
+| `purchases`, `purchase_items` | aynı | |
+| `purchase_orders` | **yok** | Sipariş akışı BRIEF'te hiç geçmiyor; v1 kapsamı dışı (D-16) |
+| `inventory_batches` | aynı | |
+| `sales_quotes`, `sales`, `sale_items` | aynı | SPEC adlandırması korundu |
+| `stock_movements` | aynı | BRIEF §6'daki genişletilmiş kolon listesiyle |
+| `stock_adjustments` | aynı | Fire/hasar ve stok düzeltme (SPEC §17); başlık + `stock_adjustment_items` |
+| `customer_ledger`, `supplier_ledger` | aynı | |
+| `collections`, `supplier_payments` | aynı | |
+| `expenses` | aynı | `expense_categories` ile |
+| `audit_logs` | aynı | |
+
+BRIEF §6'nın ek tablolarının tamamı da modeldedir (`locations`, `settings`,
+`document_sequences`, `command_log`, `cash_accounts`, `account_movements`,
+`cost_allocations`, `payment_allocations`, `supplier_payment_allocations`, `sale_returns`,
+`sale_return_items`, `purchase_returns`, `purchase_return_items`, `purchase_expenses`,
+`cost_adjustments`, `stock_counts`, `stock_count_items`, `cutting_orders`,
+`cutting_order_sources`, `cutting_order_results`, `instruments`, `instrument_events`,
+`expense_categories`, `opening_balances`, `backup_log`).
+
+**Tek sapma:** SPEC §26 "para için DECIMAL/NUMERIC kullan" diyor. SQLite'ta kesin ondalık tip
+olmadığı için bunun yerine sabit ölçekli INTEGER kullanılır — SPEC'in asıl amacı olan
+"floating-point hatası olmasın" (SPEC §30.8) kuralı böylece daha güçlü şekilde sağlanır.
+Gerekçe: `docs/DECISIONS.md` D-02.
+
+---
+
+## 0.1 Seed: 12 ürün ve fiyat katsayıları (SPEC §1 + §13)
+
+Baz ürün **Beyaz Sünger = 1,00**. Fiyat = baz TL/m³ × katsayı (SPEC §13).
+
+| # | Ürün | Katsayı | `price_coefficient` |
+|---|---|---|---|
+| 1 | Beyaz Sünger | 1,00 | `10000` |
+| 2 | D22 Gri | 1,40 | `14000` |
+| 3 | D28 Gri | 1,71 | `17100` |
+| 4 | D32 Gri | 1,91 | `19100` |
+| 5 | D35 Sert | 2,24 | `22400` |
+| 6 | D35 Yumuşak | 2,24 | `22400` |
+| 7 | D35 140×240 | 2,24 | `22400` |
+| 8 | Kuş Tüyü | 1,56 | `15600` |
+| 9 | 30 Dream Soft | 1,83 | `18300` |
+| 10 | HR35 | 2,56 | `25600` |
+| 11 | HR35 140×240 | 2,56 | `25600` |
+| 12 | Eko Gri D18 | 1,23 | `12300` |
+
+7 ve 11 numaralı ürünler katsayı olarak 5/6 ve 10 ile aynıdır ama **ayrı ürünlerdir**
+(müşteri kararı, BRIEF §1.6) ve kartlarında `default_width = 14000`,
+`default_height = 24000` (140×240 cm) gelir.
 
 ---
 
@@ -173,11 +228,15 @@ erDiagram
         text code UK
         text name
         text name_normalized "Türkçe arama"
-        int price_coefficient "rate x10000, fiyat listesi bazına çarpan"
+        int price_coefficient "rate x10000, SPEC 13 katsayısı"
+        text dns "SPEC 1: DNS degeri"
+        text foam_type "SPEC 1: sünger tipi"
         int default_width "dim, ör. D35 140x240"
         int default_height "dim"
-        text density_label "D35 | HR35 | ..."
-        int critical_stock_pieces
+        text standard_thicknesses "JSON dizi, SPEC 1: standart kalınlıklar"
+        int default_sale_price_m3 "price, SPEC 1: varsayılan satış fiyatı"
+        int critical_stock_pieces "SPEC 1: minimum stok"
+        int min_stock_volume "vol"
         bool is_active
         text note
     }
@@ -196,8 +255,9 @@ erDiagram
     customers {
         uuid id PK
         text code UK
-        text title
+        text title "SPEC 9: firma adı"
         text title_normalized
+        text contact_person "SPEC 9: yetkili"
         text phone
         text email
         text address
@@ -479,9 +539,9 @@ erDiagram
 
 ```mermaid
 erDiagram
-    customers ||--o{ quotes : ""
-    quotes ||--o{ quote_items : ""
-    quotes ||--o| sales : "satışa dönüşür"
+    customers ||--o{ sales_quotes : ""
+    sales_quotes ||--o{ sales_quote_items : ""
+    sales_quotes ||--o| sales : "satışa dönüşür"
     customers ||--o{ sales : ""
     sales ||--o{ sale_items : ""
     sale_items ||--o{ sale_return_items : "referans"
@@ -489,7 +549,7 @@ erDiagram
     sale_returns ||--o{ sale_return_items : ""
     price_lists ||--o{ sale_items : "fiyat kaynağı"
 
-    quotes {
+    sales_quotes {
         uuid id PK
         text doc_no UK "TKL-2026-000001"
         uuid customer_id FK
@@ -503,9 +563,9 @@ erDiagram
         uuid converted_sale_id FK
         text note
     }
-    quote_items {
+    sales_quote_items {
         uuid id PK
-        uuid quote_id FK
+        uuid sales_quote_id FK
         int line_no
         uuid variant_id FK
         int pieces "pcs"
@@ -522,7 +582,7 @@ erDiagram
         uuid id PK
         text doc_no UK "STS-2026-000001"
         uuid customer_id FK
-        uuid quote_id FK
+        uuid sales_quote_id FK
         int doc_date
         int due_date
         text price_mode "EXCL | INCL"
@@ -873,7 +933,7 @@ zincirinin sonucudur ve `checkIntegrity` bunu karşılaştırır.
 ```mermaid
 erDiagram
     suppliers ||--o{ cutting_orders : "kesimhane"
-    quotes ||--o| cutting_orders : "bağlı teklif"
+    sales_quotes ||--o| cutting_orders : "bağlı teklif"
     cutting_orders ||--o{ cutting_order_sources : "gönderilen"
     cutting_orders ||--o{ cutting_order_plan_items : "planlanan hedef"
     cutting_orders ||--o{ cutting_order_results : "dönen"
@@ -884,7 +944,7 @@ erDiagram
         uuid id PK
         text doc_no UK "KSM-2026-000001"
         uuid cutter_supplier_id FK "type = KESIMHANE"
-        uuid quote_id FK
+        uuid sales_quote_id FK
         uuid customer_id FK
         int sent_date
         int expected_return_date
@@ -945,8 +1005,8 @@ erDiagram
     locations ||--o{ stock_counts : ""
     stock_counts ||--o{ stock_count_items : ""
     product_variants ||--o{ stock_count_items : ""
-    waste_records ||--o{ waste_items : ""
-    product_variants ||--o{ waste_items : ""
+    stock_adjustments ||--o{ stock_adjustment_items : ""
+    product_variants ||--o{ stock_adjustment_items : ""
 
     stock_counts {
         uuid id PK
@@ -969,7 +1029,7 @@ erDiagram
         int diff_volume "vol, işaretli"
         int cost_effect "money"
     }
-    waste_records {
+    stock_adjustments {
         uuid id PK
         text doc_no UK "FIR-2026-000001"
         int occurred_at
@@ -978,9 +1038,9 @@ erDiagram
         text status "ACTIVE | CANCELLED"
         text note
     }
-    waste_items {
+    stock_adjustment_items {
         uuid id PK
-        uuid waste_record_id FK
+        uuid stock_adjustment_id FK
         uuid variant_id FK
         int pieces "pcs"
         int volume "vol"
@@ -1056,7 +1116,7 @@ erDiagram
 | `command_log` | ✔ | ✔ |
 | `audit_logs` | ✔ | ✔ |
 | `backup_log` | ✔ | ✔ |
-| Belge başlıkları (`sales`, `purchases`, `collections`, `supplier_payments`, `sale_returns`, `purchase_returns`, `transfers`, `expenses`, `waste_records`) | kısmi: yalnızca `status`, `cancelled_at`, `cancel_reason` değişebilir | ✔ |
+| Belge başlıkları (`sales`, `purchases`, `collections`, `supplier_payments`, `sale_returns`, `purchase_returns`, `transfers`, `expenses`, `stock_adjustments`) | kısmi: yalnızca `status`, `cancelled_at`, `cancel_reason` değişebilir | ✔ |
 
 Belge başlığı trigger'ı örneği:
 

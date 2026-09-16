@@ -1,0 +1,37 @@
+# --- Gizli / asla depoya girmeyecek ---
+*.jks
+*.keystore
+key.properties
+.env
+google-services.json
+*.sbk
+
+# --- Dart / Flutter ---
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+*.g.dart.lock
+coverage/
+doc/api/
+
+# --- Üretilen kod tutulur (build_runner çıktısı commit edilir) ---
+# *.g.dart ve *.drift.dart bilerek yok sayılmaz
+
+# --- Android ---
+android/.gradle/
+android/local.properties
+android/app/debug/
+android/app/profile/
+android/app/release/
+*.apk
+*.aab
+*.iml
+
+# --- IDE / OS ---
+.idea/
+.vscode/
+*.swp
+.DS_Store

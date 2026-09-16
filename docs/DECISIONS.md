@@ -1,0 +1,228 @@
+# Kararlar ve Gerekçeler
+
+Her mimari karar, varsayım ve sapma burada gerekçesiyle kayıtlıdır.
+Kaynak otorite sırası: `docs/BRIEF.md` → `docs/SPEC.md` → bu dosya.
+
+Durum etiketleri: **Kesin** (müşteri kararı) · **Karar** (geliştirme kararı) ·
+**Varsayım** (doğrulanmayı bekliyor).
+
+---
+
+## SABAH KONTROL
+
+> Gece otonom çalışma sırasında karar gerektiren belirsizliklerde en makul seçenek uygulandı.
+> Bu başlık altındakiler **onayına sunulur**; itiraz edersen ilgili karar tek tek geri alınabilir.
+
+### SK-01 · Android SDK bu ortamda kurulamadı (Flutter kuruldu)
+
+- **Durum:** Flutter **3.47.4** (Dart **3.13.3**) `/opt/sdk/flutter` altına kuruldu ve
+  çalışıyor. `flutter doctor` çıktısı aşağıda (K-01).
+- **Sorun:** Android SDK `dl.google.com` üzerinden dağıtılıyor ve bu ortamın ağ politikası
+  o adrese **403** veriyor (`storage.googleapis.com` açık olduğu için Flutter inebildi).
+  Doğrulama: `curl "$HTTPS_PROXY/__agentproxy/status"` → `connect_rejected`, `dl.google.com:443`.
+- **Uygulanan seçenek:** Faz 1 zaten arayüzsüzdür; domain ve veri katmanı testleri Dart VM'de
+  koşar, Android SDK **gerektirmez**. Faz 1 bu haliyle tamamlandı.
+- **Sonuç:** APK derlemesi ek karar #2'deki **GitHub Actions** ile yapılacak (runner'da
+  Android SDK hazır gelir). Yerel APK derlemesi bu ortamda mümkün değil.
+- **Senin yapman gereken:** Bir şey yok; Faz 2'de workflow devreye girecek. Yerelde de APK
+  derlemek istersen ağ politikasına `dl.google.com` eklenmeli.
+
+### SK-02 · `purchase_orders` tablosu v1 kapsamına alınmadı
+
+SPEC §26 minimum tablolar arasında `purchase_orders` (satın alma siparişi) sayıyor, ancak
+ne SPEC'in akış bölümlerinde ne de BRIEF'te sipariş süreci tarif edilmiyor; BRIEF §5'in
+kapsam dışı listesi de siparişi kapsama almıyor. Boş bir tablo yaratmak yerine kapsam dışı
+bırakıldı (D-16). Sipariş takibi istiyorsan ayrıca söyle — veri modeli engellemiyor.
+
+### SK-03 · Fire tablosu `stock_adjustments` olarak adlandırıldı
+
+BRIEF §6 fire için tablo adı vermiyor; SPEC §26 `stock_adjustments`, SPEC §17 ise
+"Stok Düzeltme / Fire" ekranı diyor. İkisini tek tabloda birleştirdim
+(`stock_adjustments` + `stock_adjustment_items`), sayım ise BRIEF'in istediği gibi ayrı
+(`stock_counts`). Alternatif olan `waste_records` adı SPEC'te geçmediği için terk edildi.
+
+### SK-04 · Teklif tablosu `sales_quotes` olarak adlandırıldı
+
+SPEC §26 `sales_quotes` diyor; taslakta `quotes` idi. SPEC adlandırması korundu
+(`sales_quotes`, `sales_quote_items`).
+
+### SK-05 · Ürün ve müşteri kartına SPEC alanları eklendi
+
+SPEC §1 `products` için DNS, sünger tipi, standart kalınlıklar, varsayılan satış fiyatı ve
+minimum stok istiyor; SPEC §9 `customers` için **Yetkili** istiyor. Bunlar ilk taslakta
+yoktu, eklendi (`dns`, `foam_type`, `standard_thicknesses`, `default_sale_price_m3`,
+`min_stock_volume`, `contact_person`).
+
+---
+
+## K-01 · Ortam kaydı
+
+```
+Flutter 3.47.4 • channel stable
+Framework revision 9584c6713b (2026-09-10) • Engine 06a2e2a110
+Tools • Dart 3.13.3 • DevTools 2.60.0
+
+[✓] Flutter (Channel stable, 3.47.4, on Ubuntu 24.04.4 LTS, locale en_US)
+[✗] Android toolchain — Unable to locate Android SDK   (SK-01: dl.google.com ağ politikasıyla engelli)
+[✗] Chrome — web hedefi kullanılmıyor, önemsiz
+[✗] Linux toolchain — GTK3 dev kütüphaneleri yok, Android hedefi için önemsiz
+[✓] Connected device (1 available) • Linux (desktop)
+[✓] Network resources
+```
+
+---
+
+## Kullanıcının ek kararları
+
+### D-K1 · SDK kurulumu (ek karar #1) — **Kesim**
+Faz 1'e başlamadan Flutter ve Android SDK kurulacak, `flutter doctor` gösterilecekti.
+Flutter kuruldu ve doğrulandı (K-01). Android SDK kurulamadı; gerekçe ve etkisi **SK-01**'de.
+
+### D-K2 · APK derlemesi GitHub Actions ile (ek karar #2) — **Kesim**
+Faz 2'de eklenecek workflow: her push'ta testleri çalıştırır ve debug APK'yı indirilebilir
+**artifact** olarak yükler. **Release imzalama anahtarı yalnızca GitHub Secrets'ta durur,
+asla repoya girmez.** Bu karar SK-01'i de çözer: derleme, Android SDK'sı hazır gelen
+runner'da yapılır.
+> Faz 2 işi olduğu için bu fazda workflow **yazılmadı**; `.gitignore` tarafı şimdiden hazır (D-K3).
+
+### D-K3 · `.gitignore` (ek karar #3) — **Kesim**
+`*.jks`, `*.keystore`, `key.properties`, `.env`, `google-services.json`, `*.sbk` depoya
+girmez. `.sbk` özellikle kritik: yedek dosyası tüm işletme verisidir, halka açık bir depoda
+asla bulunmamalıdır.
+
+---
+
+## SPEC ile BRIEF arasındaki çelişkiler
+
+BRIEF çelişkide üstündür (BRIEF girişi). Sapmalar:
+
+### D-01 · Platform: web değil, Android APK — **Kesin**
+SPEC "mobil uyumlu web uygulaması, masaüstü + iPhone" diyor. Müşteri kararı: tek kullanıcılı,
+sunucusuz, offline **Android APK**. Kod ileride iOS/Windows derlemesini engellemeyecek
+şekilde yazılır (`domain` saf Dart, platform API'leri arayüz arkasında).
+
+### D-02 · Para tipi: DECIMAL değil, sabit ölçekli INTEGER — **Karar**
+SPEC §26 "para için FLOAT kullanma, DECIMAL/NUMERIC kullan" diyor. Ancak hedef veritabanı
+**SQLite** ve SQLite'ta gerçek bir ondalık tip yoktur: `NUMERIC`/`DECIMAL` kolonları
+saklama sınıfı olarak `REAL`'e (IEEE-754 double) düşebilir. Bu, SPEC §30.8'in
+("para hesaplamalarında floating-point hatası olmamalı") tam tersini üretirdi.
+
+Bu yüzden her sayısal değer **sabit ölçekli tamsayı** olarak saklanır (para ×100, birim
+fiyat ×10.000, m³ ×10⁶, ölçü ×100, oran ×100) ve Dart'ta `Decimal` ile işlenir. Böylece
+SPEC'in **amacı** (kuruş hatası olmasın) daha güçlü biçimde sağlanır. SQL'de yalnızca
+toplama/çıkarma yapılır; çarpma/bölme Dart'a taşınır.
+
+### D-03 · Yetkilendirme: v1'de tek kullanıcı — **Kesin**
+SPEC §23 YÖNETİCİ/PERSONEL yetkilendirmesi istiyor. Müşteri kararı v1'de tek kullanıcı
+(Patron). `users`, `roles`, `permissions` tabloları **şimdiden var**, tek `ADMIN` kullanıcı
+seed'lenir, yönetim arayüzü gizlidir. SPEC §23'teki yetki listesi `permissions` tablosuna
+kod olarak girilir ki ikinci kullanıcı eklendiğinde şema değişmesin.
+
+### D-04 · "Maliyeti gizle" v1'de gösterim kontrolüdür — **Karar**
+SPEC §23 ve ANALİZ §2.13 "personel maliyeti göremiyorsa veri hiç gönderilmemeli" diyor. Bu
+doğru kural **sunucu-istemci** mimarisi içindir. v1'de sunucu yok, tek cihaz ve tek kullanıcı
+var; veri zaten kullanıcının kendi cihazında ve kendi şifresiyle duruyor. Bu yüzden
+"maliyeti gizle" bir **gösterim** modudur (telefonu müşteriye gösterirken), güvenlik sınırı
+değildir. İkinci kullanıcı eklendiğinde veri katmanı filtresine dönüşür — `docs/FUTURE_SYNC.md`.
+
+### D-05 · Eşzamanlı satış kilidi gerekmiyor — **Karar**
+ANALİZ §2.11 iki personelin aynı anda son 5 plakayı satmasına karşı satır kilidi istiyor.
+v1 tek kullanıcı ve tek cihaz olduğu için eşzamanlılık yok; Drift transaction'ı (tek yazar)
+yeterli. İkinci kullanıcı/sunucu geldiğinde bu yeniden gündeme gelir (FUTURE_SYNC).
+
+### D-06 · Excel'den içe aktarma yok — **Kesin**
+ANALİZ §3 öneriyor, BRIEF §1.11 kapsam dışı bırakıyor: veriler elle girilir, bunun yerine
+**açılış ekranları** zorunludur (stok, cari, kasa/banka, portföydeki evrak).
+
+---
+
+## Mimari kararlar
+
+### D-07 · Kesimdeki mal ayrı konum, ayrı parti — **Karar**
+`KESIMDE` sanal bir `location`'dır ve `is_sellable = false` taşır. Mal kesime giderken ana
+depodaki parti **silinmez**: kalanı düşülür, aynı birim maliyeti taşıyan bir **çocuk parti**
+(`parent_batch_id`) `KESIMDE` konumunda açılır.
+**Neden:** (a) satılamaz olması tek bir kolondan zorlanır, (b) kesimdeki malın değeri stok
+değerinde ayrıca görünür, (c) maliyet zinciri parti soyağacından izlenebilir kalır.
+
+### D-08 · Kesim hedefleri kaynağın tarihini taşır — **Karar (BRIEF §5.4)**
+Hedef partilerin `received_at` değeri kaynak partininkidir. Aksi halde kesimden dönen mal
+FIFO kuyruğunun **sonuna** düşer ve daha yeni alınmış mal ondan önce satılır — kesim, malın
+yaşını değiştirmez.
+
+### D-09 · `command_log` işlemle aynı transaction'da yazılır — **Karar**
+`command_log` append-only olduğu için "işleniyor → başarılı" gibi bir durum güncellemesi
+yapılamaz. Bu yüzden kayıt, iş kayıtlarıyla **aynı transaction içinde** yazılır:
+- İşlem başarılıysa komut loglanmış olur.
+- İşlem başarısızsa log da geri alınır, aynı UUID yeniden denenebilir.
+- Aynı UUID ikinci kez gelirse birincil anahtar çakışır → çift kayıt engellenir.
+
+**Alternatif ve neden seçilmedi:** komutu önce `PENDING` yazıp sonra güncellemek append-only
+kuralını delerdi ve yarıda kalan işlemler "hayalet komut" bırakırdı.
+
+### D-10 · Bakiye kolonu tutulmaz, hareketlerden toplanır — **Karar**
+`customers.balance` gibi bir önbellek kolonu **yoktur**; bakiye `SUM(customer_ledger.amount)`
+ile bulunur. Tamsayı toplaması olduğu için kesindir ve sessiz bozulma üretmez. Tek önbellek
+`inventory_batches.remaining_*`'tır (FIFO taraması her seferinde tüm geçmişi okumasın diye)
+ve `checkIntegrity()` bunu hareketlerle karşılaştırır.
+
+### D-11 · Ağırlıklı ortalama ürün (çeşit) bazındadır — **Karar (BRIEF §3.6)**
+Varyant bazında değil. Altın Senaryo eki bunu doğruluyor: (59.388 + 26.586) / **28 m³**
+= 3.070,50 TL/m³ — paydadaki 28 m³, Beyaz Sünger'in ana depodaki *tüm* varyantlarının
+kalanıdır (19,6 + 8,4). Varyant bazlı olsaydı payda 22,4 m³ olurdu.
+
+### D-12 · İade, tüketimin tersinden döner — **Karar (BRIEF §5)**
+Satış iadesinde mal, orijinal satışın tükettiği partilere `cost_allocations.sequence_no`
+**tersinden** (son tüketilenden başlayarak) döner. Altın Senaryo 8 bunu doğruluyor: satış
+A'dan 50 + B'den 10 tüketmişti; 5 adetlik iade **B**'ye 3.165 TL/m³ ile döner.
+
+### D-13 · Yedek şifresi cihaz anahtarından bağımsızdır — **Karar (BRIEF §4.1)**
+Yedeğin içindeki veritabanı anlık görüntüsü **SQLCipher şifresiz** alınır, dosyanın tamamı
+yedek şifresinden türetilen anahtarla AES-256-GCM ile şifrelenir.
+**Neden:** SQLCipher anahtarı Android Keystore'da durur ve telefon kaybolduğunda o anahtar
+da kaybolur. Yedek ona bağlı olsaydı, yedek dosyası elde olsa bile açılamazdı — yani
+yedeklemenin tek amacı boşa çıkardı. Şifresiz anlık görüntü diskte kalmaz (`docs/BACKUP.md` §1.2).
+
+### D-14 · Geri yükleme atomik dosya değişimiyle yapılır — **Karar**
+Yeni veritabanı geçici dosyaya açılır, migration ve `checkIntegrity()` **geçici dosyada**
+çalışır, ancak hepsi başarılıysa `rename()` ile yerine konur. Herhangi bir adımda hata
+olursa mevcut `app.db` dosyasına hiç dokunulmamış olur. Öncesinde güvenlik yedeği alınır.
+
+### D-15 · Belge numarası transaction içinde atanır — **Karar**
+`document_sequences` üzerinden aynı transaction'da artırılır; işlem geri alınırsa numara da
+geri alınır. Böylece SPEC'in istediği **boşluksuz** numaralandırma sağlanır.
+
+### D-16 · `purchase_orders` kapsam dışı — **Karar** → bkz. **SK-02**
+
+### D-17 · Enum'lar veritabanında TEXT — **Karar**
+Tamsayı kod yerine okunabilir metin (`'PURCHASE_IN'`) saklanır, `CHECK (col IN (...))` ile
+kısıtlanır. **Neden:** yedek dosyası ileride elle incelenebilir olmalı; tamsayı kodlar
+şema bilgisi olmadan anlamsızdır. Maliyeti ihmal edilebilir.
+
+### D-18 · Türkçe arama için normalize kolon — **Karar (BRIEF §6)**
+Aranabilir her ad kolonunun yanında `*_normalized` kolonu tutulur (İ/i, I/ı, ş/s, ğ/g, ü/u,
+ö/o, ç/c eşlenmiş, küçük harfli). SQLite'ın `LIKE`'ı Türkçe harfleri doğru katlamaz.
+FTS5'e veri büyüyene kadar gerek yok.
+
+### D-19 · `double` yasağı iki katmanlı zorlanır — **Karar (BRIEF §2)**
+(a) `custom_lint` kuralı, (b) `lib/domain` ve `lib/data` kaynaklarını tarayan bir test.
+Tek başına lint yeterli değil çünkü lint kuralları CI'da sessizce atlanabilir; test
+`flutter test` ile her koşuda çalışır.
+
+---
+
+## Varsayımlar (doğrulanmayı bekliyor)
+
+### V-01 · `D35 140×240` ve `HR35 140×240` katsayıları kopya
+SPEC §13'te bu iki ürünün katsayısı, `D35 Sert/Yumuşak` (2,24) ve `HR35` (2,56) ile
+birebir aynı. Müşteri bunları **ayrı ürün** olarak istedi (BRIEF §1.6), o yüzden aynen
+seed'leniyor. Katsayıların farklılaşması gerekiyorsa fiyat listesi versiyonundan
+düzeltilebilir.
+
+### V-02 · KDV oranı varsayılanı %20
+BRIEF §3.4 varsayılanı %20 veriyor, seçilebilir oranlar Ayarlar'da. Seed'lenen oran
+listesi: %0, %1, %10, %20.
+
+### V-03 · Açılış partisi tedarikçisi boş bırakılabilir
+Açılış stoğu girilirken malın hangi tedarikçiden geldiği bilinmeyebilir;
+`inventory_batches.supplier_id` bu durumda `NULL` olur ve `source_type = OPENING` taşır.

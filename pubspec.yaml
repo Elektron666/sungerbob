@@ -1,0 +1,36 @@
+name: sungerbob
+description: "Sünger stok, satış, cari ve kârlılık yönetimi — offline Android uygulaması."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Para ve m3 hesaplarında double YASAK (BRIEF §2) — her şey Decimal.
+  decimal: ^3.2.6
+
+  # Yerel veritabanı. SQLCipher, sqlite3 3.x build-hook'u ile Faz 2'de devreye girer.
+  drift: ^2.35.0
+  sqlite3: ^3.6.0
+
+  # UUID v7 (BRIEF §3.12)
+  uuid: ^4.6.0
+
+  collection: ^1.19.1
+  crypto: ^3.0.7
+  path: ^1.9.1
+  meta: ^1.17.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  drift_dev: ^2.35.0
+  build_runner: ^2.16.1
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

@@ -53,6 +53,40 @@ minimum stok istiyor; SPEC §9 `customers` için **Yetkili** istiyor. Bunlar ilk
 yoktu, eklendi (`dns`, `foam_type`, `standard_thicknesses`, `default_sale_price_m3`,
 `min_stock_volume`, `contact_person`).
 
+### SK-06 · Altın Senaryo adım 5'te aritmetik uyuşmazlık — adet 10 → **5** düzeltildi
+
+BRIEF §8 adım 5 ve adım 7 şunu diyor: **"140×200×8 × 10 adet = 1,12 m³"**.
+Geometri bunu vermiyor:
+
+```
+1,40 m × 2,00 m × 0,08 m × 10 adet = 2,24 m³   (1,12 değil)
+1,40 m × 2,00 m × 0,08 m ×  5 adet = 1,12 m³   ✔
+1,40 m × 2,00 m × 0,04 m × 10 adet = 1,12 m³   ✔
+```
+
+Üç sayıdan (kalınlık 8, adet 10, hacim 1,12) ancak ikisi aynı anda doğru olabilir.
+
+**1,12 m³ üç bağımsız türetilmiş rakamla doğrulanıyor:**
+
+| Kontrol | Hesap | BRIEF'teki değer |
+|---|---|---|
+| Adım 5 tutarı | 1,12 × 3.300 | **3.696,00** ✔ |
+| Adım 7 toplam m³ | 5,32 + 5,32 + 1,12 | **11,76** ✔ |
+| Adım 7 toplam maliyet | 16.837,80 + 16.119,60 + 3.696,00 | **36.653,40** ✔ |
+
+Kalınlık 8 cm + 10 adet kabul edilseydi bu **üç toplam birden** bozulurdu. Dolayısıyla hatalı
+olan ya kalınlık ya adettir.
+
+**Seçim: adet 10 → 5.** Gerekçe: SPEC §2'nin örnek kalınlık kümesi **{5, 8, 10} cm**;
+4 cm ne SPEC'te ne BRIEF'te hiçbir yerde geçmiyor, 8 cm ise işletmenin standart ölçüsü.
+Adet hiçbir para hesabına girmediği için bu düzeltmenin başka hiçbir rakama etkisi yok.
+
+**Etki:** Yok. 1,12 m³ · 3.696,00 TL · 11,76 m³ · 36.653,40 TL değerlerinin hepsi korunur.
+Yalnızca adım 5 ve adım 7'deki "10 adet" ifadesi "5 adet" olur.
+
+**Senin yapman gereken:** Onayla ya da düzelt. Eğer asıl niyet "140×200×**4** × 10 adet" idiyse
+söyle — o durumda yalnızca varyant etiketi değişir, rakamlar yine aynı kalır.
+
 ---
 
 ## K-01 · Ortam kaydı

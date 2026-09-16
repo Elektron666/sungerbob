@@ -65,7 +65,9 @@ Oluşan partiler:
 
 ## Adım 5 — Yeni fiyat
 
-- Alış C (18.09.2026): 140×200×8 × 10 = 0,224 × 10 = **1,120000 m³** @ 3.300 → **3.696,00 TL** ✔
+- Alış C (18.09.2026): 140×200×8 × **5 adet** = 0,224 × 5 = **1,120000 m³** @ 3.300 → **3.696,00 TL** ✔
+  > ⚠️ BRIEF §8 burada "× 10" yazıyor ama 10 adet 2,24 m³ eder. Düzeltme ve gerekçesi:
+  > `docs/DECISIONS.md` **SK-06**.
 - Ardından yeni fiyat listesi versiyonu (baz 3.700 TL/m³).
 - **Doğrulanacak:** 3. adımdaki satışın maliyeti, fiyatı ve kârı **değişmemeli**; eski
   fiyat listesi versiyonu erişilebilir kalmalı.
@@ -86,7 +88,7 @@ Maliyet: 0,28 × 3.030 (A2) = **848,40 TL** ✔
 |---|---|---|---|---|---|
 | 140×200×10 | 19 | 5,32 | B | 3.165 | 16.837,80 |
 | 140×200×5 | 38 | 5,32 | A2 | 3.030 | 16.119,60 |
-| 140×200×8 | 10 | 1,12 | C | 3.300 | 3.696,00 |
+| 140×200×8 | **5** | 1,12 | C | 3.300 | 3.696,00 |
 | **Toplam** | | **11,76** | | | **36.653,40** ✔ |
 
 ## Adım 8 — İade

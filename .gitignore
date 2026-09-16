@@ -35,3 +35,8 @@ android/app/release/
 .vscode/
 *.swp
 .DS_Store
+
+# --- flutter create artıkları ---
+.idea/
+*.iml
+.metadata

@@ -1,7 +1,6 @@
 import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sungerbob/domain/costing/costing_engine.dart';
-import 'package:sungerbob/domain/costing/batch_view.dart';
 import 'package:sungerbob/domain/core/money.dart';
 import 'package:sungerbob/domain/core/quantity.dart';
 

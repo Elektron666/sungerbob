@@ -6,7 +6,7 @@ Toptan sünger alım-satımı yapan işletme için **tek kullanıcılı, sunucus
 ## Otorite sırası
 
 1. `docs/BRIEF.md` — müşteriyle netleşen kesin kararlar. **Çelişkide bu kazanır.**
-2. `docs/SPEC.md` — müşterinin orijinal spesifikasyonu. *(Şu an depoda yok — Bölüm "Bilinen boşluklar")*
+2. `docs/SPEC.md` — müşterinin orijinal spesifikasyonu.
 3. `docs/DECISIONS.md` — geliştirme sırasında alınan kararlar ve gerekçeleri.
 
 ## Çalışma kuralları
@@ -93,10 +93,21 @@ Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
 - **Yedekleme kritik:** veri yalnızca telefonda. `.sbk` dosyası yedek şifresiyle AES-256-GCM
   ile şifrelenir ve **cihaz anahtarına bağlı olmamalıdır**. Ayrıntı: `docs/BACKUP.md`.
 
-## Bilinen boşluklar
+## Faz 0 çıktıları
 
-- **`docs/SPEC.md` depoda yok.** BRIEF; SPEC Bölüm 18 (ana sayfa kartları), 19 (müşteri
-  analizi), 20 (ürün analizi), 25 (raporlar), 26 (tablolar) ve **12 ürün + fiyat katsayıları**
-  için SPEC'e atıf yapıyor. Bu başlıklar dokümanlarda `TODO(SPEC)` ile işaretlidir.
-  SPEC gelmeden seed verisi ve rapor listesi kesinleştirilemez.
-- Flutter SDK bu ortamda kurulu değil; Faz 1'de kurulum gerekir.
+| Doküman | İçerik |
+|---|---|
+| `docs/ARCHITECTURE.md` | Katmanlar, sayısal saklama, KDV/yuvarlama, maliyet motoru, append-only, transaction |
+| `docs/ERD.md` | Mermaid ER diyagramları, kısıtlar, trigger listesi, enum sözlüğü, SPEC §26 uyumu, 12 ürün seed'i |
+| `docs/BACKUP.md` | `.sbk` formatı, AES-256-GCM, otomatik yedek, atomik geri yükleme, zorunlu testler |
+| `docs/FLOWS.md` | 12 iş akışı, transaction adımlarıyla |
+| `docs/SCREENS.md` | Ekran listesi, rotalar, faz dağılımı |
+| `docs/GOLDEN_SCENARIO.md` | Doğrulanmış rakamlar — testlerin birebir kaynağı |
+| `docs/FUTURE_SYNC.md` | İkinci kullanıcı ve sunucu senkronizasyonu (şimdi yapılmayacak) |
+| `docs/DECISIONS.md` | Kararlar, gerekçeler, varsayımlar, **SABAH KONTROL** |
+
+## Ortam
+
+- Flutter **3.47.4** / Dart **3.13.3** → `/opt/sdk/flutter/bin` (PATH'e ekle).
+- **Android SDK kurulu değil** — `dl.google.com` bu ortamın ağ politikasıyla engelli.
+  Faz 1 bunu gerektirmez; APK derlemesi GitHub Actions ile yapılacak (`DECISIONS.md` SK-01, D-K2).

@@ -13,7 +13,7 @@ Durum etiketleri: **Kesin** (müşteri kararı) · **Karar** (geliştirme karar�
 > Gece otonom çalışma sırasında karar gerektiren belirsizliklerde en makul seçenek uygulandı.
 > Bu başlık altındakiler **onayına sunulur**; itiraz edersen ilgili karar tek tek geri alınabilir.
 
-### SK-01 · Android SDK bu ortamda kurulamadı (Flutter kuruldu)
+### SK-01 · Android SDK bu ortamda kurulamadı (Flutter kuruldu) — **✅ ÇÖZÜLDÜ**
 
 - **Durum:** Flutter **3.47.4** (Dart **3.13.3**) `/opt/sdk/flutter` altına kuruldu ve
   çalışıyor. `flutter doctor` çıktısı aşağıda (K-01).
@@ -24,8 +24,11 @@ Durum etiketleri: **Kesin** (müşteri kararı) · **Karar** (geliştirme karar�
   koşar, Android SDK **gerektirmez**. Faz 1 bu haliyle tamamlandı.
 - **Sonuç:** APK derlemesi ek karar #2'deki **GitHub Actions** ile yapılacak (runner'da
   Android SDK hazır gelir). Yerel APK derlemesi bu ortamda mümkün değil.
-- **Senin yapman gereken:** Bir şey yok; Faz 2'de workflow devreye girecek. Yerelde de APK
-  derlemek istersen ağ politikasına `dl.google.com` eklenmeli.
+- **Çözüm uygulandı:** `.github/workflows/ci.yml` her push'ta testleri çalıştırıyor ve
+  debug APK'yı 30 gün saklanan indirilebilir artifact olarak yüklüyor;
+  `.github/workflows/release.yml` imzalı yayın APK'sını üretiyor.
+- **Senin yapman gereken:** Bir şey yok. Yerelde de APK derlemek istersen ağ politikasına
+  `dl.google.com` eklenmeli.
 
 ### SK-02 · `purchase_orders` tablosu v1 kapsamına alınmadı
 

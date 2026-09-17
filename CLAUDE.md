@@ -119,8 +119,9 @@ Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
 |---|---|
 | Faz 0 — Mimari | ✅ tamam |
 | **Faz 1 — Domain ve veri katmanı** | ✅ **tamam — 124 test geçiyor, analyze temiz** |
-| Faz 2 — Mobil çekirdek + yedekleme | ⏳ sırada |
-| Faz 3–5 | ⏳ |
+| **Faz 2 — Mobil çekirdek + yedekleme** | ✅ **tamam — 188 test, uygulama açılıyor** |
+| Faz 3 — Operasyon | ⏳ sırada |
+| Faz 4–5 | ⏳ |
 
 Faz 1'de hazır olanlar:
 
@@ -131,5 +132,19 @@ Faz 1'de hazır olanlar:
 - `data/repo` — alış, satış, iade, iptal, tahsilat, ödeme, virman, evrak, açılış,
   fiyat listesi, `checkIntegrity`
 
-**Faz 2'nin ilk iki işi:** (1) SQLCipher'ı `sqlite3` 3.x build-hook'u ile devreye almak
-(SK-07), (2) GitHub Actions workflow'u (D-K2).
+Faz 2'de eklenenler:
+
+- `data/backup` — `.sbk` formatı, AES-256-GCM + Argon2id, atomik geri yükleme,
+  saklama kuralı, cihaz dışı yedek uyarısı
+- `data/db/connection.dart` + `database_key.dart` — SQLCipher 4.19.0, anahtar
+  `flutter_secure_storage`'da
+- `data/repo/dashboard_queries.dart` — SPEC §18 kartları + Sermaye Dağılımı
+- `ui/` — tema, Türkçe biçimlendirme, Riverpod, go_router, 10 ekran
+- `.github/workflows/` — CI (test + debug APK artifact) ve release (imzalı APK)
+
+**Derleme:** Android SDK yerelde yok; APK GitHub Actions'ta üretiliyor.
+Actions sekmesindeki son koşunun **`sungerbob-debug-apk`** artifact'i telefona
+kurulabilir.
+
+**Faz 3'ün işleri:** teklif ve satışa dönüştürme, stok sayımı, fire, fason kesim
+emri, vade takibi ve bildirimler, PDF + WhatsApp paylaşımı, global arama.

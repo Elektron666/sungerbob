@@ -231,6 +231,46 @@ yazılıyor, saklama kuralı boş yere tüketiliyordu.
 ve uyarı **kapanmaz** — olmayan bir yedeği var saymak, uyarıyı hiç göstermemekten
 tehlikelidir. İki test bunu doğruluyor.
 
+### SK-15 · Arka plan yedeği saatlik koşuyor, saati politika belirliyor
+
+Android'de `workmanager` **tam zamanlı periyodik görev garanti etmez**: en az
+15 dakikalık aralık şart ve sistem, pil ve Doze durumuna göre görevi erteler.
+"Her gün 20:00'de bir kez çalıştır" diye kaydedilen bir görev, telefon o sırada
+derin uykudaysa günü atlayabilir.
+
+**Seçilen:** görev **saatlik** koşuyor; yedek alınıp alınmayacağına
+`AutoBackupPolicy.isScheduledTime()` karar veriyor. Saat 20:00 geçmiş ve o gün
+yedek alınmamışsa, görev 23:00'te koşsa bile yedek alınır. Kaçırılan gün yok.
+
+Görev gövdesi (`runBackgroundBackup`) hata durumunda bile `true` döner: `false`
+dönmek Android'e yeniden deneme yaptırır, bu da bozuk bir durumda yedek
+fırtınasına yol açar. Bir sonraki saatlik koşu zaten tekrar dener.
+
+Arka plan isolate'inde Riverpod grafiği yoktur; görev veritabanını, yedek
+servisini ve bildirimleri kendisi kurar. Veritabanı anahtarı ve yedek şifresi
+güvenli depodan okunur (SK-13) — bu, yedek şifresini orada saklamanın asıl
+gerekçesidir.
+
+**Paket sürümleri** (pub.dev'den doğrulandı): `workmanager` 0.10.10,
+`flutter_local_notifications` 22.3.1, `timezone` 0.11.1. Bildirim paketi
+22.x'te `initialize` ve `zonedSchedule` **adlandırılmış parametreye** geçti;
+eski örneklerdeki konumsal çağrı derlenmiyor.
+
+### SK-16 · Bildirim kimliği UUID'den türetiliyor
+
+Android bildirim kimliği **işaretli 32 bit tamsayı**; UUID v7 doğrudan
+kullanılamaz. FNV-1a 32 bit özet alınıp üst bit düşürülüyor
+(`NotificationService.notificationIdFor`).
+
+Aynı evrak her zaman aynı kimliği alır: vadesi değişen bir bildirim ikinci kez
+kurulmaz, üzerine yazılır. 2.000 gerçekçi UUID ile çakışma olmadığı test
+ediliyor.
+
+Bildirimler her tazelemede **tamamen silinip yeniden kuruluyor** (`cancelAll` +
+`reschedule`). Tek tek güncellemek, tahsil edilmiş bir çekin bildiriminin
+cihazda kalmasına yol açardı — kullanıcıya olmayan bir borcu hatırlatmak,
+hatırlatmamaktan kötüdür.
+
 ## K-02 · Performans ölçümü (BRIEF §9 Faz 5)
 
 "50.000 satış satırıyla ana sayfa ve raporların makul sürede açıldığını ölç."

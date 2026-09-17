@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../data/db/connection.dart';
 import '../../providers/app_providers.dart';
+import '../../startup.dart';
 import '../../widgets/common.dart';
 
 /// Ayarlar (BRIEF §7).
@@ -60,12 +61,25 @@ class SettingsScreen extends ConsumerWidget {
               leading: const Icon(Icons.schedule),
               title: const Text('Otomatik yedek saati'),
               subtitle: Text(map['backup_auto_time'] ?? '20:00'),
+              onTap: () => _pickBackupTime(
+                context,
+                ref,
+                map['backup_auto_time'] ?? '20:00',
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.cloud_upload),
+              title: const Text('Cihaz dışı yedek'),
+              subtitle: const Text('Drive, e-posta veya bilgisayara aktarım'),
+              onTap: () => context.push('/settings/drive'),
             ),
             ListTile(
               leading: const Icon(Icons.warning_amber),
               title: const Text('Cihaz dışı yedek uyarı eşiği'),
               subtitle: Text('${map['backup_offsite_warn_days'] ?? '3'} gün'),
             ),
+            const SectionHeader(title: 'Bildirimler'),
+            const _NotificationStatusTile(),
             const SectionHeader(title: 'Bakım'),
             ListTile(
               leading: const Icon(Icons.fact_check),
@@ -94,6 +108,31 @@ class SettingsScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Otomatik yedek saati. Değişiklik bir sonraki arka plan koşusunda
+  /// geçerli olur; görev saatlik koşup saati kendisi kontrol eder.
+  Future<void> _pickBackupTime(
+    BuildContext context,
+    WidgetRef ref,
+    String current,
+  ) async {
+    final parts = current.split(':');
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(
+        hour: int.tryParse(parts.first) ?? 20,
+        minute: parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0,
+      ),
+    );
+    if (picked == null) return;
+
+    final settings = await ref.read(settingsRepositoryProvider.future);
+    await settings.setBackupTime(
+      '${picked.hour.toString().padLeft(2, '0')}:'
+      '${picked.minute.toString().padLeft(2, '0')}',
+    );
+    ref.invalidate(settingsMapProvider);
   }
 
   Future<void> _runIntegrityCheck(BuildContext context, WidgetRef ref) async {
@@ -133,3 +172,43 @@ final settingsMapProvider = FutureProvider.autoDispose<Map<String, String>>((
   final rows = await db.select(db.settings).get();
   return {for (final s in rows) s.key: s.value};
 });
+
+/// Bildirim izni ve kurulu vade bildirimi sayısı (BRIEF §5).
+class _NotificationStatusTile extends ConsumerWidget {
+  const _NotificationStatusTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final report = ref.watch(startupTasksProvider);
+
+    return report.when(
+      loading: () => const ListTile(
+        leading: Icon(Icons.notifications_outlined),
+        title: Text('Vade bildirimleri'),
+        subtitle: Text('Kontrol ediliyor…'),
+      ),
+      error: (e, _) => ListTile(
+        leading: const Icon(Icons.notifications_off_outlined),
+        title: const Text('Vade bildirimleri'),
+        subtitle: Text('Kurulamadı: $e'),
+      ),
+      data: (r) => ListTile(
+        leading: Icon(
+          r.notificationsAllowed
+              ? Icons.notifications_active_outlined
+              : Icons.notifications_off_outlined,
+        ),
+        title: const Text('Vade bildirimleri'),
+        subtitle: Text(
+          r.notificationsAllowed
+              ? '${r.scheduledNotifications} bildirim kurulu · '
+                    'vadeden bir gün önce 09:00'
+              : 'Bildirim izni verilmedi. Vadeler yine de '
+                    'Raporlar → Vadeler\'den görülebilir.',
+        ),
+        trailing: const Icon(Icons.refresh),
+        onTap: () => ref.invalidate(startupTasksProvider),
+      ),
+    );
+  }
+}

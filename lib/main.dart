@@ -6,6 +6,7 @@ import 'data/documents/pdf_documents.dart';
 import 'ui/app_router.dart';
 import 'ui/format/tr_format.dart';
 import 'ui/providers/app_providers.dart';
+import 'ui/startup.dart';
 import 'ui/screens/lock/pin_lock_screen.dart';
 import 'ui/screens/setup/setup_wizard_screen.dart';
 import 'ui/theme/app_theme.dart';
@@ -69,11 +70,18 @@ class _Gate extends ConsumerWidget {
   const _Gate({required this.child});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) =>
-      switch (ref.watch(appLockProvider)) {
-        AppGate.unknown => const Scaffold(body: LoadingState()),
-        AppGate.setup => const SetupWizardScreen(),
-        AppGate.locked => const PinLockScreen(),
-        AppGate.ready => child,
-      };
+  Widget build(BuildContext context, WidgetRef ref) {
+    final gate = ref.watch(appLockProvider);
+
+    // Bildirim ve otomatik yedek işleri kilit açıldıktan sonra başlar
+    // (BRIEF §4.3). Sonucu beklenmez; ekran açılışını geciktirmemeli.
+    if (gate == AppGate.ready) ref.watch(startupTasksProvider);
+
+    return switch (gate) {
+      AppGate.unknown => const Scaffold(body: LoadingState()),
+      AppGate.setup => const SetupWizardScreen(),
+      AppGate.locked => const PinLockScreen(),
+      AppGate.ready => child,
+    };
+  }
 }

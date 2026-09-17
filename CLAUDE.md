@@ -124,7 +124,7 @@ Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
 | **Faz 4 — Analiz ve raporlar** | ✅ müşteri/ürün analizi, kârlılık, CSV |
 | **Faz 5 — Yayına alma** | ✅ kılavuzlar, imzalama, performans ölçümü |
 
-**224 test geçiyor** (223 + 1 performans), `flutter analyze` temiz.
+**274 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
 
 Faz 1'de hazır olanlar:
 
@@ -160,7 +160,20 @@ Faz 3–5'te eklenenler:
 - `docs/KURULUM.md`, `docs/KULLANIM.md`
 - `test/performance/` — 50.000 satırla ölçüm (ana sayfa 11 ms)
 
-**Kalan işler:** rapor ve analiz ekranlarının arayüzü, grafikler (fl_chart
-eklendi ama henüz kullanılmadı), vade bildirimleri (workmanager + yerel
-bildirim), otomatik yedeğin arka plan görevine bağlanması, Google Drive
-istemcisi, kurulum sihirbazı ekranları.
+Faz 5 sonrası eklenenler:
+
+- `ui/screens/setup/` — 8 adımlı kurulum sihirbazı (BRIEF §7)
+- `ui/screens/lock/` — PIN kilit ekranı, tuş takımı, "maliyeti gizle" PIN sorgusu
+- `ui/screens/reports/` — kârlılık, dönemsel satış grafiği (fl_chart), ürün
+  analizi, vade raporu; üçü de CSV olarak paylaşılabiliyor
+- `ui/screens/opening/` — açılış stoğu, cari ve kasa/banka bakiyeleri
+- `ui/screens/settings/drive_screen.dart` — cihaz dışı yedek
+- `ui/startup.dart` — kilit açıldıktan sonra bildirim kurulumu ve açılış yedeği
+- `data/notifications/notification_service.dart` — `flutter_local_notifications`
+- `data/backup/background_backup.dart` — `workmanager` saatlik görevi
+- `data/backup/backup_password_store.dart` — yedek şifresi güvenli depoda
+- `data/repo/settings_repository.dart` — PIN karması, maliyet yöntemi kilidi
+
+**Kalan işler:** teklif, kesim emri, sayım ve fire ekranlarının arayüzü (iş
+kuralları ve repository'ler hazır), Google Drive API istemcisi (SK-12 —
+kullanıcıdan OAuth istemci kimliği bekleniyor).

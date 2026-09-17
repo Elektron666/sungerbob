@@ -4,11 +4,26 @@ import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 
 /// Sayısal PIN tuş takımı (BRIEF §7 — dokunma alanı en az 48 dp).
+///
+/// **Basış biriktirme burada YAPILMAZ.** Widget yalnızca hangi tuşa
+/// basıldığını bildirir; yeni değeri çağıran taraf kendi güncel durumundan
+/// hesaplar.
+///
+/// Neden: bu widget durumsuz. Kullanıcı hızlı bastığında iki dokunuş arasında
+/// kare çizilmeyebilir ve widget hâlâ **bayat** bir `value` taşır. Yeni değer
+/// `value + digit` ile hesaplanırsa o basışlar sessizce kaybolur veya yanlış
+/// alana yazılır — PIN ekranı kilitlenir.
 class PinPad extends StatelessWidget {
+  /// Standart PIN uzunluğu.
+  static const pinLength = 4;
+
   final int length;
+
+  /// Şu ana kadar girilmiş hane sayısı kadar nokta dolu gösterilir.
   final String value;
-  final ValueChanged<String> onChanged;
-  final VoidCallback? onCompleted;
+
+  final ValueChanged<String> onDigit;
+  final VoidCallback onBackspace;
   final String? errorText;
   final String title;
   final String? subtitle;
@@ -17,46 +32,44 @@ class PinPad extends StatelessWidget {
   const PinPad({
     super.key,
     required this.value,
-    required this.onChanged,
-    this.length = 4,
-    this.onCompleted,
+    required this.onDigit,
+    required this.onBackspace,
+    this.length = pinLength,
     this.errorText,
     required this.title,
     this.subtitle,
     this.footer,
   });
 
-  void _press(String digit) {
-    if (value.length >= length) return;
-    final next = value + digit;
-    HapticFeedback.selectionClick();
-    onChanged(next);
-    if (next.length == length) onCompleted?.call();
-  }
-
-  void _backspace() {
-    if (value.isEmpty) return;
-    HapticFeedback.selectionClick();
-    onChanged(value.substring(0, value.length - 1));
-  }
-
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    // Yatay veya küçük ekranda tuş takımı ekrana sığmalı; sığmazsa 0 ve geri
+    // silme tuşu katlanır ve kullanıcı ne 0'lı PIN girebilir ne de yanlışını
+    // düzeltebilir.
+    final compact = MediaQuery.sizeOf(context).height < 640;
+    final keyHeight = compact ? 52.0 : 72.0;
+    final keyWidth = compact ? 76.0 : 88.0;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(title, style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          title,
+          style: compact
+              ? Theme.of(context).textTheme.titleMedium
+              : Theme.of(context).textTheme.titleLarge,
+          textAlign: TextAlign.center,
+        ),
         if (subtitle != null) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
             subtitle!,
             style: context.labelStyle,
             textAlign: TextAlign.center,
           ),
         ],
-        const SizedBox(height: 24),
+        SizedBox(height: compact ? 12 : 24),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -81,11 +94,11 @@ class PinPad extends StatelessWidget {
           ],
         ),
         SizedBox(
-          height: 40,
+          height: compact ? 26 : 36,
           child: errorText == null
               ? null
               : Padding(
-                  padding: const EdgeInsets.only(top: 12),
+                  padding: const EdgeInsets.only(top: 8),
                   child: Text(
                     errorText!,
                     style: TextStyle(color: scheme.error),
@@ -93,7 +106,6 @@ class PinPad extends StatelessWidget {
                   ),
                 ),
         ),
-        const SizedBox(height: 8),
         for (final row in const [
           ['1', '2', '3'],
           ['4', '5', '6'],
@@ -102,22 +114,37 @@ class PinPad extends StatelessWidget {
         ])
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [for (final key in row) _key(context, key)],
+            children: [
+              for (final key in row)
+                _key(context, key, width: keyWidth, height: keyHeight),
+            ],
           ),
-        if (footer != null) ...[const SizedBox(height: 16), footer!],
+        if (footer != null) ...[SizedBox(height: compact ? 8 : 16), footer!],
       ],
     );
   }
 
-  Widget _key(BuildContext context, String key) {
-    if (key.isEmpty) return const SizedBox(width: 88, height: 72);
+  Widget _key(
+    BuildContext context,
+    String key, {
+    required double width,
+    required double height,
+  }) {
+    if (key.isEmpty) return SizedBox(width: width, height: height);
 
     return SizedBox(
-      width: 88,
-      height: 72,
+      width: width,
+      height: height,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: key == '<' ? _backspace : () => _press(key),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          if (key == '<') {
+            onBackspace();
+          } else {
+            onDigit(key);
+          }
+        },
         child: Center(
           child: key == '<'
               ? const Icon(Icons.backspace_outlined)

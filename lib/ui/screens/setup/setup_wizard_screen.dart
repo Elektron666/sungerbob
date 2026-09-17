@@ -41,17 +41,38 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
     'Açılış işlemleri',
   ];
 
-  bool get _canContinue => switch (_step) {
-    1 =>
-      _draft.userName.trim().isNotEmpty &&
-          _draft.pin.length == 4 &&
-          _draft.pin == _draft.pinConfirm,
-    2 =>
-      BackupPasswordRules.isValid(_draft.backupPassword) &&
-          _draft.backupPassword == _draft.backupPasswordConfirm,
-    3 => _draft.companyName.trim().isNotEmpty,
-    _ => true,
-  };
+  /// Devam edilemiyorsa **nedeni**; edilebiliyorsa `null`.
+  ///
+  /// Kapalı bir düğmeyi sebepsiz göstermek kullanıcıyı çıkmaza sokar —
+  /// eksiğin ne olduğu ekranda yazar.
+  String? get _blockedReason {
+    switch (_step) {
+      case 1:
+        if (_draft.userName.trim().isEmpty) return 'Kullanıcı adı girin';
+        if (_draft.pin.length < PinPad.pinLength) return 'PIN 4 haneli olmalı';
+        if (_draft.pinConfirm.length < PinPad.pinLength) {
+          return 'PIN\'i bir kez daha girin';
+        }
+        if (_draft.pin != _draft.pinConfirm) return 'PIN\'ler aynı değil';
+      case 2:
+        final error = BackupPasswordRules.validate(_draft.backupPassword);
+        if (error != null) return error;
+        if (_draft.backupPassword != _draft.backupPasswordConfirm) {
+          return 'Yedek şifreleri aynı değil';
+        }
+      case 3:
+        if (_draft.companyName.trim().isEmpty) return 'Firma adı girin';
+    }
+    return null;
+  }
+
+  bool get _canContinue => _blockedReason == null;
+
+  /// Düğme yanında gösterilecek ipucu; tuş takımı zaten uyarıyorsa boş.
+  String? get _hintText {
+    final reason = _blockedReason;
+    return reason == _pinPadError ? null : reason;
+  }
 
   void _next() {
     if (_step == _titles.length - 1) {
@@ -155,7 +176,17 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
                       onPressed: _saving ? null : _next,
                       child: const Text('Atla'),
                     ),
-                  const Spacer(),
+                  if (_hintText case final reason?)
+                    Expanded(
+                      child: Text(
+                        reason,
+                        textAlign: TextAlign.end,
+                        style: context.labelStyle,
+                      ),
+                    )
+                  else
+                    const Spacer(),
+                  const SizedBox(width: 12),
                   FilledButton(
                     onPressed: (_canContinue && !_saving) ? _next : null,
                     child: _saving
@@ -233,6 +264,54 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
     ],
   );
 
+  /// PIN girişi iki aşamalı: önce belirle, sonra doğrula. Aşama **açıkça**
+  /// tutulur — `pin.length` gibi dolaylı bir işaretten çıkarılırsa hızlı
+  /// basışta yanlış alana yazılır.
+  bool _confirmingPin = false;
+
+  void _pressPinDigit(String digit) => setState(() {
+    if (_confirmingPin) {
+      if (_draft.pinConfirm.length < PinPad.pinLength) {
+        _draft.pinConfirm += digit;
+      }
+      return;
+    }
+    if (_draft.pin.length < PinPad.pinLength) _draft.pin += digit;
+    if (_draft.pin.length == PinPad.pinLength) _confirmingPin = true;
+  });
+
+  /// Geri silme **yalnızca son haneyi** siler. Doğrulama boşken bir adım
+  /// geri gidilir; ilk PIN'in tamamı silinmez.
+  void _pinBackspace() => setState(() {
+    if (_confirmingPin) {
+      if (_draft.pinConfirm.isEmpty) {
+        _confirmingPin = false;
+        _draft.pin = _dropLast(_draft.pin);
+      } else {
+        _draft.pinConfirm = _dropLast(_draft.pinConfirm);
+      }
+      return;
+    }
+    _draft.pin = _dropLast(_draft.pin);
+  });
+
+  void _resetPin() => setState(() {
+    _draft.pin = '';
+    _draft.pinConfirm = '';
+    _confirmingPin = false;
+  });
+
+  static String _dropLast(String value) =>
+      value.isEmpty ? value : value.substring(0, value.length - 1);
+
+  /// Tuş takımının kendi hata metni. Düğme yanındaki ipucu bunu
+  /// tekrarlamaz — aynı uyarıyı iki yerde göstermek gürültüdür.
+  String? get _pinPadError =>
+      _draft.pinConfirm.length == PinPad.pinLength &&
+          _draft.pinConfirm != _draft.pin
+      ? 'PIN\'ler aynı değil'
+      : null;
+
   Widget _pinStep() => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
@@ -245,25 +324,22 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
         textCapitalization: TextCapitalization.words,
         onChanged: (v) => setState(() => _draft.userName = v),
       ),
-      const SizedBox(height: 24),
+      const SizedBox(height: 16),
       PinPad(
-        title: _draft.pin.length < 4 ? '4 haneli PIN belirleyin' : 'PIN tekrar',
-        subtitle: _draft.pin.length < 4
-            ? 'Uygulamayı her açışınızda sorulur'
-            : 'Aynı PIN\'i bir kez daha girin',
-        value: _draft.pin.length < 4 ? _draft.pin : _draft.pinConfirm,
-        errorText:
-            _draft.pinConfirm.length == 4 && _draft.pinConfirm != _draft.pin
-            ? 'PIN\'ler aynı değil'
-            : null,
-        onChanged: (v) => setState(() {
-          if (_draft.pin.length < 4) {
-            _draft.pin = v;
-          } else {
-            _draft.pinConfirm = v;
-            if (v.isEmpty) _draft.pin = '';
-          }
-        }),
+        title: _confirmingPin ? 'PIN tekrar' : '4 haneli PIN belirleyin',
+        subtitle: _confirmingPin
+            ? 'Aynı PIN\'i bir kez daha girin'
+            : 'Uygulamayı her açışınızda sorulur',
+        value: _confirmingPin ? _draft.pinConfirm : _draft.pin,
+        errorText: _pinPadError,
+        onDigit: _pressPinDigit,
+        onBackspace: _pinBackspace,
+        footer: (_draft.pin.isEmpty && _draft.pinConfirm.isEmpty)
+            ? null
+            : TextButton(
+                onPressed: _resetPin,
+                child: const Text('PIN\'i sıfırla'),
+              ),
       ),
       SwitchListTile(
         value: _draft.biometric,

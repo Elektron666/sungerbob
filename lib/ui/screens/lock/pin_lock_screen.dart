@@ -35,6 +35,23 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
     return left.isNegative ? Duration.zero : left;
   }
 
+  void _digit(String digit) {
+    if (_pin.length >= PinPad.pinLength || _busy) return;
+    setState(() {
+      _pin += digit;
+      _error = null;
+    });
+    if (_pin.length == PinPad.pinLength) _verify();
+  }
+
+  void _backspace() {
+    if (_pin.isEmpty) return;
+    setState(() {
+      _pin = _pin.substring(0, _pin.length - 1);
+      _error = null;
+    });
+  }
+
   Future<void> _verify() async {
     if (_remainingBlock > Duration.zero) {
       setState(() {
@@ -89,11 +106,8 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
                     subtitle: 'Devam etmek için PIN girin',
                     value: _pin,
                     errorText: _error,
-                    onChanged: (v) => setState(() {
-                      _pin = v;
-                      if (v.isEmpty) _error = null;
-                    }),
-                    onCompleted: _verify,
+                    onDigit: _digit,
+                    onBackspace: _backspace,
                   ),
           ),
         ),
@@ -124,6 +138,23 @@ class _PinDialogState extends ConsumerState<_PinDialog> {
   String _pin = '';
   String? _error;
 
+  void _digit(String digit) {
+    if (_pin.length >= PinPad.pinLength) return;
+    setState(() {
+      _pin += digit;
+      _error = null;
+    });
+    if (_pin.length == PinPad.pinLength) _verify();
+  }
+
+  void _backspace() {
+    if (_pin.isEmpty) return;
+    setState(() {
+      _pin = _pin.substring(0, _pin.length - 1);
+      _error = null;
+    });
+  }
+
   Future<void> _verify() async {
     final settings = await ref.read(settingsRepositoryProvider.future);
     final ok = await settings.verifyPin(_pin);
@@ -146,11 +177,8 @@ class _PinDialogState extends ConsumerState<_PinDialog> {
         subtitle: 'Maliyetleri göstermek için PIN girin',
         value: _pin,
         errorText: _error,
-        onChanged: (v) => setState(() {
-          _pin = v;
-          if (v.isEmpty) _error = null;
-        }),
-        onCompleted: _verify,
+        onDigit: _digit,
+        onBackspace: _backspace,
       ),
     ),
     actions: [

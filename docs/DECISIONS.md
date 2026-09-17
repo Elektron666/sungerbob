@@ -291,6 +291,48 @@ hatırlatmamaktan kötüdür.
 GSON kural dosyası v19'dan itibaren paketin kendisiyle geliyor; ayrıca
 ProGuard kuralı gerekmiyor.
 
+### SK-18 · PIN tuş takımı basışları düşürüyordu — widget artık değer biriktirmiyor
+
+**Kullanıcının bildirdiği hata:** kurulum sihirbazında PIN girilebiliyor ama
+"Devam" açılmıyordu; kurulum tamamlanamıyordu.
+
+**Kök neden:** `PinPad` durumsuzdu ve yeni değeri `value + digit` ile, yani
+kendisine **dışarıdan verilen** değerden hesaplıyordu. Kullanıcı hızlı
+bastığında iki dokunuş arasında kare çizilmiyor; ikinci dokunuş bayat bir
+`value` okuyup yanlış sonucu üretiyordu. Sonuç: haneler sessizce kayboluyor
+veya doğrulama alanına yazılıyor, ekran kilitleniyordu.
+
+Testle birebir doğrulandı:
+
+| Basış hızı | Sonuç (eski sürüm) |
+|---|---|
+| Her dokunuştan sonra kare çizilerek | çalışıyor |
+| Art arda, kare beklemeden | **kilitleniyor** |
+
+İlk testim yalnızca yavaş yolu deniyordu; bu yüzden hata CI'den geçti.
+**Ders: bir tuş takımı testi gerçek kullanımı, yani art arda dokunuşu
+denemelidir.**
+
+**Düzeltme:** `PinPad` artık yalnızca **hangi tuşa basıldığını** bildiriyor
+(`onDigit` / `onBackspace`). Yeni değeri, güncel durumu elinde tutan çağıran
+taraf hesaplıyor; bayat değer aritmetiği kalmadı.
+
+**Bunun ortaya çıkardığı üç kusur daha:**
+
+1. **0 ve geri silme tuşu kısa ekranda katlanıyordu** — yatay veya küçük
+   ekranda 4. sıra ekranın altında kalıyordu. Ne 0'lı PIN girilebiliyor ne de
+   yanlış düzeltilebiliyordu. Tuş takımı artık ekran alçakken sıkışık moda
+   geçiyor; test 1058×564'te tüm tuşların ekran içinde kaldığını doğruluyor.
+2. **Geri silme ilk PIN'in tamamını siliyordu.** Artık yalnızca son haneyi
+   siler; doğrulama boşken bir adım geriye döner.
+3. **Kapalı "Devam" düğmesi sebebini söylemiyordu.** Artık eksik ne ise
+   yanında yazıyor ("Kullanıcı adı girin", "PIN'i bir kez daha girin"…).
+   Ayrıca **"PIN'i sıfırla"** düğmesi eklendi: kullanıcı hiçbir durumda
+   çıkmazda kalmamalı.
+
+PIN aşaması (belirleme / doğrulama) artık `pin.length` gibi dolaylı bir
+işaretten çıkarılmıyor, açık bir alanda tutuluyor.
+
 ## K-02 · Performans ölçümü (BRIEF §9 Faz 5)
 
 "50.000 satış satırıyla ana sayfa ve raporların makul sürede açıldığını ölç."

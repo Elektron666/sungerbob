@@ -9,6 +9,7 @@ import 'master_tables.dart';
 /// 🔒 append-only. Bakiye = SUM(amount) — ayrı bakiye kolonu YOK (D-10).
 /// İşaretli: **+ borç** (müşteri bize borçlu), **− alacak**.
 /// Cariye **brüt** (KDV dahil) tutar yazılır (BRIEF §3.4).
+@DataClassName('CustomerLedgerEntry')
 @TableIndex(name: 'idx_cl_customer', columns: {#customerId})
 @TableIndex(name: 'idx_cl_occurred', columns: {#occurredAt})
 @TableIndex(name: 'idx_cl_doc', columns: {#docType, #docId})
@@ -39,6 +40,7 @@ class CustomerLedger extends Table {
 }
 
 /// 🔒 append-only. **+ bizim borcumuz**, − azalış.
+@DataClassName('SupplierLedgerEntry')
 @TableIndex(name: 'idx_sl_supplier', columns: {#supplierId})
 @TableIndex(name: 'idx_sl_occurred', columns: {#occurredAt})
 @TableIndex(name: 'idx_sl_reversal', columns: {#reversalOfId}, unique: true)

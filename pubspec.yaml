@@ -25,6 +25,36 @@ dependencies:
   path: ^1.9.1
   meta: ^1.17.0
 
+  # --- Faz 2: güvenlik ve yedekleme ---
+  # Veritabanı anahtarı Android Keystore destekli güvenli depoda (BRIEF §2).
+  flutter_secure_storage: ^11.2.0
+  # Yedek şifrelemesi: AES-256-GCM + Argon2id/PBKDF2 (BRIEF §2, BACKUP.md §1.3)
+  cryptography: ^2.9.0
+  path_provider: ^2.1.6
+  archive: ^4.0.9
+  share_plus: ^13.3.0
+  file_picker: ^13.1.0
+  local_auth: ^3.0.2
+
+  # --- Faz 3: belgeler ve paylaşım ---
+  # Türkçe karakter desteği için gömülü font gerekiyor (BRIEF §2).
+  pdf: ^3.13.0
+  printing: ^5.15.0
+
+  # --- Faz 4: grafikler ---
+  fl_chart: ^1.2.0
+
+  # --- otomatik yedek ve vade bildirimleri (BRIEF §4.3, §5) ---
+  # Sürümler pub.dev'den doğrulandı (SK-15).
+  workmanager: ^0.10.10
+  flutter_local_notifications: ^22.3.1
+  timezone: ^0.11.1
+
+  # --- Faz 2: arayüz ---
+  flutter_riverpod: ^3.4.3
+  go_router: ^18.0.1
+  intl: ^0.20.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -34,3 +64,16 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # Türkçe karakter destekli gömülü font (BRIEF §2).
+  # PDF'in varsayılan Helvetica'sı ş, ğ, İ, ı basmıyor.
+  assets:
+    - assets/fonts/
+
+# SQLCipher ile şifreli veritabanı (BRIEF §2, DECISIONS SK-07).
+# sqlite3 3.x'te yerel kütüphane build-hook ile seçilir; sqlcipher_flutter_libs
+# artık kullanılmıyor.
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlcipher

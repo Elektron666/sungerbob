@@ -119,8 +119,12 @@ Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
 |---|---|
 | Faz 0 — Mimari | ✅ tamam |
 | **Faz 1 — Domain ve veri katmanı** | ✅ **tamam — 124 test geçiyor, analyze temiz** |
-| Faz 2 — Mobil çekirdek + yedekleme | ⏳ sırada |
-| Faz 3–5 | ⏳ |
+| **Faz 2 — Mobil çekirdek + yedekleme** | ✅ tamam |
+| **Faz 3 — Operasyon** | ✅ sayım, fire, kesim, teklif, arama, PDF |
+| **Faz 4 — Analiz ve raporlar** | ✅ müşteri/ürün analizi, kârlılık, CSV |
+| **Faz 5 — Yayına alma** | ✅ kılavuzlar, imzalama, performans ölçümü |
+
+**275 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
 
 Faz 1'de hazır olanlar:
 
@@ -131,5 +135,48 @@ Faz 1'de hazır olanlar:
 - `data/repo` — alış, satış, iade, iptal, tahsilat, ödeme, virman, evrak, açılış,
   fiyat listesi, `checkIntegrity`
 
-**Faz 2'nin ilk iki işi:** (1) SQLCipher'ı `sqlite3` 3.x build-hook'u ile devreye almak
-(SK-07), (2) GitHub Actions workflow'u (D-K2).
+Faz 2'de eklenenler:
+
+- `data/backup` — `.sbk` formatı, AES-256-GCM + Argon2id, atomik geri yükleme,
+  saklama kuralı, cihaz dışı yedek uyarısı
+- `data/db/connection.dart` + `database_key.dart` — SQLCipher 4.19.0, anahtar
+  `flutter_secure_storage`'da
+- `data/repo/dashboard_queries.dart` — SPEC §18 kartları + Sermaye Dağılımı
+- `ui/` — tema, Türkçe biçimlendirme, Riverpod, go_router, 10 ekran
+- `.github/workflows/` — CI (test + debug APK artifact) ve release (imzalı APK)
+
+**Derleme:** Android SDK yerelde yok; APK GitHub Actions'ta üretiliyor.
+Actions sekmesindeki son koşunun **`sungerbob-debug-apk`** artifact'i telefona
+kurulabilir.
+
+Faz 3–5'te eklenenler:
+
+- `data/repo/stock_ops_repository.dart` — sayım (DRAFT → onay) ve fire
+- `data/repo/cutting_repository.dart` — fason kesim, kısmi dönüş
+- `data/repo/quote_repository.dart` — teklif, satışa dönüştürme
+- `data/repo/search_queries.dart` — global arama (Türkçe normalize)
+- `data/repo/analytics_queries.dart` — müşteri/ürün analizi, kârlılık, dönemsel satış
+- `data/documents/` — PDF belgeler (gömülü Noto Sans) ve CSV dışa aktarma
+- `docs/KURULUM.md`, `docs/KULLANIM.md`
+- `test/performance/` — 50.000 satırla ölçüm (ana sayfa 11 ms)
+
+Faz 5 sonrası eklenenler:
+
+- `ui/screens/setup/` — 8 adımlı kurulum sihirbazı (BRIEF §7)
+- `ui/screens/lock/` — PIN kilit ekranı, tuş takımı, "maliyeti gizle" PIN sorgusu
+- `ui/screens/reports/` — kârlılık, dönemsel satış grafiği (fl_chart), ürün
+  analizi, vade raporu; üçü de CSV olarak paylaşılabiliyor
+- `ui/screens/opening/` — açılış stoğu, cari ve kasa/banka bakiyeleri
+- `ui/screens/ops/` — teklifler (satışa çevirme), kesim emirleri (gönder /
+  dönüş al), sayım (taslak → onay), fire
+- `ui/widgets/variant_picker.dart` — stoktaki varyantı seçtiren ortak sayfa
+- `ui/screens/settings/drive_screen.dart` — cihaz dışı yedek
+- `ui/startup.dart` — kilit açıldıktan sonra bildirim kurulumu ve açılış yedeği
+- `data/notifications/notification_service.dart` — `flutter_local_notifications`
+- `data/backup/background_backup.dart` — `workmanager` saatlik görevi
+- `data/backup/backup_password_store.dart` — yedek şifresi güvenli depoda
+- `data/repo/settings_repository.dart` — PIN karması, maliyet yöntemi kilidi
+
+**Kalan işler:** Google Drive API istemcisi (SK-12 — kullanıcıdan OAuth
+istemci kimliği bekleniyor), teklif oluşturma formu (liste ve satışa çevirme
+hazır; yeni teklif şimdilik hızlı satış ekranından geçiyor).

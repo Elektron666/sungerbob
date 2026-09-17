@@ -13,7 +13,7 @@ Durum etiketleri: **Kesin** (müşteri kararı) · **Karar** (geliştirme karar�
 > Gece otonom çalışma sırasında karar gerektiren belirsizliklerde en makul seçenek uygulandı.
 > Bu başlık altındakiler **onayına sunulur**; itiraz edersen ilgili karar tek tek geri alınabilir.
 
-### SK-01 · Android SDK bu ortamda kurulamadı (Flutter kuruldu)
+### SK-01 · Android SDK bu ortamda kurulamadı (Flutter kuruldu) — **✅ ÇÖZÜLDÜ**
 
 - **Durum:** Flutter **3.47.4** (Dart **3.13.3**) `/opt/sdk/flutter` altına kuruldu ve
   çalışıyor. `flutter doctor` çıktısı aşağıda (K-01).
@@ -24,8 +24,11 @@ Durum etiketleri: **Kesin** (müşteri kararı) · **Karar** (geliştirme karar�
   koşar, Android SDK **gerektirmez**. Faz 1 bu haliyle tamamlandı.
 - **Sonuç:** APK derlemesi ek karar #2'deki **GitHub Actions** ile yapılacak (runner'da
   Android SDK hazır gelir). Yerel APK derlemesi bu ortamda mümkün değil.
-- **Senin yapman gereken:** Bir şey yok; Faz 2'de workflow devreye girecek. Yerelde de APK
-  derlemek istersen ağ politikasına `dl.google.com` eklenmeli.
+- **Çözüm uygulandı:** `.github/workflows/ci.yml` her push'ta testleri çalıştırıyor ve
+  debug APK'yı 30 gün saklanan indirilebilir artifact olarak yüklüyor;
+  `.github/workflows/release.yml` imzalı yayın APK'sını üretiyor.
+- **Senin yapman gereken:** Bir şey yok. Yerelde de APK derlemek istersen ağ politikasına
+  `dl.google.com` eklenmeli.
 
 ### SK-02 · `purchase_orders` tablosu v1 kapsamına alınmadı
 
@@ -94,11 +97,27 @@ söyle — o durumda yalnızca varyant etiketi değişir, rakamlar yine aynı ka
 of package:sqlite3 instead"*). Yerlerini `sqlite3` 3.x aldı; SQLCipher artık paketin
 **build-hook** ayarıyla devreye giriyor.
 
-Faz 1 arayüzsüz ve testleri bellek içi veritabanında koştuğu için şifreleme gerekmiyor;
-`sqlite3` düz kullanılıyor. **SQLCipher yapılandırması Faz 2'nin ilk işi** (BRIEF §2:
-"Yerel veritabanı Drift (SQLite), SQLCipher ile şifreli"). Yedek dosyasının şifrelemesi
-zaten veritabanı anahtarından bağımsızdır (D-13), bu yüzden bu erteleme yedekleme
-tasarımını etkilemez.
+**✅ Faz 2'de çözüldü.** `pubspec.yaml`'a eklenen
+
+```yaml
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlcipher
+```
+
+ile SQLCipher **4.19.0 community** devreye girdi (SQLite 3.53.4). Doğrulaması
+`test/data/encryption_test.dart`'ta: `PRAGMA cipher_version` dolu dönüyor, dosya anahtarsız
+ve yanlış anahtarla açılamıyor, ham baytlarında `SQLite format 3` başlığı görünmüyor.
+
+Alternatif olarak `source: sqlite3mc` (SQLite3MultipleCiphers) da vardı; BRIEF §2 doğrudan
+"SQLCipher" dediği için o seçildi. sqlite3mc daha güncel bir SQLite taşıyor, ileride
+gerekirse tek satırlık bir değişiklik.
+
+Veritabanı anahtarı `flutter_secure_storage` v11 ile saklanıyor (varsayılanı zaten
+Android Keystore destekli AES-GCM + RSA OAEP; v11'de `encryptedSharedPreferences`
+parametresi kaldırılmış). Yedek dosyasının şifrelemesi bu anahtardan **bağımsızdır**
+(D-13), bu yüzden telefon kaybolsa bile yedek açılabilir.
 
 ### SK-08 · Faz 1'de doğrulanan paket sürümleri
 
@@ -128,6 +147,179 @@ Kullanılmayan bağımlılık eklemek yerine sırası gelince sürümü yeniden 
    (10000 → 1,0); formülde fazladan `×100` vardı. Fiyat listesi testi yakaladı.
 
 Her ikisi de kural gereği **önce yazılan testler** sayesinde koda değil teste düştü.
+
+### SK-10 · Excel yerine CSV — paket çakışması
+
+SPEC §25 "Excel ve PDF dışa aktarımı desteklensin" diyor. `excel` paketi
+eklenemedi çünkü iki ayrı çakışma var:
+
+```
+excel 4.0.6  →  archive ^3.6.1   ama yedekleme archive ^4.x kullanıyor
+excel 4.0.6  →  xml >=5.0.0 <7   ama pdf ^3.13.0 xml ^7.0.1 istiyor
+```
+
+`pdf` BRIEF §5'te açıkça isteniyor (teklif, sevk fişi, cari ekstre, kesim emri)
+ve önceliklidir. Bu yüzden **Excel yerine CSV** seçildi:
+
+- Excel `.csv` dosyalarını doğrudan açar — muhasebeciye göndermek için yeterli.
+- Türkçe Excel ayraç olarak **noktalı virgül** bekler (virgül ondalık ayırıcı
+  olduğu için alan ayracı olamaz); `CsvExport.separator` bu yüzden `;`.
+- Dosya **UTF-8 BOM** ile başlar, yoksa Excel Türkçe karakterleri bozuk gösterir.
+
+`archive` ayrıca `^4.0.9`'a sabitlendi (`pdf` `<4.1.0` istiyor). Yedekleme
+testlerinin tamamı bu sürümle de geçiyor.
+
+**Senin yapman gereken:** Gerçek `.xlsx` şartsa söyle; `syncfusion_flutter_xlsio`
+gibi bağımsız bir paketle eklenebilir, ama lisans koşullarına bakmak gerekir.
+
+### SK-11 · PDF için gömülü Noto Sans
+
+BRIEF §2 "Türkçe karakter destekli gömülü font: Inter veya Noto Sans" diyor —
+bu bir tercih değil, zorunluluk: `pdf` paketinin varsayılan Helvetica'sı
+**ş, ğ, İ, ı karakterlerini basmıyor** (test çalıştırırken
+`Unable to find a font to draw "ş"` uyarısı veriyordu).
+
+`assets/fonts/` altına **Noto Sans Regular ve Bold** (toplam ~1,1 MB) gömüldü ve
+`main()` içinde yükleniyor. Test de fontun yüklü olduğunu doğruluyor.
+
+### SK-12 · Google Drive API entegrasyonu ertelendi — cihaz dışı yedek paylaşımla
+
+BRIEF §7 kurulum sihirbazında "Google Drive bağlama (atlanabilir)" diyor.
+Doğrudan Drive API kullanmak için uygulamanın **yayın imzasına bağlı** bir
+OAuth istemci kimliği gerekir: Google Cloud Console'da proje açılır ve release
+keystore'un SHA-1 parmak izi kaydedilir.
+
+**Sorun:** imzalama anahtarı yalnızca GitHub Secrets'ta duruyor (D-K2, kullanıcı
+kararı). Parmak izi bu ortamda okunamaz, dolayısıyla çalışan bir istemci kimliği
+üretilemez. Kimliği olmayan bir Drive kodu derlenir ama cihazda **her zaman
+oturum açma hatası verir** — çalışmayan bir düğme, olmayan düğmeden kötüdür.
+
+**Seçilen:** cihaz dışı yedek şimdilik **sistem paylaşım menüsüyle** yapılıyor
+(`/settings/drive`). Kullanıcı Drive, e-posta veya bilgisayara aktarımı seçebilir;
+üçü de `backup_log`'a `destination = SHARE` olarak yazılır ve ana sayfadaki
+"cihaz dışı yedek yok" uyarısını kapatır. Sihirbazdaki Drive adımı bu ekrana
+götürüyor ve atlanabilir.
+
+**Kullanıcıdan gereken:** Drive'a otomatik yükleme isteniyorsa, release
+keystore'un SHA-1 parmak izi ve ondan üretilen OAuth istemci kimliği. Geldiğinde
+`googleapis` + `google_sign_in` eklenip `recordOffsiteCopy` aynı yerden
+`destination = DRIVE` ile çağrılır — arayüz ve kayıt tarafı hazır.
+
+### SK-13 · Yedek şifresi güvenli depoda saklanıyor
+
+Otomatik yedek (BRIEF §4.3) kullanıcı ekranda değilken çalışır; şifreyi o anda
+soramaz. Şifre `flutter_secure_storage`'a (Android Keystore destekli) yazılıyor,
+veritabanına **yazılmıyor**.
+
+Bu, yedeğin cihaz bağımsızlığını bozmaz (D-13): `.sbk` dosyası hâlâ yalnızca
+yedek şifresiyle açılır, cihaz anahtarıyla değil. Güvenli depodaki kopya
+telefonla birlikte kaybolur — yedekler yine okunabilir, yeter ki kullanıcı
+şifreyi not etmiş olsun. Sihirbaz bunu kırmızı bir kartla açıkça uyarıyor.
+
+**Alternatif:** her otomatik yedekte bildirimle şifre sormak. Reddedildi —
+kullanıcı bildirimi kaçırırsa yedek alınmaz, yani en kritik özellik en kırılgan
+hâle gelir.
+
+### SK-14 · Cihaz dışı kopya yeni yedek üretmiyor
+
+Faz 2'de paylaşım akışı, `destination = SHARE` kaydı düşmek için **ikinci bir
+yedek** alıyordu: aynı veri tekrar şifrelenip ikinci bir `.sbk` dosyası
+yazılıyor, saklama kuralı boş yere tüketiliyordu.
+
+`BackupService.recordOffsiteCopy()` eklendi: var olan dosyanın kopyalandığını
+`backup_log`'a yazar, yeni dosya üretmez. Dosya bulunamazsa `FAIL` kaydı düşer
+ve uyarı **kapanmaz** — olmayan bir yedeği var saymak, uyarıyı hiç göstermemekten
+tehlikelidir. İki test bunu doğruluyor.
+
+### SK-15 · Arka plan yedeği saatlik koşuyor, saati politika belirliyor
+
+Android'de `workmanager` **tam zamanlı periyodik görev garanti etmez**: en az
+15 dakikalık aralık şart ve sistem, pil ve Doze durumuna göre görevi erteler.
+"Her gün 20:00'de bir kez çalıştır" diye kaydedilen bir görev, telefon o sırada
+derin uykudaysa günü atlayabilir.
+
+**Seçilen:** görev **saatlik** koşuyor; yedek alınıp alınmayacağına
+`AutoBackupPolicy.isScheduledTime()` karar veriyor. Saat 20:00 geçmiş ve o gün
+yedek alınmamışsa, görev 23:00'te koşsa bile yedek alınır. Kaçırılan gün yok.
+
+Görev gövdesi (`runBackgroundBackup`) hata durumunda bile `true` döner: `false`
+dönmek Android'e yeniden deneme yaptırır, bu da bozuk bir durumda yedek
+fırtınasına yol açar. Bir sonraki saatlik koşu zaten tekrar dener.
+
+Arka plan isolate'inde Riverpod grafiği yoktur; görev veritabanını, yedek
+servisini ve bildirimleri kendisi kurar. Veritabanı anahtarı ve yedek şifresi
+güvenli depodan okunur (SK-13) — bu, yedek şifresini orada saklamanın asıl
+gerekçesidir.
+
+**Paket sürümleri** (pub.dev'den doğrulandı): `workmanager` 0.10.10,
+`flutter_local_notifications` 22.3.1, `timezone` 0.11.1. Bildirim paketi
+22.x'te `initialize` ve `zonedSchedule` **adlandırılmış parametreye** geçti;
+eski örneklerdeki konumsal çağrı derlenmiyor.
+
+### SK-16 · Bildirim kimliği UUID'den türetiliyor
+
+Android bildirim kimliği **işaretli 32 bit tamsayı**; UUID v7 doğrudan
+kullanılamaz. FNV-1a 32 bit özet alınıp üst bit düşürülüyor
+(`NotificationService.notificationIdFor`).
+
+Aynı evrak her zaman aynı kimliği alır: vadesi değişen bir bildirim ikinci kez
+kurulmaz, üzerine yazılır. 2.000 gerçekçi UUID ile çakışma olmadığı test
+ediliyor.
+
+Bildirimler her tazelemede **tamamen silinip yeniden kuruluyor** (`cancelAll` +
+`reschedule`). Tek tek güncellemek, tahsil edilmiş bir çekin bildiriminin
+cihazda kalmasına yol açardı — kullanıcıya olmayan bir borcu hatırlatmak,
+hatırlatmamaktan kötüdür.
+
+### SK-17 · Bildirim paketi Android tarafında iki şey daha istiyor
+
+`flutter_local_notifications` 22.x eklendiğinde Dart tarafı derleniyor ama
+**APK derlemesi kırılıyor**; ikisi de paketin kendi dokümanında yazılı:
+
+1. **Core library desugaring zorunlu.** Paket, zamanlanmış bildirimlerin eski
+   Android sürümlerinde de çalışması için `java.time` API'lerine dayanıyor.
+   `android/app/build.gradle.kts`'e `isCoreLibraryDesugaringEnabled = true` ve
+   `coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")` eklendi.
+   Sürüm ezberden değil, paketin kendi `android/build.gradle` dosyasından
+   alındı.
+
+2. **Bildirim simgesi R8'den korunmalı.** `isShrinkResources = true` açık ve
+   simge çalışma anında **adıyla** çözülüyor (`@mipmap/ic_launcher`). R8 onu
+   kullanılmıyor sanıp atarsa bildirim **sessizce hiç görünmez** — kullanıcının
+   fark edemeyeceği bir hata. `res/raw/keep.xml` eklendi.
+
+GSON kural dosyası v19'dan itibaren paketin kendisiyle geliyor; ayrıca
+ProGuard kuralı gerekmiyor.
+
+## K-02 · Performans ölçümü (BRIEF §9 Faz 5)
+
+"50.000 satış satırıyla ana sayfa ve raporların makul sürede açıldığını ölç."
+
+**Kurgu:** 5.000 satış × 10 satır = **50.000 `sale_items` satırı**, 5.000
+`customer_ledger` hareketi, 12 aya yayılmış. Ölçüm `test/performance/` altında
+otomatik koşuyor ve her sonuç 2 saniye eşiğiyle sınanıyor.
+
+| İşlem | Süre |
+|---|---|
+| Ana sayfa (12 kart) | **11 ms** |
+| Cari bakiye | **0 ms** |
+| Müşteri analizi (SPEC §19) | **49 ms** |
+| Ürün analizi (SPEC §20) | **76 ms** |
+| Kârlılık raporu (yıllık) | **6 ms** |
+| Aylık satış raporu | **5 ms** |
+| Global arama | **6 ms** |
+| Stok sorgusu | **1 ms** |
+
+Hiçbiri 100 ms'yi geçmiyor; eşiğin (2.000 ms) çok altında.
+
+**Neden bu kadar hızlı:** bakiyeler ve toplamlar `SUM()` ile **tamsayı**
+kolonlardan okunuyor (D-02, D-10). Ondalık dönüşümü ya da satır satır Dart
+hesabı yok. Sık sorgulanan kolonlarda indeks var (ERD §4, §7).
+
+**Not:** Ölçüm masaüstü Linux'ta, bellek destekli dosya üzerinde yapıldı.
+Telefonda (yavaş flash, düşük CPU) süreler birkaç kat artabilir; yine de
+eşiğin çok altında kalması bekleniyor. Gerçek cihazda tekrar ölçülmesi
+Faz 5'in kapanış işidir.
 
 ---
 

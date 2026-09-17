@@ -22989,7 +22989,7 @@ class SaleReturnItemsCompanion extends UpdateCompanion<SaleReturnItem> {
 }
 
 class $CustomerLedgerTable extends CustomerLedger
-    with TableInfo<$CustomerLedgerTable, CustomerLedgerData> {
+    with TableInfo<$CustomerLedgerTable, CustomerLedgerEntry> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -23167,7 +23167,7 @@ class $CustomerLedgerTable extends CustomerLedger
   static const String $name = 'customer_ledger';
   @override
   VerificationContext validateIntegrity(
-    Insertable<CustomerLedgerData> instance, {
+    Insertable<CustomerLedgerEntry> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -23269,9 +23269,9 @@ class $CustomerLedgerTable extends CustomerLedger
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  CustomerLedgerData map(Map<String, dynamic> data, {String? tablePrefix}) {
+  CustomerLedgerEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return CustomerLedgerData(
+    return CustomerLedgerEntry(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
@@ -23341,8 +23341,8 @@ class $CustomerLedgerTable extends CustomerLedger
   static TypeConverter<Money, int> $converteramount = const MoneyConverter();
 }
 
-class CustomerLedgerData extends DataClass
-    implements Insertable<CustomerLedgerData> {
+class CustomerLedgerEntry extends DataClass
+    implements Insertable<CustomerLedgerEntry> {
   final String id;
   final String customerId;
   final int occurredAt;
@@ -23357,7 +23357,7 @@ class CustomerLedgerData extends DataClass
   final int createdAt;
   final String? createdBy;
   final String? deviceId;
-  const CustomerLedgerData({
+  const CustomerLedgerEntry({
     required this.id,
     required this.customerId,
     required this.occurredAt,
@@ -23448,12 +23448,12 @@ class CustomerLedgerData extends DataClass
     );
   }
 
-  factory CustomerLedgerData.fromJson(
+  factory CustomerLedgerEntry.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return CustomerLedgerData(
+    return CustomerLedgerEntry(
       id: serializer.fromJson<String>(json['id']),
       customerId: serializer.fromJson<String>(json['customerId']),
       occurredAt: serializer.fromJson<int>(json['occurredAt']),
@@ -23491,7 +23491,7 @@ class CustomerLedgerData extends DataClass
     };
   }
 
-  CustomerLedgerData copyWith({
+  CustomerLedgerEntry copyWith({
     String? id,
     String? customerId,
     int? occurredAt,
@@ -23506,7 +23506,7 @@ class CustomerLedgerData extends DataClass
     int? createdAt,
     Value<String?> createdBy = const Value.absent(),
     Value<String?> deviceId = const Value.absent(),
-  }) => CustomerLedgerData(
+  }) => CustomerLedgerEntry(
     id: id ?? this.id,
     customerId: customerId ?? this.customerId,
     occurredAt: occurredAt ?? this.occurredAt,
@@ -23522,8 +23522,8 @@ class CustomerLedgerData extends DataClass
     createdBy: createdBy.present ? createdBy.value : this.createdBy,
     deviceId: deviceId.present ? deviceId.value : this.deviceId,
   );
-  CustomerLedgerData copyWithCompanion(CustomerLedgerCompanion data) {
-    return CustomerLedgerData(
+  CustomerLedgerEntry copyWithCompanion(CustomerLedgerCompanion data) {
+    return CustomerLedgerEntry(
       id: data.id.present ? data.id.value : this.id,
       customerId: data.customerId.present
           ? data.customerId.value
@@ -23551,7 +23551,7 @@ class CustomerLedgerData extends DataClass
 
   @override
   String toString() {
-    return (StringBuffer('CustomerLedgerData(')
+    return (StringBuffer('CustomerLedgerEntry(')
           ..write('id: $id, ')
           ..write('customerId: $customerId, ')
           ..write('occurredAt: $occurredAt, ')
@@ -23590,7 +23590,7 @@ class CustomerLedgerData extends DataClass
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is CustomerLedgerData &&
+      (other is CustomerLedgerEntry &&
           other.id == this.id &&
           other.customerId == this.customerId &&
           other.occurredAt == this.occurredAt &&
@@ -23607,7 +23607,7 @@ class CustomerLedgerData extends DataClass
           other.deviceId == this.deviceId);
 }
 
-class CustomerLedgerCompanion extends UpdateCompanion<CustomerLedgerData> {
+class CustomerLedgerCompanion extends UpdateCompanion<CustomerLedgerEntry> {
   final Value<String> id;
   final Value<String> customerId;
   final Value<int> occurredAt;
@@ -23662,7 +23662,7 @@ class CustomerLedgerCompanion extends UpdateCompanion<CustomerLedgerData> {
        docType = Value(docType),
        amount = Value(amount),
        createdAt = Value(createdAt);
-  static Insertable<CustomerLedgerData> custom({
+  static Insertable<CustomerLedgerEntry> custom({
     Expression<String>? id,
     Expression<String>? customerId,
     Expression<int>? occurredAt,
@@ -23811,7 +23811,7 @@ class CustomerLedgerCompanion extends UpdateCompanion<CustomerLedgerData> {
 }
 
 class $SupplierLedgerTable extends SupplierLedger
-    with TableInfo<$SupplierLedgerTable, SupplierLedgerData> {
+    with TableInfo<$SupplierLedgerTable, SupplierLedgerEntry> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -23965,7 +23965,7 @@ class $SupplierLedgerTable extends SupplierLedger
   static const String $name = 'supplier_ledger';
   @override
   VerificationContext validateIntegrity(
-    Insertable<SupplierLedgerData> instance, {
+    Insertable<SupplierLedgerEntry> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -24055,9 +24055,9 @@ class $SupplierLedgerTable extends SupplierLedger
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  SupplierLedgerData map(Map<String, dynamic> data, {String? tablePrefix}) {
+  SupplierLedgerEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return SupplierLedgerData(
+    return SupplierLedgerEntry(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
@@ -24119,8 +24119,8 @@ class $SupplierLedgerTable extends SupplierLedger
   static TypeConverter<Money, int> $converteramount = const MoneyConverter();
 }
 
-class SupplierLedgerData extends DataClass
-    implements Insertable<SupplierLedgerData> {
+class SupplierLedgerEntry extends DataClass
+    implements Insertable<SupplierLedgerEntry> {
   final String id;
   final String supplierId;
   final int occurredAt;
@@ -24133,7 +24133,7 @@ class SupplierLedgerData extends DataClass
   final String? reversalOfId;
   final String? commandId;
   final int createdAt;
-  const SupplierLedgerData({
+  const SupplierLedgerEntry({
     required this.id,
     required this.supplierId,
     required this.occurredAt,
@@ -24210,12 +24210,12 @@ class SupplierLedgerData extends DataClass
     );
   }
 
-  factory SupplierLedgerData.fromJson(
+  factory SupplierLedgerEntry.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return SupplierLedgerData(
+    return SupplierLedgerEntry(
       id: serializer.fromJson<String>(json['id']),
       supplierId: serializer.fromJson<String>(json['supplierId']),
       occurredAt: serializer.fromJson<int>(json['occurredAt']),
@@ -24249,7 +24249,7 @@ class SupplierLedgerData extends DataClass
     };
   }
 
-  SupplierLedgerData copyWith({
+  SupplierLedgerEntry copyWith({
     String? id,
     String? supplierId,
     int? occurredAt,
@@ -24262,7 +24262,7 @@ class SupplierLedgerData extends DataClass
     Value<String?> reversalOfId = const Value.absent(),
     Value<String?> commandId = const Value.absent(),
     int? createdAt,
-  }) => SupplierLedgerData(
+  }) => SupplierLedgerEntry(
     id: id ?? this.id,
     supplierId: supplierId ?? this.supplierId,
     occurredAt: occurredAt ?? this.occurredAt,
@@ -24276,8 +24276,8 @@ class SupplierLedgerData extends DataClass
     commandId: commandId.present ? commandId.value : this.commandId,
     createdAt: createdAt ?? this.createdAt,
   );
-  SupplierLedgerData copyWithCompanion(SupplierLedgerCompanion data) {
-    return SupplierLedgerData(
+  SupplierLedgerEntry copyWithCompanion(SupplierLedgerCompanion data) {
+    return SupplierLedgerEntry(
       id: data.id.present ? data.id.value : this.id,
       supplierId: data.supplierId.present
           ? data.supplierId.value
@@ -24303,7 +24303,7 @@ class SupplierLedgerData extends DataClass
 
   @override
   String toString() {
-    return (StringBuffer('SupplierLedgerData(')
+    return (StringBuffer('SupplierLedgerEntry(')
           ..write('id: $id, ')
           ..write('supplierId: $supplierId, ')
           ..write('occurredAt: $occurredAt, ')
@@ -24338,7 +24338,7 @@ class SupplierLedgerData extends DataClass
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is SupplierLedgerData &&
+      (other is SupplierLedgerEntry &&
           other.id == this.id &&
           other.supplierId == this.supplierId &&
           other.occurredAt == this.occurredAt &&
@@ -24353,7 +24353,7 @@ class SupplierLedgerData extends DataClass
           other.createdAt == this.createdAt);
 }
 
-class SupplierLedgerCompanion extends UpdateCompanion<SupplierLedgerData> {
+class SupplierLedgerCompanion extends UpdateCompanion<SupplierLedgerEntry> {
   final Value<String> id;
   final Value<String> supplierId;
   final Value<int> occurredAt;
@@ -24402,7 +24402,7 @@ class SupplierLedgerCompanion extends UpdateCompanion<SupplierLedgerData> {
        docType = Value(docType),
        amount = Value(amount),
        createdAt = Value(createdAt);
-  static Insertable<SupplierLedgerData> custom({
+  static Insertable<SupplierLedgerEntry> custom({
     Expression<String>? id,
     Expression<String>? supplierId,
     Expression<int>? occurredAt,
@@ -42956,7 +42956,7 @@ final class $$CustomersTableReferences
     );
   }
 
-  static MultiTypedResultKey<$CustomerLedgerTable, List<CustomerLedgerData>>
+  static MultiTypedResultKey<$CustomerLedgerTable, List<CustomerLedgerEntry>>
   _customerLedgerRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.customerLedger,
     aliasName: 'customers__id__customer_ledger__customer_id',
@@ -43918,7 +43918,7 @@ class $$CustomersTableTableManager
                         await $_getPrefetchedData<
                           Customer,
                           $CustomersTable,
-                          CustomerLedgerData
+                          CustomerLedgerEntry
                         >(
                           currentTable: table,
                           referencedTable: $$CustomersTableReferences
@@ -44144,7 +44144,7 @@ final class $$SuppliersTableReferences
     );
   }
 
-  static MultiTypedResultKey<$SupplierLedgerTable, List<SupplierLedgerData>>
+  static MultiTypedResultKey<$SupplierLedgerTable, List<SupplierLedgerEntry>>
   _supplierLedgerRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.supplierLedger,
     aliasName: 'suppliers__id__supplier_ledger__supplier_id',
@@ -45046,7 +45046,7 @@ class $$SuppliersTableTableManager
                         await $_getPrefetchedData<
                           Supplier,
                           $SuppliersTable,
-                          SupplierLedgerData
+                          SupplierLedgerEntry
                         >(
                           currentTable: table,
                           referencedTable: $$SuppliersTableReferences
@@ -59206,7 +59206,7 @@ final class $$CustomerLedgerTableReferences
         BaseReferences<
           _$AppDatabase,
           $CustomerLedgerTable,
-          CustomerLedgerData
+          CustomerLedgerEntry
         > {
   $$CustomerLedgerTableReferences(
     super.$_db,
@@ -59512,14 +59512,14 @@ class $$CustomerLedgerTableTableManager
         RootTableManager<
           _$AppDatabase,
           $CustomerLedgerTable,
-          CustomerLedgerData,
+          CustomerLedgerEntry,
           $$CustomerLedgerTableFilterComposer,
           $$CustomerLedgerTableOrderingComposer,
           $$CustomerLedgerTableAnnotationComposer,
           $$CustomerLedgerTableCreateCompanionBuilder,
           $$CustomerLedgerTableUpdateCompanionBuilder,
-          (CustomerLedgerData, $$CustomerLedgerTableReferences),
-          CustomerLedgerData,
+          (CustomerLedgerEntry, $$CustomerLedgerTableReferences),
+          CustomerLedgerEntry,
           PrefetchHooks Function({bool customerId})
         > {
   $$CustomerLedgerTableTableManager(
@@ -59606,7 +59606,7 @@ class $$CustomerLedgerTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable<$CustomerLedgerTable, CustomerLedgerData>(table),
+                  e.readTable<$CustomerLedgerTable, CustomerLedgerEntry>(table),
                   $$CustomerLedgerTableReferences(db, table, e),
                 ),
               )
@@ -59658,14 +59658,14 @@ typedef $$CustomerLedgerTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
       $CustomerLedgerTable,
-      CustomerLedgerData,
+      CustomerLedgerEntry,
       $$CustomerLedgerTableFilterComposer,
       $$CustomerLedgerTableOrderingComposer,
       $$CustomerLedgerTableAnnotationComposer,
       $$CustomerLedgerTableCreateCompanionBuilder,
       $$CustomerLedgerTableUpdateCompanionBuilder,
-      (CustomerLedgerData, $$CustomerLedgerTableReferences),
-      CustomerLedgerData,
+      (CustomerLedgerEntry, $$CustomerLedgerTableReferences),
+      CustomerLedgerEntry,
       PrefetchHooks Function({bool customerId})
     >;
 typedef $$SupplierLedgerTableCreateCompanionBuilder =
@@ -59706,7 +59706,7 @@ final class $$SupplierLedgerTableReferences
         BaseReferences<
           _$AppDatabase,
           $SupplierLedgerTable,
-          SupplierLedgerData
+          SupplierLedgerEntry
         > {
   $$SupplierLedgerTableReferences(
     super.$_db,
@@ -59986,14 +59986,14 @@ class $$SupplierLedgerTableTableManager
         RootTableManager<
           _$AppDatabase,
           $SupplierLedgerTable,
-          SupplierLedgerData,
+          SupplierLedgerEntry,
           $$SupplierLedgerTableFilterComposer,
           $$SupplierLedgerTableOrderingComposer,
           $$SupplierLedgerTableAnnotationComposer,
           $$SupplierLedgerTableCreateCompanionBuilder,
           $$SupplierLedgerTableUpdateCompanionBuilder,
-          (SupplierLedgerData, $$SupplierLedgerTableReferences),
-          SupplierLedgerData,
+          (SupplierLedgerEntry, $$SupplierLedgerTableReferences),
+          SupplierLedgerEntry,
           PrefetchHooks Function({bool supplierId})
         > {
   $$SupplierLedgerTableTableManager(
@@ -60072,7 +60072,7 @@ class $$SupplierLedgerTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable<$SupplierLedgerTable, SupplierLedgerData>(table),
+                  e.readTable<$SupplierLedgerTable, SupplierLedgerEntry>(table),
                   $$SupplierLedgerTableReferences(db, table, e),
                 ),
               )
@@ -60124,14 +60124,14 @@ typedef $$SupplierLedgerTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
       $SupplierLedgerTable,
-      SupplierLedgerData,
+      SupplierLedgerEntry,
       $$SupplierLedgerTableFilterComposer,
       $$SupplierLedgerTableOrderingComposer,
       $$SupplierLedgerTableAnnotationComposer,
       $$SupplierLedgerTableCreateCompanionBuilder,
       $$SupplierLedgerTableUpdateCompanionBuilder,
-      (SupplierLedgerData, $$SupplierLedgerTableReferences),
-      SupplierLedgerData,
+      (SupplierLedgerEntry, $$SupplierLedgerTableReferences),
+      SupplierLedgerEntry,
       PrefetchHooks Function({bool supplierId})
     >;
 typedef $$CollectionsTableCreateCompanionBuilder =

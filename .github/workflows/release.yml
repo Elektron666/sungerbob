@@ -1,0 +1,77 @@
+name: Release APK
+
+# İmzalı yayın APK'sı. Elle tetiklenir veya sürüm etiketiyle çalışır.
+#
+# İMZALAMA ANAHTARI YALNIZCA GITHUB SECRETS'TA DURUR, ASLA REPOYA GİRMEZ.
+# Gerekli secret'lar (Settings → Secrets and variables → Actions):
+#   ANDROID_KEYSTORE_BASE64  — keystore dosyasının base64 hali
+#   ANDROID_KEYSTORE_PASSWORD
+#   ANDROID_KEY_ALIAS
+#   ANDROID_KEY_PASSWORD
+# Oluşturma adımları: docs/KURULUM.md
+#
+# UYARI: anahtar kaybolursa uygulama BİR DAHA güncellenemez. En az iki güvenli
+# yere yedekleyin.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: '3.47.4'
+
+jobs:
+  release-apk:
+    name: İmzalı release APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: dart run build_runner build --delete-conflicting-outputs
+      - run: flutter analyze
+      - run: flutter test
+
+      - name: İmzalama anahtarını hazırla
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 secret'ı tanımlı değil. docs/KURULUM.md'ye bakın."
+            exit 1
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > android/app/upload-keystore.jks
+          cat > android/key.properties <<EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=upload-keystore.jks
+          EOF
+
+      - name: Release APK derle
+        run: flutter build apk --release
+
+      - name: Anahtarı temizle
+        if: always()
+        run: rm -f android/app/upload-keystore.jks android/key.properties
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sungerbob-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 90

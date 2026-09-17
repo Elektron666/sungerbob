@@ -148,6 +148,40 @@ Kullanılmayan bağımlılık eklemek yerine sırası gelince sürümü yeniden 
 
 Her ikisi de kural gereği **önce yazılan testler** sayesinde koda değil teste düştü.
 
+### SK-10 · Excel yerine CSV — paket çakışması
+
+SPEC §25 "Excel ve PDF dışa aktarımı desteklensin" diyor. `excel` paketi
+eklenemedi çünkü iki ayrı çakışma var:
+
+```
+excel 4.0.6  →  archive ^3.6.1   ama yedekleme archive ^4.x kullanıyor
+excel 4.0.6  →  xml >=5.0.0 <7   ama pdf ^3.13.0 xml ^7.0.1 istiyor
+```
+
+`pdf` BRIEF §5'te açıkça isteniyor (teklif, sevk fişi, cari ekstre, kesim emri)
+ve önceliklidir. Bu yüzden **Excel yerine CSV** seçildi:
+
+- Excel `.csv` dosyalarını doğrudan açar — muhasebeciye göndermek için yeterli.
+- Türkçe Excel ayraç olarak **noktalı virgül** bekler (virgül ondalık ayırıcı
+  olduğu için alan ayracı olamaz); `CsvExport.separator` bu yüzden `;`.
+- Dosya **UTF-8 BOM** ile başlar, yoksa Excel Türkçe karakterleri bozuk gösterir.
+
+`archive` ayrıca `^4.0.9`'a sabitlendi (`pdf` `<4.1.0` istiyor). Yedekleme
+testlerinin tamamı bu sürümle de geçiyor.
+
+**Senin yapman gereken:** Gerçek `.xlsx` şartsa söyle; `syncfusion_flutter_xlsio`
+gibi bağımsız bir paketle eklenebilir, ama lisans koşullarına bakmak gerekir.
+
+### SK-11 · PDF için gömülü Noto Sans
+
+BRIEF §2 "Türkçe karakter destekli gömülü font: Inter veya Noto Sans" diyor —
+bu bir tercih değil, zorunluluk: `pdf` paketinin varsayılan Helvetica'sı
+**ş, ğ, İ, ı karakterlerini basmıyor** (test çalıştırırken
+`Unable to find a font to draw "ş"` uyarısı veriyordu).
+
+`assets/fonts/` altına **Noto Sans Regular ve Bold** (toplam ~1,1 MB) gömüldü ve
+`main()` içinde yükleniyor. Test de fontun yüklü olduğunu doğruluyor.
+
 ---
 
 ## K-01 · Ortam kaydı

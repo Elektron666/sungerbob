@@ -41,85 +41,127 @@ class PinPad extends StatelessWidget {
     this.footer,
   });
 
+  /// Başlık, alt yazı, noktalar ve hata satırının kapladığı sabit yükseklik.
+  double _fixedHeight(bool compact) =>
+      (compact ? 22 : 28) + // başlık
+      (subtitle == null || compact ? 0 : 20) +
+      (compact ? 12 : 24) + // boşluk
+      16 + // noktalar
+      (compact ? 26 : 36) + // hata satırı
+      (footer == null ? 0 : (compact ? 52 : 60));
+
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    // Yatay veya küçük ekranda tuş takımı ekrana sığmalı; sığmazsa 0 ve geri
-    // silme tuşu katlanır ve kullanıcı ne 0'lı PIN girebilir ne de yanlışını
-    // düzeltebilir.
-    final compact = MediaQuery.sizeOf(context).height < 640;
-    final keyHeight = compact ? 52.0 : 72.0;
-    final keyWidth = compact ? 76.0 : 88.0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Tuş takımı **her zaman** tam görünmeli. Ekranın altında kalan bir
+        // sıra yüzünden kullanıcı 0'lı PIN giremez, yanlışını düzeltemez ve
+        // kurulumu bitiremez — bu hata bir kez yaşandı.
+        //
+        // Yükseklik biliniyorsa tuşlar ona göre küçülür; bilinmiyorsa
+        // (kaydırılabilir bir kutu içindeyse) ekran boyuna bakılır.
+        final screenHeight = MediaQuery.sizeOf(context).height;
+        final available = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : screenHeight * 0.62;
 
-    return Column(
+        final compact = available < 420 || screenHeight < 700;
+        final keyHeight = ((available - _fixedHeight(compact)) / 4).clamp(
+          // BRIEF §7: dokunma alanı en az 48 dp. Bunun altına inilmez;
+          // sığmıyorsa kaydırılır.
+          48.0,
+          72.0,
+        );
+        final keyWidth = compact ? 76.0 : 88.0;
+
+        final content = Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              title,
+              style: compact
+                  ? Theme.of(context).textTheme.titleMedium
+                  : Theme.of(context).textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+            // Dar ekranda alt yazı tuş takımının alanını yer; başlık zaten
+            // hangi aşamada olunduğunu söylüyor.
+            if (subtitle != null && !compact) ...[
+              const SizedBox(height: 4),
+              Text(
+                subtitle!,
+                style: context.labelStyle,
+                textAlign: TextAlign.center,
+              ),
+            ],
+            SizedBox(height: compact ? 12 : 24),
+            _dots(context),
+            SizedBox(
+              height: compact ? 26 : 36,
+              child: errorText == null
+                  ? null
+                  : Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        errorText!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+            ),
+            for (final row in const [
+              ['1', '2', '3'],
+              ['4', '5', '6'],
+              ['7', '8', '9'],
+              ['', '0', '<'],
+            ])
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  for (final key in row)
+                    _key(context, key, width: keyWidth, height: keyHeight),
+                ],
+              ),
+            if (footer != null) ...[
+              SizedBox(height: compact ? 4 : 12),
+              footer!,
+            ],
+          ],
+        );
+
+        // En küçük ekranda bile tuşlar 48 dp'nin altına inmez; sığmazsa
+        // kaydırılır ki hiçbir tuş erişilemez kalmasın.
+        return constraints.maxHeight.isFinite
+            ? SingleChildScrollView(child: content)
+            : content;
+      },
+    );
+  }
+
+  Widget _dots(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
-          title,
-          style: compact
-              ? Theme.of(context).textTheme.titleMedium
-              : Theme.of(context).textTheme.titleLarge,
-          textAlign: TextAlign.center,
-        ),
-        if (subtitle != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            subtitle!,
-            style: context.labelStyle,
-            textAlign: TextAlign.center,
-          ),
-        ],
-        SizedBox(height: compact ? 12 : 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            for (var i = 0; i < length; i++)
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: i < value.length
-                      ? (errorText != null ? scheme.error : scheme.primary)
-                      : Colors.transparent,
-                  border: Border.all(
-                    color: errorText != null
-                        ? scheme.error
-                        : scheme.outlineVariant,
-                    width: 2,
-                  ),
-                ),
+        for (var i = 0; i < length; i++)
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            width: 16,
+            height: 16,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: i < value.length
+                  ? (errorText != null ? scheme.error : scheme.primary)
+                  : Colors.transparent,
+              border: Border.all(
+                color: errorText != null ? scheme.error : scheme.outlineVariant,
+                width: 2,
               ),
-          ],
-        ),
-        SizedBox(
-          height: compact ? 26 : 36,
-          child: errorText == null
-              ? null
-              : Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    errorText!,
-                    style: TextStyle(color: scheme.error),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-        ),
-        for (final row in const [
-          ['1', '2', '3'],
-          ['4', '5', '6'],
-          ['7', '8', '9'],
-          ['', '0', '<'],
-        ])
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (final key in row)
-                _key(context, key, width: keyWidth, height: keyHeight),
-            ],
+            ),
           ),
-        if (footer != null) ...[SizedBox(height: compact ? 8 : 16), footer!],
       ],
     );
   }

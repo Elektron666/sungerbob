@@ -397,6 +397,63 @@ satır eklemek yeterli; testler tekrar ve boş kaynak kontrolünü kendisi yapar
 adımında ve Ayarlar → Hakkında'da: **"Tasarım · Fatih Özdemir"**. Sessiz
 tutuldu; göz onu ararsa bulur, aramazsa rahatsız etmez.
 
+### SK-19 · Alt bardaki ipucu tuş takımını ekrandan taşırıyordu
+
+Kullanıcı kurulumu **yine** bitiremediğini bildirdi. Adım adım testler
+geçiyordu; sekiz adımı baştan sona süren bir test yazılınca hata çıktı ve
+yalnızca **dar ekranlarda** görüldü:
+
+| Ekran | Eski sonuç |
+|---|---|
+| 411×891 dikey telefon | geçiyor |
+| 1058×564 yatay | geçiyor |
+| **360×640 dar telefon** | **kilitleniyor** |
+| **320×568 çok küçük** | **kilitleniyor** |
+
+**Kök neden ölçümle bulundu.** Tuş takımının kutusu ilk basıştan sonra
+444 px'ten 236 px'e düşüyordu:
+
+```
+"1"e basmadan önce  → PinPad kutusu y 68–512  (444 px)
+"1"e bastıktan sonra → PinPad kutusu y 68–304  (236 px)
+```
+
+Sebep: "Devam" düğmesinin **yanındaki** ipucu yazısı. İlk basışla birlikte
+alt barda "PIN'i sıfırla" düğmesi beliriyor, ipucu dar bir sütuna sıkışıp
+altı satıra sarıyor, alt bar şişiyor ve tuş takımının alt sıraları görünür
+alandan çıkıyordu. Kullanıcı 0'a ve geri silmeye basamıyor, PIN tamamlanmıyor,
+"Devam" kapalı kalıyordu.
+
+**Üç düzeltme:**
+
+1. **İpucu kendi satırında ve sabit yükseklikte.** Tek satır, taşarsa
+   kısaltılır. Alt barın yüksekliği artık hiçbir koşulda değişmiyor.
+2. **Kullanıcı adı ile PIN ayrı adımlara bölündü.** Sihirbazda bir ekranda
+   tek iş sorulur; tuş takımı da kalan alanın tamamını alır. Adım sayısı
+   8 → 9.
+3. **PIN adımı kaydırmaya bağımlı değil.** Kalan alanı doldurur, tuşlar
+   ona göre 48–72 dp arasında ölçeklenir (BRIEF §7 dokunma alanı alt sınırı).
+
+**Testteki asıl kusur:** ilk sürüm `warnIfMissed: false` kullanıyordu, yani
+**ıskalayan dokunuşlar sessizce yutuluyordu** — ekran dışında kalan tuş
+sırası testten böyle kaçtı. Artık ıskalama testi düşürür ve akış dört farklı
+ekran boyutunda baştan sona sürülür.
+
+### SK-20 · Demo giriş
+
+Kullanıcı isteği: kurulumu atlayıp uygulamayı hemen görebilmek.
+
+Başlangıç ekranına **"Demo ile hızlı gir"** eklendi. Sekiz adımı sormadan
+gerçek bir kurulum yapar: PIN `0000`, yedek şifresi `demo1234`, kullanıcı
+"Demo". Hepsi Ayarlar'dan değiştirilebilir.
+
+**Sahte veri üretmez.** CLAUDE.md'nin "mock veri yok" kuralı burada da
+geçerli: kayıt defteri boş açılır. Demo diye uydurma satış ve cari yazmak,
+sonradan gerçek kayıtlarla karışma riski taşır — ve bu uygulamada hareketler
+append-only olduğu için temizlenmeleri ters hareket gerektirirdi. Test, demo
+girişten sonra `sales`, `purchases`, `customer_ledger`, `stock_movements` ve
+`inventory_batches` tablolarının boş olduğunu doğruluyor.
+
 ## K-02 · Performans ölçümü (BRIEF §9 Faz 5)
 
 "50.000 satış satırıyla ana sayfa ve raporların makul sürede açıldığını ölç."

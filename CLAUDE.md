@@ -124,7 +124,7 @@ Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
 | **Faz 4 — Analiz ve raporlar** | ✅ müşteri/ürün analizi, kârlılık, CSV |
 | **Faz 5 — Yayına alma** | ✅ kılavuzlar, imzalama, performans ölçümü |
 
-**308 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
+**315 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
 
 Faz 1'de hazır olanlar:
 

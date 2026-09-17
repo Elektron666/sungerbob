@@ -19,6 +19,13 @@ import '../../widgets/signature.dart';
 ///
 /// **Mock veri yoktur**: sihirbaz yalnızca ayar yazar, hareket üretmez.
 class SetupWizardScreen extends ConsumerStatefulWidget {
+  /// Demo girişin kullandığı PIN. Ayarlar'dan değiştirilebilir.
+  static const demoPin = '0000';
+
+  /// Demo girişin yedek şifresi. Kurallara uyar; kullanıcı Ayarlar'dan
+  /// kendi şifresini belirleyene kadar yedekler bununla açılır.
+  static const demoBackupPassword = 'demo1234';
+
   const SetupWizardScreen({super.key});
 
   @override
@@ -33,7 +40,10 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
 
   static const _titles = [
     'Başlangıç',
-    'Kullanıcı ve PIN',
+    'Kullanıcı adı',
+    // PIN kendi adımında: tuş takımı ekranı paylaşınca alt sırası
+    // kesiliyor ve kullanıcı kurulumu bitiremiyor.
+    'PIN',
     'Yedek şifresi',
     'Firma bilgileri',
     'KDV ve fiyat modu',
@@ -50,18 +60,19 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
     switch (_step) {
       case 1:
         if (_draft.userName.trim().isEmpty) return 'Kullanıcı adı girin';
+      case 2:
         if (_draft.pin.length < PinPad.pinLength) return 'PIN 4 haneli olmalı';
         if (_draft.pinConfirm.length < PinPad.pinLength) {
           return 'PIN\'i bir kez daha girin';
         }
         if (_draft.pin != _draft.pinConfirm) return 'PIN\'ler aynı değil';
-      case 2:
+      case 3:
         final error = BackupPasswordRules.validate(_draft.backupPassword);
         if (error != null) return error;
         if (_draft.backupPassword != _draft.backupPasswordConfirm) {
           return 'Yedek şifreleri aynı değil';
         }
-      case 3:
+      case 4:
         if (_draft.companyName.trim().isEmpty) return 'Firma adı girin';
     }
     return null;
@@ -155,10 +166,19 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
         child: Column(
           children: [
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: _body(),
-              ),
+              // PIN adımı kaydırmaya bağımlı olmamalı: tuş takımının bir
+              // sırası ekranın altında kalırsa kullanıcı o tuşlara basamaz
+              // ve kurulumu bitiremez. Bu adım kalan alanı doldurur, tuşlar
+              // ona göre ölçeklenir.
+              child: _step == 2
+                  ? Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      child: _pinStep(),
+                    )
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: _body(),
+                    ),
             ),
             if (_saveError != null)
               Padding(
@@ -170,33 +190,59 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
               ),
             Padding(
               padding: const EdgeInsets.all(16),
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (_isSkippable(_step))
-                    TextButton(
-                      onPressed: _saving ? null : _next,
-                      child: const Text('Atla'),
-                    ),
-                  if (_hintText case final reason?)
-                    Expanded(
-                      child: Text(
-                        reason,
-                        textAlign: TextAlign.end,
-                        style: context.labelStyle,
+                  // İpucu **kendi satırında ve sabit yükseklikte** durur.
+                  //
+                  // Daha önce düğmelerle aynı satırdaydı: yanına bir düğme
+                  // eklenince dar bir sütuna sıkışıp altı satıra sarıyor,
+                  // alt barı şişiriyor ve tuş takımının alt sıralarını
+                  // ekrandan taşırıyordu — kullanıcı PIN'i giremiyordu.
+                  SizedBox(
+                    height: 20,
+                    child: _hintText == null
+                        ? null
+                        : Text(
+                            _hintText!,
+                            textAlign: TextAlign.end,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.labelStyle,
+                          ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      if (_isSkippable(_step))
+                        TextButton(
+                          onPressed: _saving ? null : _next,
+                          child: const Text('Atla'),
+                        ),
+                      if (_step == 2 &&
+                          (_draft.pin.isNotEmpty ||
+                              _draft.pinConfirm.isNotEmpty))
+                        TextButton(
+                          onPressed: _saving ? null : _resetPin,
+                          child: const Text('Sıfırla'),
+                        ),
+                      const Spacer(),
+                      FilledButton(
+                        onPressed: (_canContinue && !_saving) ? _next : null,
+                        child: _saving
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                _step == _titles.length - 1 ? 'Bitir' : 'Devam',
+                              ),
                       ),
-                    )
-                  else
-                    const Spacer(),
-                  const SizedBox(width: 12),
-                  FilledButton(
-                    onPressed: (_canContinue && !_saving) ? _next : null,
-                    child: _saving
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(_step == _titles.length - 1 ? 'Bitir' : 'Devam'),
+                    ],
                   ),
                 ],
               ),
@@ -208,16 +254,17 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
   }
 
   /// Drive ve açılış işlemleri atlanabilir (BRIEF §7).
-  static bool _isSkippable(int step) => step == 6 || step == 7;
+  static bool _isSkippable(int step) => step == 7 || step == 8;
 
   Widget _body() => switch (_step) {
     0 => _startStep(),
-    1 => _pinStep(),
-    2 => _backupPasswordStep(),
-    3 => _companyStep(),
-    4 => _vatStep(),
-    5 => _costingStep(),
-    6 => _driveStep(),
+    1 => _userNameStep(),
+    2 => _pinStep(),
+    3 => _backupPasswordStep(),
+    4 => _companyStep(),
+    5 => _vatStep(),
+    6 => _costingStep(),
+    7 => _driveStep(),
     _ => _openingStep(),
   };
 
@@ -271,8 +318,63 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
           onTap: () => context.push('/restore'),
         ),
       ),
+      const SizedBox(height: 24),
+      Center(
+        child: TextButton.icon(
+          onPressed: _saving ? null : _startDemo,
+          icon: const Icon(Icons.bolt_outlined, size: 18),
+          label: const Text('Demo ile hızlı gir'),
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Text(
+          'Kurulumu atlar, uygulamayı boş kayıt defteriyle açar. '
+          'PIN 0000, sonradan Ayarlar\'dan değiştirilir.',
+          textAlign: TextAlign.center,
+          style: context.labelStyle,
+        ),
+      ),
     ],
   );
+
+  /// **Demo giriş** — kurulumu atlayıp doğrudan uygulamayı açar.
+  ///
+  /// Denemek isteyen kullanıcıyı sekiz adımlık formda bekletmemek için.
+  /// Gerçek bir kurulum yapar (PIN, yedek şifresi, firma adı yazılır);
+  /// tek farkı değerleri sormaması.
+  ///
+  /// **Sahte veri üretmez** — kayıt defteri boş açılır. Uygulama gerçek
+  /// işletme verisiyle çalışır; demo diye uydurma satış ve cari yazmak,
+  /// sonradan gerçek kayıtlarla karışma riski taşır.
+  Future<void> _startDemo() async {
+    setState(() {
+      _saving = true;
+      _saveError = null;
+    });
+
+    try {
+      final settings = await ref.read(settingsRepositoryProvider.future);
+      await settings.setPin(SetupWizardScreen.demoPin);
+      await settings.saveUserName('Demo');
+      await settings.saveCompany(const CompanySettings(name: 'Demo İşletme'));
+      await ref
+          .read(backupPasswordStoreProvider)
+          .write(SetupWizardScreen.demoBackupPassword);
+      await settings.markSetupCompleted();
+
+      ref.invalidate(setupCompletedProvider);
+      ref.read(appLockProvider.notifier).unlock();
+      if (!mounted) return;
+      context.go('/');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _saveError = '$e';
+      });
+    }
+  }
 
   /// PIN girişi iki aşamalı: önce belirle, sonra doğrula. Aşama **açıkça**
   /// tutulur — `pin.length` gibi dolaylı bir işaretten çıkarılırsa hızlı
@@ -322,40 +424,53 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
       ? 'PIN\'ler aynı değil'
       : null;
 
-  Widget _pinStep() => Column(
+  Widget _userNameStep() => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
+      const SizedBox(height: 8),
       TextFormField(
         initialValue: _draft.userName,
+        autofocus: true,
         decoration: const InputDecoration(
           labelText: 'Kullanıcı adı',
           helperText: 'Belgelerde ve audit kayıtlarında görünür',
         ),
         textCapitalization: TextCapitalization.words,
+        textInputAction: TextInputAction.done,
         onChanged: (v) => setState(() => _draft.userName = v),
       ),
-      const SizedBox(height: 16),
-      PinPad(
-        title: _confirmingPin ? 'PIN tekrar' : '4 haneli PIN belirleyin',
-        subtitle: _confirmingPin
-            ? 'Aynı PIN\'i bir kez daha girin'
-            : 'Uygulamayı her açışınızda sorulur',
-        value: _confirmingPin ? _draft.pinConfirm : _draft.pin,
-        errorText: _pinPadError,
-        onDigit: _pressPinDigit,
-        onBackspace: _pinBackspace,
-        footer: (_draft.pin.isEmpty && _draft.pinConfirm.isEmpty)
-            ? null
-            : TextButton(
-                onPressed: _resetPin,
-                child: const Text('PIN\'i sıfırla'),
-              ),
+      const SizedBox(height: 20),
+      Text(
+        'Tek kullanıcılı bir uygulama; bu ad belgelerin altında ve işlem '
+        'geçmişinde görünür.',
+        style: context.labelStyle,
       ),
+    ],
+  );
+
+  /// PIN kendi ekranında: tuş takımı kalan alanın tamamını alır.
+  Widget _pinStep() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Expanded(
+        child: PinPad(
+          title: _confirmingPin ? 'PIN tekrar' : '4 haneli PIN belirleyin',
+          subtitle: _confirmingPin
+              ? 'Aynı PIN\'i bir kez daha girin'
+              : 'Uygulamayı her açışınızda sorulur',
+          value: _confirmingPin ? _draft.pinConfirm : _draft.pin,
+          errorText: _pinPadError,
+          onDigit: _pressPinDigit,
+          onBackspace: _pinBackspace,
+        ),
+      ),
+      // Parmak izi seçeneği tuş takımının alanını yemesin diye tek satır.
       SwitchListTile(
         value: _draft.biometric,
         onChanged: (v) => setState(() => _draft.biometric = v),
         title: const Text('Parmak izi ile aç'),
-        subtitle: const Text('Cihaz destekliyorsa PIN yerine kullanılır'),
+        dense: true,
+        contentPadding: EdgeInsets.zero,
       ),
     ],
   );

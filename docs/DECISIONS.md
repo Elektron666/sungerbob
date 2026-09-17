@@ -271,6 +271,26 @@ Bildirimler her tazelemede **tamamen silinip yeniden kuruluyor** (`cancelAll` +
 cihazda kalmasına yol açardı — kullanıcıya olmayan bir borcu hatırlatmak,
 hatırlatmamaktan kötüdür.
 
+### SK-17 · Bildirim paketi Android tarafında iki şey daha istiyor
+
+`flutter_local_notifications` 22.x eklendiğinde Dart tarafı derleniyor ama
+**APK derlemesi kırılıyor**; ikisi de paketin kendi dokümanında yazılı:
+
+1. **Core library desugaring zorunlu.** Paket, zamanlanmış bildirimlerin eski
+   Android sürümlerinde de çalışması için `java.time` API'lerine dayanıyor.
+   `android/app/build.gradle.kts`'e `isCoreLibraryDesugaringEnabled = true` ve
+   `coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")` eklendi.
+   Sürüm ezberden değil, paketin kendi `android/build.gradle` dosyasından
+   alındı.
+
+2. **Bildirim simgesi R8'den korunmalı.** `isShrinkResources = true` açık ve
+   simge çalışma anında **adıyla** çözülüyor (`@mipmap/ic_launcher`). R8 onu
+   kullanılmıyor sanıp atarsa bildirim **sessizce hiç görünmez** — kullanıcının
+   fark edemeyeceği bir hata. `res/raw/keep.xml` eklendi.
+
+GSON kural dosyası v19'dan itibaren paketin kendisiyle geliyor; ayrıca
+ProGuard kuralı gerekmiyor.
+
 ## K-02 · Performans ölçümü (BRIEF §9 Faz 5)
 
 "50.000 satış satırıyla ana sayfa ve raporların makul sürede açıldığını ölç."

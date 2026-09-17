@@ -24,6 +24,10 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // flutter_local_notifications 10+ bunu ZORUNLU kılıyor: zamanlanmış
+        // bildirimlerin eski Android sürümlerinde de çalışması için java.time
+        // API'leri "desugar" ediliyor. Kapalıysa APK derlemesi kırılır.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -72,6 +76,12 @@ kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
+}
+
+dependencies {
+    // Sürüm flutter_local_notifications 22.3.1'in kendi android/build.gradle
+    // dosyasından alındı; ondan eskisi derleme hatası veriyor.
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
 flutter {

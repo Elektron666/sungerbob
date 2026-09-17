@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Bildirim simgesi çalışma anında ADIYLA çözülüyor (`@mipmap/ic_launcher`),
+  bu yüzden R8'in kaynak küçültmesi onu "kullanılmıyor" sanıp atabilir.
+  Atarsa bildirim sessizce hiç görünmez — en kötü hata türü.
+  flutter_local_notifications README'si bu dosyayı açıkça istiyor.
+-->
+<resources
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/*,@mipmap/ic_launcher"
+    tools:shrinkMode="strict" />

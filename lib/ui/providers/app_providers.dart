@@ -21,7 +21,10 @@ import '../../data/repo/return_repository.dart';
 import '../../data/repo/reversal_repository.dart';
 import '../../data/repo/sale_repository.dart';
 import '../../data/repo/instrument_repository.dart';
+import '../../data/repo/cutting_repository.dart';
+import '../../data/repo/quote_repository.dart';
 import '../../data/repo/settings_repository.dart';
+import '../../data/repo/stock_ops_repository.dart';
 
 /// Uygulama genelindeki bağımlılıklar.
 ///
@@ -94,6 +97,18 @@ final priceListRepositoryProvider = FutureProvider(
 
 final integrityServiceProvider = FutureProvider(
   (ref) async => IntegrityService(await ref.watch(databaseProvider.future)),
+);
+
+final stockOpsRepositoryProvider = FutureProvider(
+  (ref) async => StockOpsRepository(await ref.watch(databaseProvider.future)),
+);
+
+final cuttingRepositoryProvider = FutureProvider(
+  (ref) async => CuttingRepository(await ref.watch(databaseProvider.future)),
+);
+
+final quoteRepositoryProvider = FutureProvider(
+  (ref) async => QuoteRepository(await ref.watch(databaseProvider.future)),
 );
 
 final settingsRepositoryProvider = FutureProvider(

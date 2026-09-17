@@ -124,7 +124,7 @@ Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
 | **Faz 4 — Analiz ve raporlar** | ✅ müşteri/ürün analizi, kârlılık, CSV |
 | **Faz 5 — Yayına alma** | ✅ kılavuzlar, imzalama, performans ölçümü |
 
-**274 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
+**275 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
 
 Faz 1'de hazır olanlar:
 
@@ -167,6 +167,9 @@ Faz 5 sonrası eklenenler:
 - `ui/screens/reports/` — kârlılık, dönemsel satış grafiği (fl_chart), ürün
   analizi, vade raporu; üçü de CSV olarak paylaşılabiliyor
 - `ui/screens/opening/` — açılış stoğu, cari ve kasa/banka bakiyeleri
+- `ui/screens/ops/` — teklifler (satışa çevirme), kesim emirleri (gönder /
+  dönüş al), sayım (taslak → onay), fire
+- `ui/widgets/variant_picker.dart` — stoktaki varyantı seçtiren ortak sayfa
 - `ui/screens/settings/drive_screen.dart` — cihaz dışı yedek
 - `ui/startup.dart` — kilit açıldıktan sonra bildirim kurulumu ve açılış yedeği
 - `data/notifications/notification_service.dart` — `flutter_local_notifications`
@@ -174,6 +177,6 @@ Faz 5 sonrası eklenenler:
 - `data/backup/backup_password_store.dart` — yedek şifresi güvenli depoda
 - `data/repo/settings_repository.dart` — PIN karması, maliyet yöntemi kilidi
 
-**Kalan işler:** teklif, kesim emri, sayım ve fire ekranlarının arayüzü (iş
-kuralları ve repository'ler hazır), Google Drive API istemcisi (SK-12 —
-kullanıcıdan OAuth istemci kimliği bekleniyor).
+**Kalan işler:** Google Drive API istemcisi (SK-12 — kullanıcıdan OAuth
+istemci kimliği bekleniyor), teklif oluşturma formu (liste ve satışa çevirme
+hazır; yeni teklif şimdilik hızlı satış ekranından geçiyor).

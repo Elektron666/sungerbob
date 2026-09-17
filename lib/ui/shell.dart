@@ -62,6 +62,11 @@ class AppShell extends StatelessWidget {
                 route: '/collection/new',
                 icon: Icons.payments,
               ),
+              (
+                label: 'Kesime Gönder',
+                route: '/cutting/new',
+                icon: Icons.content_cut,
+              ),
             ])
               ListTile(
                 leading: Icon(action.icon),
@@ -85,6 +90,10 @@ class MenuScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const items = [
+      (label: 'Teklifler', route: '/quotes', icon: Icons.request_quote),
+      (label: 'Kesim Emirleri', route: '/cutting', icon: Icons.content_cut),
+      (label: 'Sayım', route: '/count', icon: Icons.fact_check),
+      (label: 'Fire', route: '/waste', icon: Icons.delete_sweep),
       (label: 'Raporlar', route: '/reports', icon: Icons.insights),
       (label: 'Açılış İşlemleri', route: '/opening', icon: Icons.flag_outlined),
       (label: 'Yedek Al', route: '/backup', icon: Icons.backup),
@@ -104,13 +113,6 @@ class MenuScreen extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push(item.route),
             ),
-          const Divider(),
-          const ListTile(
-            leading: Icon(Icons.info_outline),
-            title: Text('Teklifler, Kesim Emirleri, Sayım, Fire'),
-            subtitle: Text('İş kuralları hazır; ekranları eklenecek'),
-            enabled: false,
-          ),
         ],
       ),
     );

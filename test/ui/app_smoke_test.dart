@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sungerbob/main.dart';
 import 'package:sungerbob/ui/app_router.dart';
 import 'package:sungerbob/ui/format/tr_format.dart';
@@ -69,6 +70,10 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: MenuScreen()));
     await tester.pump();
 
+    expect(find.text('Teklifler'), findsOneWidget);
+    expect(find.text('Kesim Emirleri'), findsOneWidget);
+    expect(find.text('Sayım'), findsOneWidget);
+    expect(find.text('Fire'), findsOneWidget);
     expect(find.text('Raporlar'), findsOneWidget);
     expect(find.text('Açılış İşlemleri'), findsOneWidget);
     expect(find.text('Yedek Al'), findsOneWidget);
@@ -80,5 +85,45 @@ void main() {
   test('yönlendirici kurulabiliyor ve rotalar tanımlı', () {
     final router = buildRouter();
     expect(router.configuration.routes, isNotEmpty);
+  });
+
+  test('menüdeki ve sihirbazdaki her rota tanımlı', () {
+    final router = buildRouter();
+    final defined = <String>{};
+
+    void collect(List<RouteBase> routes) {
+      for (final route in routes) {
+        if (route is GoRoute) defined.add(route.path);
+        collect(route.routes);
+      }
+    }
+
+    collect(router.configuration.routes);
+
+    // Menüden, hızlı işlemlerden ve kurulum sihirbazından çağrılan rotalar.
+    // Tanımsız bir rota çalışma anında "page not found" ekranı verir.
+    for (final route in const [
+      '/',
+      '/stock',
+      '/customers',
+      '/menu',
+      '/sale/new',
+      '/purchase/new',
+      '/collection/new',
+      '/quotes',
+      '/cutting',
+      '/cutting/new',
+      '/count',
+      '/waste',
+      '/reports',
+      '/opening',
+      '/backup',
+      '/backups',
+      '/restore',
+      '/settings',
+      '/settings/drive',
+    ]) {
+      expect(defined, contains(route), reason: '$route tanımlı değil');
+    }
   });
 }

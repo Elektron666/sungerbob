@@ -7,6 +7,7 @@ import 'master_tables.dart';
 /// Stok ve maliyet tabloları (ERD §4).
 
 /// Parti. Her alış satırı, açılış stoğu ve kesim dönüşü bir parti üretir.
+@DataClassName('InventoryBatch')
 @TableIndex(
   name: 'idx_batch_fifo',
   columns: {#variantId, #locationId, #receivedAt, #id},
@@ -103,6 +104,7 @@ class StockMovements extends Table {
 }
 
 /// 🔒 append-only. Her çıkışın parti bazlı maliyeti (BRIEF §3.6).
+@DataClassName('CostAllocationRow')
 @TableIndex(name: 'idx_ca_movement', columns: {#movementId})
 @TableIndex(name: 'idx_ca_batch', columns: {#batchId})
 class CostAllocations extends Table {

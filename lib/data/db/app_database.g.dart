@@ -10069,7 +10069,7 @@ class ExpenseCategoriesCompanion extends UpdateCompanion<ExpenseCategory> {
 }
 
 class $InventoryBatchesTable extends InventoryBatches
-    with TableInfo<$InventoryBatchesTable, InventoryBatche> {
+    with TableInfo<$InventoryBatchesTable, InventoryBatch> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -10291,7 +10291,7 @@ class $InventoryBatchesTable extends InventoryBatches
   static const String $name = 'inventory_batches';
   @override
   VerificationContext validateIntegrity(
-    Insertable<InventoryBatche> instance, {
+    Insertable<InventoryBatch> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -10399,9 +10399,9 @@ class $InventoryBatchesTable extends InventoryBatches
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  InventoryBatche map(Map<String, dynamic> data, {String? tablePrefix}) {
+  InventoryBatch map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return InventoryBatche(
+    return InventoryBatch(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
@@ -10496,7 +10496,7 @@ class $InventoryBatchesTable extends InventoryBatches
       const VolumeConverter();
 }
 
-class InventoryBatche extends DataClass implements Insertable<InventoryBatche> {
+class InventoryBatch extends DataClass implements Insertable<InventoryBatch> {
   final String id;
   final String variantId;
   final String locationId;
@@ -10522,7 +10522,7 @@ class InventoryBatche extends DataClass implements Insertable<InventoryBatche> {
   final int createdAt;
   final String? createdBy;
   final String? deviceId;
-  const InventoryBatche({
+  const InventoryBatch({
     required this.id,
     required this.variantId,
     required this.locationId,
@@ -10622,12 +10622,12 @@ class InventoryBatche extends DataClass implements Insertable<InventoryBatche> {
     );
   }
 
-  factory InventoryBatche.fromJson(
+  factory InventoryBatch.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return InventoryBatche(
+    return InventoryBatch(
       id: serializer.fromJson<String>(json['id']),
       variantId: serializer.fromJson<String>(json['variantId']),
       locationId: serializer.fromJson<String>(json['locationId']),
@@ -10671,7 +10671,7 @@ class InventoryBatche extends DataClass implements Insertable<InventoryBatche> {
     };
   }
 
-  InventoryBatche copyWith({
+  InventoryBatch copyWith({
     String? id,
     String? variantId,
     String? locationId,
@@ -10689,7 +10689,7 @@ class InventoryBatche extends DataClass implements Insertable<InventoryBatche> {
     int? createdAt,
     Value<String?> createdBy = const Value.absent(),
     Value<String?> deviceId = const Value.absent(),
-  }) => InventoryBatche(
+  }) => InventoryBatch(
     id: id ?? this.id,
     variantId: variantId ?? this.variantId,
     locationId: locationId ?? this.locationId,
@@ -10710,8 +10710,8 @@ class InventoryBatche extends DataClass implements Insertable<InventoryBatche> {
     createdBy: createdBy.present ? createdBy.value : this.createdBy,
     deviceId: deviceId.present ? deviceId.value : this.deviceId,
   );
-  InventoryBatche copyWithCompanion(InventoryBatchesCompanion data) {
-    return InventoryBatche(
+  InventoryBatch copyWithCompanion(InventoryBatchesCompanion data) {
+    return InventoryBatch(
       id: data.id.present ? data.id.value : this.id,
       variantId: data.variantId.present ? data.variantId.value : this.variantId,
       locationId: data.locationId.present
@@ -10752,7 +10752,7 @@ class InventoryBatche extends DataClass implements Insertable<InventoryBatche> {
 
   @override
   String toString() {
-    return (StringBuffer('InventoryBatche(')
+    return (StringBuffer('InventoryBatch(')
           ..write('id: $id, ')
           ..write('variantId: $variantId, ')
           ..write('locationId: $locationId, ')
@@ -10797,7 +10797,7 @@ class InventoryBatche extends DataClass implements Insertable<InventoryBatche> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is InventoryBatche &&
+      (other is InventoryBatch &&
           other.id == this.id &&
           other.variantId == this.variantId &&
           other.locationId == this.locationId &&
@@ -10817,7 +10817,7 @@ class InventoryBatche extends DataClass implements Insertable<InventoryBatche> {
           other.deviceId == this.deviceId);
 }
 
-class InventoryBatchesCompanion extends UpdateCompanion<InventoryBatche> {
+class InventoryBatchesCompanion extends UpdateCompanion<InventoryBatch> {
   final Value<String> id;
   final Value<String> variantId;
   final Value<String> locationId;
@@ -10887,7 +10887,7 @@ class InventoryBatchesCompanion extends UpdateCompanion<InventoryBatche> {
        remainingPieces = Value(remainingPieces),
        remainingVolume = Value(remainingVolume),
        createdAt = Value(createdAt);
-  static Insertable<InventoryBatche> custom({
+  static Insertable<InventoryBatch> custom({
     Expression<String>? id,
     Expression<String>? variantId,
     Expression<String>? locationId,
@@ -12088,7 +12088,7 @@ class StockMovementsCompanion extends UpdateCompanion<StockMovement> {
 }
 
 class $CostAllocationsTable extends CostAllocations
-    with TableInfo<$CostAllocationsTable, CostAllocation> {
+    with TableInfo<$CostAllocationsTable, CostAllocationRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -12207,7 +12207,7 @@ class $CostAllocationsTable extends CostAllocations
   static const String $name = 'cost_allocations';
   @override
   VerificationContext validateIntegrity(
-    Insertable<CostAllocation> instance, {
+    Insertable<CostAllocationRow> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -12263,9 +12263,9 @@ class $CostAllocationsTable extends CostAllocations
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  CostAllocation map(Map<String, dynamic> data, {String? tablePrefix}) {
+  CostAllocationRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return CostAllocation(
+    return CostAllocationRow(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
@@ -12322,7 +12322,8 @@ class $CostAllocationsTable extends CostAllocations
   static TypeConverter<Money, int> $convertertotalCost = const MoneyConverter();
 }
 
-class CostAllocation extends DataClass implements Insertable<CostAllocation> {
+class CostAllocationRow extends DataClass
+    implements Insertable<CostAllocationRow> {
   final String id;
   final String movementId;
   final String batchId;
@@ -12334,7 +12335,7 @@ class CostAllocation extends DataClass implements Insertable<CostAllocation> {
   /// Tüketim sırası. İade bunun TERSİNDEN okunur (D-12).
   final int sequenceNo;
   final int createdAt;
-  const CostAllocation({
+  const CostAllocationRow({
     required this.id,
     required this.movementId,
     required this.batchId,
@@ -12386,12 +12387,12 @@ class CostAllocation extends DataClass implements Insertable<CostAllocation> {
     );
   }
 
-  factory CostAllocation.fromJson(
+  factory CostAllocationRow.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return CostAllocation(
+    return CostAllocationRow(
       id: serializer.fromJson<String>(json['id']),
       movementId: serializer.fromJson<String>(json['movementId']),
       batchId: serializer.fromJson<String>(json['batchId']),
@@ -12419,7 +12420,7 @@ class CostAllocation extends DataClass implements Insertable<CostAllocation> {
     };
   }
 
-  CostAllocation copyWith({
+  CostAllocationRow copyWith({
     String? id,
     String? movementId,
     String? batchId,
@@ -12429,7 +12430,7 @@ class CostAllocation extends DataClass implements Insertable<CostAllocation> {
     Money? totalCost,
     int? sequenceNo,
     int? createdAt,
-  }) => CostAllocation(
+  }) => CostAllocationRow(
     id: id ?? this.id,
     movementId: movementId ?? this.movementId,
     batchId: batchId ?? this.batchId,
@@ -12440,8 +12441,8 @@ class CostAllocation extends DataClass implements Insertable<CostAllocation> {
     sequenceNo: sequenceNo ?? this.sequenceNo,
     createdAt: createdAt ?? this.createdAt,
   );
-  CostAllocation copyWithCompanion(CostAllocationsCompanion data) {
-    return CostAllocation(
+  CostAllocationRow copyWithCompanion(CostAllocationsCompanion data) {
+    return CostAllocationRow(
       id: data.id.present ? data.id.value : this.id,
       movementId: data.movementId.present
           ? data.movementId.value
@@ -12462,7 +12463,7 @@ class CostAllocation extends DataClass implements Insertable<CostAllocation> {
 
   @override
   String toString() {
-    return (StringBuffer('CostAllocation(')
+    return (StringBuffer('CostAllocationRow(')
           ..write('id: $id, ')
           ..write('movementId: $movementId, ')
           ..write('batchId: $batchId, ')
@@ -12491,7 +12492,7 @@ class CostAllocation extends DataClass implements Insertable<CostAllocation> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is CostAllocation &&
+      (other is CostAllocationRow &&
           other.id == this.id &&
           other.movementId == this.movementId &&
           other.batchId == this.batchId &&
@@ -12503,7 +12504,7 @@ class CostAllocation extends DataClass implements Insertable<CostAllocation> {
           other.createdAt == this.createdAt);
 }
 
-class CostAllocationsCompanion extends UpdateCompanion<CostAllocation> {
+class CostAllocationsCompanion extends UpdateCompanion<CostAllocationRow> {
   final Value<String> id;
   final Value<String> movementId;
   final Value<String> batchId;
@@ -12546,7 +12547,7 @@ class CostAllocationsCompanion extends UpdateCompanion<CostAllocation> {
        totalCost = Value(totalCost),
        sequenceNo = Value(sequenceNo),
        createdAt = Value(createdAt);
-  static Insertable<CostAllocation> custom({
+  static Insertable<CostAllocationRow> custom({
     Expression<String>? id,
     Expression<String>? movementId,
     Expression<String>? batchId,
@@ -40225,7 +40226,7 @@ final class $$LocationsTableReferences
     extends BaseReferences<_$AppDatabase, $LocationsTable, Location> {
   $$LocationsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static MultiTypedResultKey<$InventoryBatchesTable, List<InventoryBatche>>
+  static MultiTypedResultKey<$InventoryBatchesTable, List<InventoryBatch>>
   _inventoryBatchesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.inventoryBatches,
     aliasName: 'locations__id__inventory_batches__location_id',
@@ -40619,7 +40620,7 @@ class $$LocationsTableTableManager
                         await $_getPrefetchedData<
                           Location,
                           $LocationsTable,
-                          InventoryBatche
+                          InventoryBatch
                         >(
                           currentTable: table,
                           referencedTable: $$LocationsTableReferences
@@ -41485,7 +41486,7 @@ final class $$ProductVariantsTableReferences
     );
   }
 
-  static MultiTypedResultKey<$InventoryBatchesTable, List<InventoryBatche>>
+  static MultiTypedResultKey<$InventoryBatchesTable, List<InventoryBatch>>
   _inventoryBatchesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.inventoryBatches,
     aliasName: 'product_variants__id__inventory_batches__variant_id',
@@ -42592,7 +42593,7 @@ class $$ProductVariantsTableTableManager
                         await $_getPrefetchedData<
                           ProductVariant,
                           $ProductVariantsTable,
-                          InventoryBatche
+                          InventoryBatch
                         >(
                           currentTable: table,
                           referencedTable: $$ProductVariantsTableReferences
@@ -44065,7 +44066,7 @@ final class $$SuppliersTableReferences
     extends BaseReferences<_$AppDatabase, $SuppliersTable, Supplier> {
   $$SuppliersTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static MultiTypedResultKey<$InventoryBatchesTable, List<InventoryBatche>>
+  static MultiTypedResultKey<$InventoryBatchesTable, List<InventoryBatch>>
   _inventoryBatchesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.inventoryBatches,
     aliasName: 'suppliers__id__inventory_batches__supplier_id',
@@ -44961,7 +44962,7 @@ class $$SuppliersTableTableManager
                         await $_getPrefetchedData<
                           Supplier,
                           $SuppliersTable,
-                          InventoryBatche
+                          InventoryBatch
                         >(
                           currentTable: table,
                           referencedTable: $$SuppliersTableReferences
@@ -47478,7 +47479,7 @@ typedef $$InventoryBatchesTableUpdateCompanionBuilder =
 
 final class $$InventoryBatchesTableReferences
     extends
-        BaseReferences<_$AppDatabase, $InventoryBatchesTable, InventoryBatche> {
+        BaseReferences<_$AppDatabase, $InventoryBatchesTable, InventoryBatch> {
   $$InventoryBatchesTableReferences(
     super.$_db,
     super.$_table,
@@ -47555,7 +47556,7 @@ final class $$InventoryBatchesTableReferences
     );
   }
 
-  static MultiTypedResultKey<$CostAllocationsTable, List<CostAllocation>>
+  static MultiTypedResultKey<$CostAllocationsTable, List<CostAllocationRow>>
   _costAllocationsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.costAllocations,
     aliasName: 'inventory_batches__id__cost_allocations__batch_id',
@@ -48492,14 +48493,14 @@ class $$InventoryBatchesTableTableManager
         RootTableManager<
           _$AppDatabase,
           $InventoryBatchesTable,
-          InventoryBatche,
+          InventoryBatch,
           $$InventoryBatchesTableFilterComposer,
           $$InventoryBatchesTableOrderingComposer,
           $$InventoryBatchesTableAnnotationComposer,
           $$InventoryBatchesTableCreateCompanionBuilder,
           $$InventoryBatchesTableUpdateCompanionBuilder,
-          (InventoryBatche, $$InventoryBatchesTableReferences),
-          InventoryBatche,
+          (InventoryBatch, $$InventoryBatchesTableReferences),
+          InventoryBatch,
           PrefetchHooks Function({
             bool variantId,
             bool locationId,
@@ -48609,7 +48610,7 @@ class $$InventoryBatchesTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable<$InventoryBatchesTable, InventoryBatche>(table),
+                  e.readTable<$InventoryBatchesTable, InventoryBatch>(table),
                   $$InventoryBatchesTableReferences(db, table, e),
                 ),
               )
@@ -48695,7 +48696,7 @@ class $$InventoryBatchesTableTableManager
                     return [
                       if (stockMovementsRefs)
                         await $_getPrefetchedData<
-                          InventoryBatche,
+                          InventoryBatch,
                           $InventoryBatchesTable,
                           StockMovement
                         >(
@@ -48716,9 +48717,9 @@ class $$InventoryBatchesTableTableManager
                         ),
                       if (costAllocationsRefs)
                         await $_getPrefetchedData<
-                          InventoryBatche,
+                          InventoryBatch,
                           $InventoryBatchesTable,
-                          CostAllocation
+                          CostAllocationRow
                         >(
                           currentTable: table,
                           referencedTable: $$InventoryBatchesTableReferences
@@ -48737,7 +48738,7 @@ class $$InventoryBatchesTableTableManager
                         ),
                       if (costAdjustmentsRefs)
                         await $_getPrefetchedData<
-                          InventoryBatche,
+                          InventoryBatch,
                           $InventoryBatchesTable,
                           CostAdjustment
                         >(
@@ -48758,7 +48759,7 @@ class $$InventoryBatchesTableTableManager
                         ),
                       if (purchaseItemsRefs)
                         await $_getPrefetchedData<
-                          InventoryBatche,
+                          InventoryBatch,
                           $InventoryBatchesTable,
                           PurchaseItem
                         >(
@@ -48779,7 +48780,7 @@ class $$InventoryBatchesTableTableManager
                         ),
                       if (purchaseExpenseAllocationsRefs)
                         await $_getPrefetchedData<
-                          InventoryBatche,
+                          InventoryBatch,
                           $InventoryBatchesTable,
                           PurchaseExpenseAllocation
                         >(
@@ -48800,7 +48801,7 @@ class $$InventoryBatchesTableTableManager
                         ),
                       if (purchaseReturnItemsRefs)
                         await $_getPrefetchedData<
-                          InventoryBatche,
+                          InventoryBatch,
                           $InventoryBatchesTable,
                           PurchaseReturnItem
                         >(
@@ -48821,7 +48822,7 @@ class $$InventoryBatchesTableTableManager
                         ),
                       if (cuttingOrderResultsRefs)
                         await $_getPrefetchedData<
-                          InventoryBatche,
+                          InventoryBatch,
                           $InventoryBatchesTable,
                           CuttingOrderResult
                         >(
@@ -48852,14 +48853,14 @@ typedef $$InventoryBatchesTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
       $InventoryBatchesTable,
-      InventoryBatche,
+      InventoryBatch,
       $$InventoryBatchesTableFilterComposer,
       $$InventoryBatchesTableOrderingComposer,
       $$InventoryBatchesTableAnnotationComposer,
       $$InventoryBatchesTableCreateCompanionBuilder,
       $$InventoryBatchesTableUpdateCompanionBuilder,
-      (InventoryBatche, $$InventoryBatchesTableReferences),
-      InventoryBatche,
+      (InventoryBatch, $$InventoryBatchesTableReferences),
+      InventoryBatch,
       PrefetchHooks Function({
         bool variantId,
         bool locationId,
@@ -48979,7 +48980,7 @@ final class $$StockMovementsTableReferences
     );
   }
 
-  static MultiTypedResultKey<$CostAllocationsTable, List<CostAllocation>>
+  static MultiTypedResultKey<$CostAllocationsTable, List<CostAllocationRow>>
   _costAllocationsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.costAllocations,
     aliasName: 'stock_movements__id__cost_allocations__movement_id',
@@ -49689,7 +49690,7 @@ class $$StockMovementsTableTableManager
                         await $_getPrefetchedData<
                           StockMovement,
                           $StockMovementsTable,
-                          CostAllocation
+                          CostAllocationRow
                         >(
                           currentTable: table,
                           referencedTable: $$StockMovementsTableReferences
@@ -49762,7 +49763,11 @@ typedef $$CostAllocationsTableUpdateCompanionBuilder =
 
 final class $$CostAllocationsTableReferences
     extends
-        BaseReferences<_$AppDatabase, $CostAllocationsTable, CostAllocation> {
+        BaseReferences<
+          _$AppDatabase,
+          $CostAllocationsTable,
+          CostAllocationRow
+        > {
   $$CostAllocationsTableReferences(
     super.$_db,
     super.$_table,
@@ -50078,14 +50083,14 @@ class $$CostAllocationsTableTableManager
         RootTableManager<
           _$AppDatabase,
           $CostAllocationsTable,
-          CostAllocation,
+          CostAllocationRow,
           $$CostAllocationsTableFilterComposer,
           $$CostAllocationsTableOrderingComposer,
           $$CostAllocationsTableAnnotationComposer,
           $$CostAllocationsTableCreateCompanionBuilder,
           $$CostAllocationsTableUpdateCompanionBuilder,
-          (CostAllocation, $$CostAllocationsTableReferences),
-          CostAllocation,
+          (CostAllocationRow, $$CostAllocationsTableReferences),
+          CostAllocationRow,
           PrefetchHooks Function({bool movementId, bool batchId})
         > {
   $$CostAllocationsTableTableManager(
@@ -50152,7 +50157,7 @@ class $$CostAllocationsTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable<$CostAllocationsTable, CostAllocation>(table),
+                  e.readTable<$CostAllocationsTable, CostAllocationRow>(table),
                   $$CostAllocationsTableReferences(db, table, e),
                 ),
               )
@@ -50215,14 +50220,14 @@ typedef $$CostAllocationsTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
       $CostAllocationsTable,
-      CostAllocation,
+      CostAllocationRow,
       $$CostAllocationsTableFilterComposer,
       $$CostAllocationsTableOrderingComposer,
       $$CostAllocationsTableAnnotationComposer,
       $$CostAllocationsTableCreateCompanionBuilder,
       $$CostAllocationsTableUpdateCompanionBuilder,
-      (CostAllocation, $$CostAllocationsTableReferences),
-      CostAllocation,
+      (CostAllocationRow, $$CostAllocationsTableReferences),
+      CostAllocationRow,
       PrefetchHooks Function({bool movementId, bool batchId})
     >;
 typedef $$CostAdjustmentsTableCreateCompanionBuilder =

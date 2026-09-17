@@ -94,11 +94,27 @@ söyle — o durumda yalnızca varyant etiketi değişir, rakamlar yine aynı ka
 of package:sqlite3 instead"*). Yerlerini `sqlite3` 3.x aldı; SQLCipher artık paketin
 **build-hook** ayarıyla devreye giriyor.
 
-Faz 1 arayüzsüz ve testleri bellek içi veritabanında koştuğu için şifreleme gerekmiyor;
-`sqlite3` düz kullanılıyor. **SQLCipher yapılandırması Faz 2'nin ilk işi** (BRIEF §2:
-"Yerel veritabanı Drift (SQLite), SQLCipher ile şifreli"). Yedek dosyasının şifrelemesi
-zaten veritabanı anahtarından bağımsızdır (D-13), bu yüzden bu erteleme yedekleme
-tasarımını etkilemez.
+**✅ Faz 2'de çözüldü.** `pubspec.yaml`'a eklenen
+
+```yaml
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlcipher
+```
+
+ile SQLCipher **4.19.0 community** devreye girdi (SQLite 3.53.4). Doğrulaması
+`test/data/encryption_test.dart`'ta: `PRAGMA cipher_version` dolu dönüyor, dosya anahtarsız
+ve yanlış anahtarla açılamıyor, ham baytlarında `SQLite format 3` başlığı görünmüyor.
+
+Alternatif olarak `source: sqlite3mc` (SQLite3MultipleCiphers) da vardı; BRIEF §2 doğrudan
+"SQLCipher" dediği için o seçildi. sqlite3mc daha güncel bir SQLite taşıyor, ileride
+gerekirse tek satırlık bir değişiklik.
+
+Veritabanı anahtarı `flutter_secure_storage` v11 ile saklanıyor (varsayılanı zaten
+Android Keystore destekli AES-GCM + RSA OAEP; v11'de `encryptedSharedPreferences`
+parametresi kaldırılmış). Yedek dosyasının şifrelemesi bu anahtardan **bağımsızdır**
+(D-13), bu yüzden telefon kaybolsa bile yedek açılabilir.
 
 ### SK-08 · Faz 1'de doğrulanan paket sürümleri
 

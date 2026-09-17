@@ -119,9 +119,12 @@ Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
 |---|---|
 | Faz 0 — Mimari | ✅ tamam |
 | **Faz 1 — Domain ve veri katmanı** | ✅ **tamam — 124 test geçiyor, analyze temiz** |
-| **Faz 2 — Mobil çekirdek + yedekleme** | ✅ **tamam — 188 test, uygulama açılıyor** |
-| Faz 3 — Operasyon | ⏳ sırada |
-| Faz 4–5 | ⏳ |
+| **Faz 2 — Mobil çekirdek + yedekleme** | ✅ tamam |
+| **Faz 3 — Operasyon** | ✅ sayım, fire, kesim, teklif, arama, PDF |
+| **Faz 4 — Analiz ve raporlar** | ✅ müşteri/ürün analizi, kârlılık, CSV |
+| **Faz 5 — Yayına alma** | ✅ kılavuzlar, imzalama, performans ölçümü |
+
+**224 test geçiyor** (223 + 1 performans), `flutter analyze` temiz.
 
 Faz 1'de hazır olanlar:
 
@@ -146,5 +149,18 @@ Faz 2'de eklenenler:
 Actions sekmesindeki son koşunun **`sungerbob-debug-apk`** artifact'i telefona
 kurulabilir.
 
-**Faz 3'ün işleri:** teklif ve satışa dönüştürme, stok sayımı, fire, fason kesim
-emri, vade takibi ve bildirimler, PDF + WhatsApp paylaşımı, global arama.
+Faz 3–5'te eklenenler:
+
+- `data/repo/stock_ops_repository.dart` — sayım (DRAFT → onay) ve fire
+- `data/repo/cutting_repository.dart` — fason kesim, kısmi dönüş
+- `data/repo/quote_repository.dart` — teklif, satışa dönüştürme
+- `data/repo/search_queries.dart` — global arama (Türkçe normalize)
+- `data/repo/analytics_queries.dart` — müşteri/ürün analizi, kârlılık, dönemsel satış
+- `data/documents/` — PDF belgeler (gömülü Noto Sans) ve CSV dışa aktarma
+- `docs/KURULUM.md`, `docs/KULLANIM.md`
+- `test/performance/` — 50.000 satırla ölçüm (ana sayfa 11 ms)
+
+**Kalan işler:** rapor ve analiz ekranlarının arayüzü, grafikler (fl_chart
+eklendi ama henüz kullanılmadı), vade bildirimleri (workmanager + yerel
+bildirim), otomatik yedeğin arka plan görevine bağlanması, Google Drive
+istemcisi, kurulum sihirbazı ekranları.

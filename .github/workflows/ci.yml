@@ -39,7 +39,10 @@ jobs:
         run: flutter analyze
 
       - name: Testler
-        run: flutter test --reporter expanded
+        run: flutter test --exclude-tags performance --reporter expanded
+
+      - name: Performans ölçümü (50.000 satır)
+        run: flutter test --tags performance --reporter expanded
 
       - name: Test kapsamı
         run: flutter test --coverage

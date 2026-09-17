@@ -182,6 +182,36 @@ bu bir tercih değil, zorunluluk: `pdf` paketinin varsayılan Helvetica'sı
 `assets/fonts/` altına **Noto Sans Regular ve Bold** (toplam ~1,1 MB) gömüldü ve
 `main()` içinde yükleniyor. Test de fontun yüklü olduğunu doğruluyor.
 
+## K-02 · Performans ölçümü (BRIEF §9 Faz 5)
+
+"50.000 satış satırıyla ana sayfa ve raporların makul sürede açıldığını ölç."
+
+**Kurgu:** 5.000 satış × 10 satır = **50.000 `sale_items` satırı**, 5.000
+`customer_ledger` hareketi, 12 aya yayılmış. Ölçüm `test/performance/` altında
+otomatik koşuyor ve her sonuç 2 saniye eşiğiyle sınanıyor.
+
+| İşlem | Süre |
+|---|---|
+| Ana sayfa (12 kart) | **11 ms** |
+| Cari bakiye | **0 ms** |
+| Müşteri analizi (SPEC §19) | **49 ms** |
+| Ürün analizi (SPEC §20) | **76 ms** |
+| Kârlılık raporu (yıllık) | **6 ms** |
+| Aylık satış raporu | **5 ms** |
+| Global arama | **6 ms** |
+| Stok sorgusu | **1 ms** |
+
+Hiçbiri 100 ms'yi geçmiyor; eşiğin (2.000 ms) çok altında.
+
+**Neden bu kadar hızlı:** bakiyeler ve toplamlar `SUM()` ile **tamsayı**
+kolonlardan okunuyor (D-02, D-10). Ondalık dönüşümü ya da satır satır Dart
+hesabı yok. Sık sorgulanan kolonlarda indeks var (ERD §4, §7).
+
+**Not:** Ölçüm masaüstü Linux'ta, bellek destekli dosya üzerinde yapıldı.
+Telefonda (yavaş flash, düşük CPU) süreler birkaç kat artabilir; yine de
+eşiğin çok altında kalması bekleniyor. Gerçek cihazda tekrar ölçülmesi
+Faz 5'in kapanış işidir.
+
 ---
 
 ## K-01 · Ortam kaydı

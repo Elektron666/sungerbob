@@ -6,6 +6,7 @@ import '../../../data/repo/dashboard_queries.dart';
 import '../../format/tr_format.dart';
 import '../../providers/app_providers.dart';
 import '../../widgets/common.dart';
+import '../lock/pin_lock_screen.dart';
 import 'backup_status_band.dart';
 
 /// Ana Sayfa (BRIEF §7 + SPEC §18).
@@ -73,11 +74,8 @@ class HomeScreen extends ConsumerWidget {
       return;
     }
     // Kapatmak için PIN gerekir (BRIEF §5).
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => const _PinDialog(),
-    );
-    if (ok ?? false) {
+    final ok = await askPin(context);
+    if (ok) {
       ref.read(hideCostProvider.notifier).revealAfterPinVerified();
     }
   }
@@ -218,62 +216,6 @@ class _DashboardCards extends StatelessWidget {
           );
         },
       ),
-    );
-  }
-}
-
-class _PinDialog extends StatefulWidget {
-  const _PinDialog();
-
-  @override
-  State<_PinDialog> createState() => _PinDialogState();
-}
-
-class _PinDialogState extends State<_PinDialog> {
-  final _controller = TextEditingController();
-  String? _error;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('PIN gerekli'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('Maliyet ve kâr bilgilerini göstermek için PIN girin.'),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _controller,
-            obscureText: true,
-            keyboardType: TextInputType.number,
-            autofocus: true,
-            decoration: InputDecoration(labelText: 'PIN', errorText: _error),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Vazgeç'),
-        ),
-        FilledButton(
-          onPressed: () {
-            // PIN doğrulaması Faz 2'nin kilit ekranıyla ortak servise taşınır.
-            if (_controller.text.isEmpty) {
-              setState(() => _error = 'PIN girin');
-              return;
-            }
-            Navigator.of(context).pop(true);
-          },
-          child: const Text('Göster'),
-        ),
-      ],
     );
   }
 }

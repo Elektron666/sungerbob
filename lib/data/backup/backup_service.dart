@@ -462,6 +462,29 @@ final class BackupService {
         .inDays;
   }
 
+  /// Var olan bir yedek dosyasının **cihaz dışına** çıkarıldığını kaydeder.
+  ///
+  /// Paylaşım veya Drive yüklemesi yeni bir yedek üretmez; aynı dosya başka
+  /// bir yere kopyalanır. Yeniden yedek almak hem gereksiz şifreleme yapar
+  /// hem de saklama kuralını boş yere tüketir (BACKUP.md §4).
+  Future<void> recordOffsiteCopy({
+    required File file,
+    required String destination,
+    DateTime? now,
+  }) async {
+    final exists = await file.exists();
+    await _log(
+      kind: BackupKind.backup,
+      trigger: BackupTrigger.manual,
+      destination: destination,
+      fileName: p.basename(file.path),
+      sizeBytes: exists ? await file.length() : 0,
+      result: exists ? 'OK' : 'FAIL',
+      errorMessage: exists ? null : 'Yedek dosyası bulunamadı',
+      now: now,
+    );
+  }
+
   /// Ana sayfada kırmızı uyarı bandı gösterilmeli mi?
   Future<bool> shouldWarnAboutOffsiteBackup({DateTime? now}) async {
     final threshold =

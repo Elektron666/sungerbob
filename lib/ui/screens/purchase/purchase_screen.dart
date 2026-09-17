@@ -1,10 +1,10 @@
-import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/db/app_database.dart';
 import '../../../data/repo/purchase_repository.dart';
 import '../../../data/repo/unit_of_work.dart';
+import '../../../data/repo/variant_helper.dart';
 import '../../../domain/core/quantity.dart';
 import '../../../domain/service/vat.dart';
 import '../../format/tr_format.dart';
@@ -130,43 +130,13 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
   }
 
   /// Ölçü daha önce görülmediyse varyantı oluşturur.
-  Future<String> _ensureVariant(AppDatabase db, String productId) async {
-    final w = TrFormat.parseDimension(_widthController.text)!;
-    final h = TrFormat.parseDimension(_heightController.text)!;
-    final t = TrFormat.parseDimension(_thicknessController.text)!;
-
-    final existing =
-        await (db.select(db.productVariants)..where(
-              (v) =>
-                  v.productId.equals(productId) &
-                  v.width.equals(w.stored) &
-                  v.height.equals(h.stored) &
-                  v.thickness.equals(t.stored),
-            ))
-            .getSingleOrNull();
-    if (existing != null) return existing.id;
-
-    final id = uuid.v7();
-    await db
-        .into(db.productVariants)
-        .insert(
-          ProductVariantsCompanion.insert(
-            id: id,
-            productId: productId,
-            width: w,
-            height: h,
-            thickness: t,
-            kind: 'PLAKA',
-            unitVolume: Volume.fromDimensions(
-              width: w,
-              height: h,
-              thickness: t,
-              pieces: 1,
-            ),
-          ),
-        );
-    return id;
-  }
+  Future<String> _ensureVariant(AppDatabase db, String productId) =>
+      db.ensureVariant(
+        productId: productId,
+        width: TrFormat.parseDimension(_widthController.text)!,
+        height: TrFormat.parseDimension(_heightController.text)!,
+        thickness: TrFormat.parseDimension(_thicknessController.text)!,
+      );
 
   @override
   Widget build(BuildContext context) {

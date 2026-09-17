@@ -73,11 +73,11 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
       ),
     );
 
-    // Paylaşım cihaz dışı yedek sayılır (BRIEF §4.4).
+    // Paylaşım cihaz dışı yedek sayılır (BRIEF §4.4). Yeni yedek üretilmez;
+    // aynı dosyanın kopyalandığı kaydedilir.
     final service = await ref.read(backupServiceProvider.future);
-    await service.createBackup(
-      password: _passwordController.text,
-      trigger: BackupTrigger.manual,
+    await service.recordOffsiteCopy(
+      file: result.file,
       destination: BackupDestination.share,
     );
     ref.invalidate(backupStatusProvider);

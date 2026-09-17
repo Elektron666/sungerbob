@@ -100,9 +100,20 @@ final class SettingsRepository {
   Future<String> defaultPriceMode() async =>
       await _get('default_price_mode') ?? 'EXCL';
 
+  Future<void> setDefaultPriceMode(String mode) =>
+      _set('default_price_mode', mode);
+
   Future<Rate> defaultVatRate() async => Rate.fromStored(
     int.tryParse(await _get('default_vat_rate') ?? '2000') ?? 2000,
   );
+
+  /// Oran ×100 ölçeğinde saklanır: %20 → 2000.
+  Future<void> setDefaultVatRate(int storedRate) =>
+      _set('default_vat_rate', '$storedRate');
+
+  /// Belgelerde ve audit kayıtlarında görünen kullanıcı adı.
+  Future<String> userName() async => await _get('user_name') ?? '';
+  Future<void> saveUserName(String value) => _set('user_name', value);
 
   Future<List<Rate>> allowedVatRates() async {
     final raw = await _get('allowed_vat_rates') ?? '[0,100,1000,2000]';

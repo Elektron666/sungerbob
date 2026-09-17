@@ -110,4 +110,42 @@ void main() {
       expect(logs.single.trigger, BackupTrigger.preMigration);
     });
   });
+
+  group('Cihaz dışı kopya kaydı', () {
+    test('yeni yedek dosyası üretmeden uyarıyı kapatır', () async {
+      final created = await f.service.createBackup(
+        password: 'sunger2026',
+        trigger: BackupTrigger.manual,
+      );
+      // Yerel yedek cihaz dışı sayılmaz; uyarı sürer.
+      expect(await f.service.daysSinceOffsiteBackup(), isNull);
+      expect(await f.service.shouldWarnAboutOffsiteBackup(), isTrue);
+
+      final before = f.service.localBackups().length;
+      await f.service.recordOffsiteCopy(
+        file: created.file,
+        destination: BackupDestination.share,
+      );
+
+      expect(f.service.localBackups().length, before);
+      expect(await f.service.daysSinceOffsiteBackup(), 0);
+      expect(await f.service.shouldWarnAboutOffsiteBackup(), isFalse);
+    });
+
+    test('dosya yoksa FAIL kaydı düşer, uyarı sürer', () async {
+      final created = await f.service.createBackup(
+        password: 'sunger2026',
+        trigger: BackupTrigger.manual,
+      );
+      await created.file.delete();
+
+      await f.service.recordOffsiteCopy(
+        file: created.file,
+        destination: BackupDestination.share,
+      );
+
+      expect(await f.service.daysSinceOffsiteBackup(), isNull);
+      expect(await f.service.shouldWarnAboutOffsiteBackup(), isTrue);
+    });
+  });
 }

@@ -182,6 +182,55 @@ bu bir tercih değil, zorunluluk: `pdf` paketinin varsayılan Helvetica'sı
 `assets/fonts/` altına **Noto Sans Regular ve Bold** (toplam ~1,1 MB) gömüldü ve
 `main()` içinde yükleniyor. Test de fontun yüklü olduğunu doğruluyor.
 
+### SK-12 · Google Drive API entegrasyonu ertelendi — cihaz dışı yedek paylaşımla
+
+BRIEF §7 kurulum sihirbazında "Google Drive bağlama (atlanabilir)" diyor.
+Doğrudan Drive API kullanmak için uygulamanın **yayın imzasına bağlı** bir
+OAuth istemci kimliği gerekir: Google Cloud Console'da proje açılır ve release
+keystore'un SHA-1 parmak izi kaydedilir.
+
+**Sorun:** imzalama anahtarı yalnızca GitHub Secrets'ta duruyor (D-K2, kullanıcı
+kararı). Parmak izi bu ortamda okunamaz, dolayısıyla çalışan bir istemci kimliği
+üretilemez. Kimliği olmayan bir Drive kodu derlenir ama cihazda **her zaman
+oturum açma hatası verir** — çalışmayan bir düğme, olmayan düğmeden kötüdür.
+
+**Seçilen:** cihaz dışı yedek şimdilik **sistem paylaşım menüsüyle** yapılıyor
+(`/settings/drive`). Kullanıcı Drive, e-posta veya bilgisayara aktarımı seçebilir;
+üçü de `backup_log`'a `destination = SHARE` olarak yazılır ve ana sayfadaki
+"cihaz dışı yedek yok" uyarısını kapatır. Sihirbazdaki Drive adımı bu ekrana
+götürüyor ve atlanabilir.
+
+**Kullanıcıdan gereken:** Drive'a otomatik yükleme isteniyorsa, release
+keystore'un SHA-1 parmak izi ve ondan üretilen OAuth istemci kimliği. Geldiğinde
+`googleapis` + `google_sign_in` eklenip `recordOffsiteCopy` aynı yerden
+`destination = DRIVE` ile çağrılır — arayüz ve kayıt tarafı hazır.
+
+### SK-13 · Yedek şifresi güvenli depoda saklanıyor
+
+Otomatik yedek (BRIEF §4.3) kullanıcı ekranda değilken çalışır; şifreyi o anda
+soramaz. Şifre `flutter_secure_storage`'a (Android Keystore destekli) yazılıyor,
+veritabanına **yazılmıyor**.
+
+Bu, yedeğin cihaz bağımsızlığını bozmaz (D-13): `.sbk` dosyası hâlâ yalnızca
+yedek şifresiyle açılır, cihaz anahtarıyla değil. Güvenli depodaki kopya
+telefonla birlikte kaybolur — yedekler yine okunabilir, yeter ki kullanıcı
+şifreyi not etmiş olsun. Sihirbaz bunu kırmızı bir kartla açıkça uyarıyor.
+
+**Alternatif:** her otomatik yedekte bildirimle şifre sormak. Reddedildi —
+kullanıcı bildirimi kaçırırsa yedek alınmaz, yani en kritik özellik en kırılgan
+hâle gelir.
+
+### SK-14 · Cihaz dışı kopya yeni yedek üretmiyor
+
+Faz 2'de paylaşım akışı, `destination = SHARE` kaydı düşmek için **ikinci bir
+yedek** alıyordu: aynı veri tekrar şifrelenip ikinci bir `.sbk` dosyası
+yazılıyor, saklama kuralı boş yere tüketiliyordu.
+
+`BackupService.recordOffsiteCopy()` eklendi: var olan dosyanın kopyalandığını
+`backup_log`'a yazar, yeni dosya üretmez. Dosya bulunamazsa `FAIL` kaydı düşer
+ve uyarı **kapanmaz** — olmayan bir yedeği var saymak, uyarıyı hiç göstermemekten
+tehlikelidir. İki test bunu doğruluyor.
+
 ## K-02 · Performans ölçümü (BRIEF §9 Faz 5)
 
 "50.000 satış satırıyla ana sayfa ve raporların makul sürede açıldığını ölç."

@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../../data/backup/auto_backup.dart';
+import '../../data/backup/backup_password_store.dart';
 import '../../data/backup/backup_service.dart';
 import '../../data/db/app_database.dart';
 import '../../data/db/connection.dart';
@@ -18,6 +21,7 @@ import '../../data/repo/return_repository.dart';
 import '../../data/repo/reversal_repository.dart';
 import '../../data/repo/sale_repository.dart';
 import '../../data/repo/instrument_repository.dart';
+import '../../data/repo/settings_repository.dart';
 
 /// Uygulama genelindeki bağımlılıklar.
 ///
@@ -92,6 +96,30 @@ final integrityServiceProvider = FutureProvider(
   (ref) async => IntegrityService(await ref.watch(databaseProvider.future)),
 );
 
+final settingsRepositoryProvider = FutureProvider(
+  (ref) async => SettingsRepository(await ref.watch(databaseProvider.future)),
+);
+
+/// Yedek şifresi güvenli depoda; otomatik yedek buradan okur (D-22).
+final backupPasswordStoreProvider = Provider<BackupPasswordStore>(
+  (ref) => SecureBackupPasswordStore(),
+);
+
+final autoBackupPolicyProvider = FutureProvider(
+  (ref) async => AutoBackupPolicy(
+    backup: await ref.watch(backupServiceProvider.future),
+    settings: await ref.watch(settingsRepositoryProvider.future),
+  ),
+);
+
+// ----------------------------------------------------------------- kurulum
+
+/// Kurulum sihirbazı tamamlandı mı? Uygulama açılışında ilk sorulan şey.
+final setupCompletedProvider = FutureProvider<bool>((ref) async {
+  final settings = await ref.watch(settingsRepositoryProvider.future);
+  return settings.isSetupCompleted();
+});
+
 // --------------------------------------------------------------- oturum
 
 /// "Maliyeti gizle" modu (BRIEF §5).
@@ -116,16 +144,39 @@ class HideCostNotifier extends Notifier<bool> {
   void revealAfterPinVerified() => state = false;
 }
 
-/// Uygulama kilidi durumu.
-final appLockProvider = NotifierProvider<AppLockNotifier, bool>(
+/// Uygulama giriş kapısı: kurulum mu, kilit mi, uygulama mı?
+///
+/// Uygulama her açılışta kilitlidir (BRIEF §5). Kurulum tamamlanmadıysa
+/// kilit değil sihirbaz gösterilir.
+enum AppGate { unknown, setup, locked, ready }
+
+final appLockProvider = NotifierProvider<AppLockNotifier, AppGate>(
   AppLockNotifier.new,
 );
 
-class AppLockNotifier extends Notifier<bool> {
-  /// true = kilitli
+class AppLockNotifier extends Notifier<AppGate> {
   @override
-  bool build() => true;
+  AppGate build() {
+    unawaited(_resolve());
+    return AppGate.unknown;
+  }
 
-  void unlock() => state = false;
-  void lock() => state = true;
+  Future<void> _resolve() async {
+    try {
+      final settings = await ref.read(settingsRepositoryProvider.future);
+      final done = await settings.isSetupCompleted() && await settings.hasPin();
+      state = done ? AppGate.locked : AppGate.setup;
+    } catch (_) {
+      // Veritabanı açılamadıysa kurulumdan başlamak tek güvenli seçenek.
+      state = AppGate.setup;
+    }
+  }
+
+  /// PIN doğrulandıktan veya kurulum bittikten sonra.
+  void unlock() => state = AppGate.ready;
+
+  /// Arka plana alınınca veya kullanıcı kilitleyince.
+  void lock() {
+    if (state == AppGate.ready) state = AppGate.locked;
+  }
 }

@@ -5,8 +5,11 @@ import 'screens/backup/restore_screen.dart';
 import 'screens/finance/collection_screen.dart';
 import 'screens/finance/customers_screen.dart';
 import 'screens/home/home_screen.dart';
+import 'screens/opening/opening_screen.dart';
 import 'screens/purchase/purchase_screen.dart';
+import 'screens/reports/reports_screen.dart';
 import 'screens/sale/quick_sale_screen.dart';
+import 'screens/settings/drive_screen.dart';
 import 'screens/settings/settings_screen.dart';
 import 'screens/stock/stock_screen.dart';
 import 'shell.dart';
@@ -40,5 +43,8 @@ GoRouter buildRouter() => GoRouter(
     GoRoute(path: '/backups', builder: (_, _) => const BackupListScreen()),
     GoRoute(path: '/restore', builder: (_, _) => const RestoreScreen()),
     GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
+    GoRoute(path: '/settings/drive', builder: (_, _) => const DriveScreen()),
+    GoRoute(path: '/reports', builder: (_, _) => const ReportsScreen()),
+    GoRoute(path: '/opening', builder: (_, _) => const OpeningScreen()),
   ],
 );

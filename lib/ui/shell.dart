@@ -85,6 +85,8 @@ class MenuScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const items = [
+      (label: 'Raporlar', route: '/reports', icon: Icons.insights),
+      (label: 'Açılış İşlemleri', route: '/opening', icon: Icons.flag_outlined),
       (label: 'Yedek Al', route: '/backup', icon: Icons.backup),
       (label: 'Yedekten Yükle', route: '/restore', icon: Icons.restore),
       (label: 'Yedekler', route: '/backups', icon: Icons.folder),
@@ -105,8 +107,8 @@ class MenuScreen extends StatelessWidget {
           const Divider(),
           const ListTile(
             leading: Icon(Icons.info_outline),
-            title: Text('Teklifler, Kesim Emirleri, Sayım, Fire, Raporlar'),
-            subtitle: Text('Faz 3 ve Faz 4 ile gelecek'),
+            title: Text('Teklifler, Kesim Emirleri, Sayım, Fire'),
+            subtitle: Text('İş kuralları hazır; ekranları eklenecek'),
             enabled: false,
           ),
         ],

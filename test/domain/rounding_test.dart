@@ -25,8 +25,14 @@ void main() {
 
     test('ondalık basamakla yuvarlar', () {
       expect(roundHalfUp(Decimal.parse('166.665'), 2), Decimal.parse('166.67'));
-      expect(roundHalfUp(Decimal.parse('833.3333'), 2), Decimal.parse('833.33'));
-      expect(roundHalfUp(Decimal.parse('3030.00005'), 4), Decimal.parse('3030.0001'));
+      expect(
+        roundHalfUp(Decimal.parse('833.3333'), 2),
+        Decimal.parse('833.33'),
+      );
+      expect(
+        roundHalfUp(Decimal.parse('3030.00005'), 4),
+        Decimal.parse('3030.0001'),
+      );
     });
 
     test('zaten yuvarlaksa değiştirmez', () {

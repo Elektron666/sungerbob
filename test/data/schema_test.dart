@@ -41,20 +41,23 @@ void main() {
       expect(byName['Eko Gri D18'], 12300); // 1,23
     });
 
-    test('D35 140×240 ve HR35 140×240 ayrı ürün, standart ölçüleri gelir', () async {
-      final rows = await db.select(db.products).get();
-      final d35 = rows.firstWhere((p) => p.name == 'D35 140×240');
-      final hr35 = rows.firstWhere((p) => p.name == 'HR35 140×240');
+    test(
+      'D35 140×240 ve HR35 140×240 ayrı ürün, standart ölçüleri gelir',
+      () async {
+        final rows = await db.select(db.products).get();
+        final d35 = rows.firstWhere((p) => p.name == 'D35 140×240');
+        final hr35 = rows.firstWhere((p) => p.name == 'HR35 140×240');
 
-      expect(d35.defaultWidth, Dimension.cm('140'));
-      expect(d35.defaultHeight, Dimension.cm('240'));
-      expect(hr35.defaultWidth, Dimension.cm('140'));
-      expect(hr35.defaultHeight, Dimension.cm('240'));
+        expect(d35.defaultWidth, Dimension.cm('140'));
+        expect(d35.defaultHeight, Dimension.cm('240'));
+        expect(hr35.defaultWidth, Dimension.cm('140'));
+        expect(hr35.defaultHeight, Dimension.cm('240'));
 
-      // Ayrı ürün: D35 Sert'ten farklı id ve kod.
-      final d35Sert = rows.firstWhere((p) => p.name == 'D35 Sert');
-      expect(d35.id, isNot(d35Sert.id));
-    });
+        // Ayrı ürün: D35 Sert'ten farklı id ve kod.
+        final d35Sert = rows.firstWhere((p) => p.name == 'D35 Sert');
+        expect(d35.id, isNot(d35Sert.id));
+      },
+    );
 
     test('Türkçe arama normalizasyonu yazılmış', () async {
       final rows = await db.select(db.products).get();
@@ -96,30 +99,36 @@ void main() {
       expect(perms.length, 9);
       expect(perms.map((p) => p.code), contains('COST_VIEW'));
 
-      final admin = await (db.select(db.roles)..where((r) => r.code.equals('ADMIN'))).getSingle();
-      final links = await (db.select(db.rolePermissions)
-            ..where((rp) => rp.roleId.equals(admin.id)))
-          .get();
+      final admin = await (db.select(
+        db.roles,
+      )..where((r) => r.code.equals('ADMIN'))).getSingle();
+      final links = await (db.select(
+        db.rolePermissions,
+      )..where((rp) => rp.roleId.equals(admin.id))).get();
       expect(links.length, 9);
     });
   });
 
   group('Append-only trigger\'ları (BRIEF §3.5)', () {
     Future<void> insertMovement(String id) async {
-      final loc = await (db.select(db.locations)
-            ..where((l) => l.code.equals(LocationCode.mainWarehouse)))
-          .getSingle();
+      final loc = await (db.select(
+        db.locations,
+      )..where((l) => l.code.equals(LocationCode.mainWarehouse))).getSingle();
       final product = await db.select(db.products).get().then((r) => r.first);
 
-      await db.into(db.productVariants).insert(ProductVariantsCompanion.insert(
-            id: 'var-1',
-            productId: product.id,
-            width: Dimension.cm('140'),
-            height: Dimension.cm('200'),
-            thickness: Dimension.cm('10'),
-            kind: VariantKind.plate,
-            unitVolume: Volume.parse('0.28'),
-          ));
+      await db
+          .into(db.productVariants)
+          .insert(
+            ProductVariantsCompanion.insert(
+              id: 'var-1',
+              productId: product.id,
+              width: Dimension.cm('140'),
+              height: Dimension.cm('200'),
+              thickness: Dimension.cm('10'),
+              kind: VariantKind.plate,
+              unitVolume: Volume.parse('0.28'),
+            ),
+          );
 
       await db.customStatement(
         "INSERT INTO stock_movements (id, occurred_at, type, location_id, variant_id, "
@@ -131,7 +140,9 @@ void main() {
     test('stock_movements UPDATE reddedilir', () async {
       await insertMovement('m1');
       expect(
-        () => db.customStatement("UPDATE stock_movements SET pieces = 5 WHERE id = 'm1'"),
+        () => db.customStatement(
+          "UPDATE stock_movements SET pieces = 5 WHERE id = 'm1'",
+        ),
         throwsA(isA<SqliteException>()),
       );
     });
@@ -147,8 +158,12 @@ void main() {
     test('kayıt UPDATE denemesinden sonra bozulmamış olarak durur', () async {
       await insertMovement('m3');
       try {
-        await db.customStatement("UPDATE stock_movements SET pieces = 999 WHERE id = 'm3'");
-      } catch (_) {/* beklenen */}
+        await db.customStatement(
+          "UPDATE stock_movements SET pieces = 999 WHERE id = 'm3'",
+        );
+      } catch (_) {
+        /* beklenen */
+      }
 
       final row = await db
           .customSelect("SELECT pieces FROM stock_movements WHERE id = 'm3'")
@@ -158,28 +173,51 @@ void main() {
 
     test('tüm append-only tablolar korunuyor', () async {
       const tables = [
-        'customer_ledger', 'supplier_ledger', 'account_movements',
-        'instrument_events', 'cost_allocations', 'cost_adjustments',
-        'payment_allocations', 'supplier_payment_allocations',
-        'command_log', 'audit_logs', 'backup_log',
+        'customer_ledger',
+        'supplier_ledger',
+        'account_movements',
+        'instrument_events',
+        'cost_allocations',
+        'cost_adjustments',
+        'payment_allocations',
+        'supplier_payment_allocations',
+        'command_log',
+        'audit_logs',
+        'backup_log',
       ];
       for (final t in tables) {
         final triggers = await db
             .customSelect(
-                "SELECT name FROM sqlite_master WHERE type='trigger' AND tbl_name='$t'")
+              "SELECT name FROM sqlite_master WHERE type='trigger' AND tbl_name='$t'",
+            )
             .get();
         final names = triggers.map((r) => r.read<String>('name')).toList();
-        expect(names, contains('trg_${t}_no_update'), reason: '$t UPDATE koruması');
-        expect(names, contains('trg_${t}_no_delete'), reason: '$t DELETE koruması');
+        expect(
+          names,
+          contains('trg_${t}_no_update'),
+          reason: '$t UPDATE koruması',
+        );
+        expect(
+          names,
+          contains('trg_${t}_no_delete'),
+          reason: '$t DELETE koruması',
+        );
       }
     });
   });
 
   group('Belge başlığı: yalnızca durum güncellenebilir', () {
     Future<String> insertSale() async {
-      final customer = await db.into(db.customers).insertReturning(
-          CustomersCompanion.insert(
-              id: 'c1', code: 'C1', title: 'ABC Mobilya', titleNormalized: 'abc mobilya'));
+      final customer = await db
+          .into(db.customers)
+          .insertReturning(
+            CustomersCompanion.insert(
+              id: 'c1',
+              code: 'C1',
+              title: 'ABC Mobilya',
+              titleNormalized: 'abc mobilya',
+            ),
+          );
       await db.customStatement(
         "INSERT INTO sales (id, doc_no, customer_id, doc_date, price_mode, subtotal_net, "
         "vat_total, grand_total, cost_total, status, created_at) "
@@ -191,15 +229,20 @@ void main() {
     test('status ve cancel alanları güncellenebilir', () async {
       await insertSale();
       await db.customStatement(
-          "UPDATE sales SET status='CANCELLED', cancelled_at=2, cancel_reason='hatalı' WHERE id='s1'");
-      final row = await db.customSelect("SELECT status FROM sales WHERE id='s1'").getSingle();
+        "UPDATE sales SET status='CANCELLED', cancelled_at=2, cancel_reason='hatalı' WHERE id='s1'",
+      );
+      final row = await db
+          .customSelect("SELECT status FROM sales WHERE id='s1'")
+          .getSingle();
       expect(row.read<String>('status'), 'CANCELLED');
     });
 
     test('tutar güncellenemez', () async {
       await insertSale();
       expect(
-        () => db.customStatement("UPDATE sales SET grand_total = 1 WHERE id='s1'"),
+        () => db.customStatement(
+          "UPDATE sales SET grand_total = 1 WHERE id='s1'",
+        ),
         throwsA(isA<SqliteException>()),
       );
     });
@@ -207,7 +250,8 @@ void main() {
     test('sabitlenmiş maliyet güncellenemez (BRIEF §3.6)', () async {
       await insertSale();
       expect(
-        () => db.customStatement("UPDATE sales SET cost_total = 1 WHERE id='s1'"),
+        () =>
+            db.customStatement("UPDATE sales SET cost_total = 1 WHERE id='s1'"),
         throwsA(isA<SqliteException>()),
       );
     });
@@ -223,16 +267,23 @@ void main() {
 
   group('CHECK kısıtları (BRIEF §6)', () {
     test('negatif parti kalanı reddedilir — negatif stok yasağı', () async {
-      final loc = await (db.select(db.locations)
-            ..where((l) => l.code.equals(LocationCode.mainWarehouse)))
-          .getSingle();
+      final loc = await (db.select(
+        db.locations,
+      )..where((l) => l.code.equals(LocationCode.mainWarehouse))).getSingle();
       final product = await db.select(db.products).get().then((r) => r.first);
-      await db.into(db.productVariants).insert(ProductVariantsCompanion.insert(
-            id: 'v1', productId: product.id,
-            width: Dimension.cm('140'), height: Dimension.cm('200'),
-            thickness: Dimension.cm('10'), kind: VariantKind.plate,
-            unitVolume: Volume.parse('0.28'),
-          ));
+      await db
+          .into(db.productVariants)
+          .insert(
+            ProductVariantsCompanion.insert(
+              id: 'v1',
+              productId: product.id,
+              width: Dimension.cm('140'),
+              height: Dimension.cm('200'),
+              thickness: Dimension.cm('10'),
+              kind: VariantKind.plate,
+              unitVolume: Volume.parse('0.28'),
+            ),
+          );
 
       expect(
         () => db.customStatement(
@@ -246,16 +297,23 @@ void main() {
     });
 
     test('kalan girenden fazla olamaz', () async {
-      final loc = await (db.select(db.locations)
-            ..where((l) => l.code.equals(LocationCode.mainWarehouse)))
-          .getSingle();
+      final loc = await (db.select(
+        db.locations,
+      )..where((l) => l.code.equals(LocationCode.mainWarehouse))).getSingle();
       final product = await db.select(db.products).get().then((r) => r.first);
-      await db.into(db.productVariants).insert(ProductVariantsCompanion.insert(
-            id: 'v2', productId: product.id,
-            width: Dimension.cm('140'), height: Dimension.cm('200'),
-            thickness: Dimension.cm('10'), kind: VariantKind.plate,
-            unitVolume: Volume.parse('0.28'),
-          ));
+      await db
+          .into(db.productVariants)
+          .insert(
+            ProductVariantsCompanion.insert(
+              id: 'v2',
+              productId: product.id,
+              width: Dimension.cm('140'),
+              height: Dimension.cm('200'),
+              thickness: Dimension.cm('10'),
+              kind: VariantKind.plate,
+              unitVolume: Volume.parse('0.28'),
+            ),
+          );
 
       expect(
         () => db.customStatement(
@@ -269,16 +327,23 @@ void main() {
     });
 
     test('giriş hareketinde negatif adet reddedilir', () async {
-      final loc = await (db.select(db.locations)
-            ..where((l) => l.code.equals(LocationCode.mainWarehouse)))
-          .getSingle();
+      final loc = await (db.select(
+        db.locations,
+      )..where((l) => l.code.equals(LocationCode.mainWarehouse))).getSingle();
       final product = await db.select(db.products).get().then((r) => r.first);
-      await db.into(db.productVariants).insert(ProductVariantsCompanion.insert(
-            id: 'v3', productId: product.id,
-            width: Dimension.cm('140'), height: Dimension.cm('200'),
-            thickness: Dimension.cm('10'), kind: VariantKind.plate,
-            unitVolume: Volume.parse('0.28'),
-          ));
+      await db
+          .into(db.productVariants)
+          .insert(
+            ProductVariantsCompanion.insert(
+              id: 'v3',
+              productId: product.id,
+              width: Dimension.cm('140'),
+              height: Dimension.cm('200'),
+              thickness: Dimension.cm('10'),
+              kind: VariantKind.plate,
+              unitVolume: Volume.parse('0.28'),
+            ),
+          );
 
       expect(
         () => db.customStatement(
@@ -291,9 +356,9 @@ void main() {
     });
 
     test('geçersiz hareket tipi reddedilir', () async {
-      final loc = await (db.select(db.locations)
-            ..where((l) => l.code.equals(LocationCode.mainWarehouse)))
-          .getSingle();
+      final loc = await (db.select(
+        db.locations,
+      )..where((l) => l.code.equals(LocationCode.mainWarehouse))).getSingle();
       expect(
         () => db.customStatement(
           "INSERT INTO stock_movements (id, occurred_at, type, location_id, variant_id, "
@@ -305,23 +370,30 @@ void main() {
     });
 
     test('bir hareket iki kez ters çevrilemez', () async {
-      final loc = await (db.select(db.locations)
-            ..where((l) => l.code.equals(LocationCode.mainWarehouse)))
-          .getSingle();
+      final loc = await (db.select(
+        db.locations,
+      )..where((l) => l.code.equals(LocationCode.mainWarehouse))).getSingle();
       final product = await db.select(db.products).get().then((r) => r.first);
-      await db.into(db.productVariants).insert(ProductVariantsCompanion.insert(
-            id: 'v4', productId: product.id,
-            width: Dimension.cm('140'), height: Dimension.cm('200'),
-            thickness: Dimension.cm('10'), kind: VariantKind.plate,
-            unitVolume: Volume.parse('0.28'),
-          ));
+      await db
+          .into(db.productVariants)
+          .insert(
+            ProductVariantsCompanion.insert(
+              id: 'v4',
+              productId: product.id,
+              width: Dimension.cm('140'),
+              height: Dimension.cm('200'),
+              thickness: Dimension.cm('10'),
+              kind: VariantKind.plate,
+              unitVolume: Volume.parse('0.28'),
+            ),
+          );
 
       Future<void> ins(String id, String? reversalOf) => db.customStatement(
-            "INSERT INTO stock_movements (id, occurred_at, type, location_id, variant_id, "
-            "pieces, volume, unit_cost_m3, total_cost, source_type, reversal_of_id, created_at) "
-            "VALUES ('$id',1,'PURCHASE_IN','${loc.id}','v4',10,2800000,0,0,'PURCHASE',"
-            "${reversalOf == null ? 'NULL' : "'$reversalOf'"},1)",
-          );
+        "INSERT INTO stock_movements (id, occurred_at, type, location_id, variant_id, "
+        "pieces, volume, unit_cost_m3, total_cost, source_type, reversal_of_id, created_at) "
+        "VALUES ('$id',1,'PURCHASE_IN','${loc.id}','v4',10,2800000,0,0,'PURCHASE',"
+        "${reversalOf == null ? 'NULL' : "'$reversalOf'"},1)",
+      );
 
       await ins('orig', null);
       await ins('rev1', 'orig');
@@ -330,9 +402,9 @@ void main() {
 
     test('command_log aynı UUID ikinci kez yazılamaz (idempotency)', () async {
       Future<void> ins() => db.customStatement(
-            "INSERT INTO command_log (id, command_type, payload_hash, created_at) "
-            "VALUES ('cmd-1','SALE_CREATE','abc',1)",
-          );
+        "INSERT INTO command_log (id, command_type, payload_hash, created_at) "
+        "VALUES ('cmd-1','SALE_CREATE','abc',1)",
+      );
       await ins();
       expect(ins, throwsA(isA<SqliteException>()));
     });
@@ -346,12 +418,19 @@ void main() {
 
     test('olmayan ürüne varyant eklenemez', () async {
       expect(
-        () => db.into(db.productVariants).insert(ProductVariantsCompanion.insert(
-              id: 'vx', productId: 'yok-boyle-urun',
-              width: Dimension.cm('140'), height: Dimension.cm('200'),
-              thickness: Dimension.cm('10'), kind: VariantKind.plate,
-              unitVolume: Volume.parse('0.28'),
-            )),
+        () => db
+            .into(db.productVariants)
+            .insert(
+              ProductVariantsCompanion.insert(
+                id: 'vx',
+                productId: 'yok-boyle-urun',
+                width: Dimension.cm('140'),
+                height: Dimension.cm('200'),
+                thickness: Dimension.cm('10'),
+                kind: VariantKind.plate,
+                unitVolume: Volume.parse('0.28'),
+              ),
+            ),
         throwsA(isA<SqliteException>()),
       );
     });

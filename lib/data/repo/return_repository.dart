@@ -38,18 +38,24 @@ final class ReturnRepository {
   const ReturnRepository(this.db);
 
   Future<String> createSaleReturn(
-          SaleReturnInput input, OperationContext ctx) =>
-      db.runOperation(ctx, () => _createSaleReturn(input, ctx));
+    SaleReturnInput input,
+    OperationContext ctx,
+  ) => db.runOperation(ctx, () => _createSaleReturn(input, ctx));
 
   Future<String> _createSaleReturn(
-      SaleReturnInput input, OperationContext ctx) async {
+    SaleReturnInput input,
+    OperationContext ctx,
+  ) async {
     final returnId = uuid.v7();
-    final docNo =
-        await db.nextDocumentNumber(DocPrefix.returnDoc, input.docDate.year);
+    final docNo = await db.nextDocumentNumber(
+      DocPrefix.returnDoc,
+      input.docDate.year,
+    );
     final mainLocation = await db.locationId(LocationCode.mainWarehouse);
 
-    final sale = await (db.select(db.sales)..where((s) => s.id.equals(input.saleId)))
-        .getSingle();
+    final sale = await (db.select(
+      db.sales,
+    )..where((s) => s.id.equals(input.saleId))).getSingle();
 
     var netTotal = Money.zero;
     var vatTotal = Money.zero;
@@ -59,9 +65,9 @@ final class ReturnRepository {
     final pending = <_PendingReturnLine>[];
 
     for (final line in input.lines) {
-      final item = await (db.select(db.saleItems)
-            ..where((i) => i.id.equals(line.saleItemId)))
-          .getSingle();
+      final item = await (db.select(
+        db.saleItems,
+      )..where((i) => i.id.equals(line.saleItemId))).getSingle();
 
       // İade satılan miktarı aşamaz (BRIEF §5).
       final alreadyReturned = await _alreadyReturnedPieces(line.saleItemId);
@@ -96,130 +102,161 @@ final class ReturnRepository {
       grossTotal += vat.gross;
       costTotal += lineCost;
 
-      pending.add(_PendingReturnLine(
-        saleItem: item,
-        pieces: line.pieces,
-        volume: volume,
-        vat: vat,
-        cost: lineCost,
-        allocations: reversal,
-      ));
+      pending.add(
+        _PendingReturnLine(
+          saleItem: item,
+          pieces: line.pieces,
+          volume: volume,
+          vat: vat,
+          cost: lineCost,
+          allocations: reversal,
+        ),
+      );
     }
 
-    await db.into(db.saleReturns).insert(SaleReturnsCompanion.insert(
-          id: returnId,
-          docNo: docNo,
-          saleId: input.saleId,
-          customerId: sale.customerId,
-          docDate: input.docDate.millisecondsSinceEpoch,
-          priceMode: sale.priceMode,
-          subtotalNet: netTotal,
-          vatTotal: vatTotal,
-          grandTotal: grossTotal,
-          costTotal: costTotal,
-          commandId: Value(ctx.commandId),
-          createdAt: ctx.nowMs,
-          reason: Value(input.reason),
-        ));
-
-    for (final p in pending) {
-      await db.into(db.saleReturnItems).insert(SaleReturnItemsCompanion.insert(
-            id: uuid.v7(),
-            saleReturnId: returnId,
-            saleItemId: p.saleItem.id,
-            pieces: p.pieces,
-            volume: p.volume,
-            unitPriceM3: p.saleItem.unitPriceM3,
-            netTotal: p.vat.net,
-            vatRate: p.saleItem.vatRate,
-            vatTotal: p.vat.vat,
-            grossTotal: p.vat.gross,
-            costTotal: p.cost,
-          ));
-
-      final movementId = uuid.v7();
-      await db.into(db.stockMovements).insert(StockMovementsCompanion.insert(
-            id: movementId,
-            occurredAt: input.docDate.millisecondsSinceEpoch,
-            type: MovementType.saleReturnIn,
-            locationId: mainLocation,
-            variantId: p.saleItem.variantId,
-            pieces: p.pieces,
-            volume: p.volume,
-            unitCostM3: p.allocations.isEmpty
-                ? UnitPrice.zero
-                : p.allocations.first.unitCost,
-            totalCost: p.cost,
-            sourceType: 'RETURN',
-            sourceId: Value(returnId),
+    await db
+        .into(db.saleReturns)
+        .insert(
+          SaleReturnsCompanion.insert(
+            id: returnId,
+            docNo: docNo,
+            saleId: input.saleId,
+            customerId: sale.customerId,
+            docDate: input.docDate.millisecondsSinceEpoch,
+            priceMode: sale.priceMode,
+            subtotalNet: netTotal,
+            vatTotal: vatTotal,
+            grandTotal: grossTotal,
+            costTotal: costTotal,
             commandId: Value(ctx.commandId),
             createdAt: ctx.nowMs,
-          ));
+            reason: Value(input.reason),
+          ),
+        );
+
+    for (final p in pending) {
+      await db
+          .into(db.saleReturnItems)
+          .insert(
+            SaleReturnItemsCompanion.insert(
+              id: uuid.v7(),
+              saleReturnId: returnId,
+              saleItemId: p.saleItem.id,
+              pieces: p.pieces,
+              volume: p.volume,
+              unitPriceM3: p.saleItem.unitPriceM3,
+              netTotal: p.vat.net,
+              vatRate: p.saleItem.vatRate,
+              vatTotal: p.vat.vat,
+              grossTotal: p.vat.gross,
+              costTotal: p.cost,
+            ),
+          );
+
+      final movementId = uuid.v7();
+      await db
+          .into(db.stockMovements)
+          .insert(
+            StockMovementsCompanion.insert(
+              id: movementId,
+              occurredAt: input.docDate.millisecondsSinceEpoch,
+              type: MovementType.saleReturnIn,
+              locationId: mainLocation,
+              variantId: p.saleItem.variantId,
+              pieces: p.pieces,
+              volume: p.volume,
+              unitCostM3: p.allocations.isEmpty
+                  ? UnitPrice.zero
+                  : p.allocations.first.unitCost,
+              totalCost: p.cost,
+              sourceType: 'RETURN',
+              sourceId: Value(returnId),
+              commandId: Value(ctx.commandId),
+              createdAt: ctx.nowMs,
+            ),
+          );
 
       // Mal çıktığı partilere geri döner.
       for (final alloc in p.allocations) {
-        await db.into(db.costAllocations).insert(CostAllocationsCompanion.insert(
-              id: uuid.v7(),
-              movementId: movementId,
-              batchId: alloc.batchId,
-              pieces: alloc.pieces,
-              volume: alloc.volume,
-              unitCostM3: alloc.unitCost,
-              totalCost: alloc.cost,
-              sequenceNo: alloc.sequenceNo,
-              createdAt: ctx.nowMs,
-            ));
+        await db
+            .into(db.costAllocations)
+            .insert(
+              CostAllocationsCompanion.insert(
+                id: uuid.v7(),
+                movementId: movementId,
+                batchId: alloc.batchId,
+                pieces: alloc.pieces,
+                volume: alloc.volume,
+                unitCostM3: alloc.unitCost,
+                totalCost: alloc.cost,
+                sequenceNo: alloc.sequenceNo,
+                createdAt: ctx.nowMs,
+              ),
+            );
 
-        final batch = await (db.select(db.inventoryBatches)
-              ..where((b) => b.id.equals(alloc.batchId)))
-            .getSingle();
-        await (db.update(db.inventoryBatches)
-              ..where((b) => b.id.equals(alloc.batchId)))
-            .write(InventoryBatchesCompanion(
-          remainingPieces: Value(batch.remainingPieces + alloc.pieces),
-          remainingVolume: Value(batch.remainingVolume + alloc.volume),
-        ));
+        final batch = await (db.select(
+          db.inventoryBatches,
+        )..where((b) => b.id.equals(alloc.batchId))).getSingle();
+        await (db.update(
+          db.inventoryBatches,
+        )..where((b) => b.id.equals(alloc.batchId))).write(
+          InventoryBatchesCompanion(
+            remainingPieces: Value(batch.remainingPieces + alloc.pieces),
+            remainingVolume: Value(batch.remainingVolume + alloc.volume),
+          ),
+        );
       }
     }
 
     // Cariye alacak.
-    await db.into(db.customerLedger).insert(CustomerLedgerCompanion.insert(
-          id: uuid.v7(),
-          customerId: sale.customerId,
-          occurredAt: input.docDate.millisecondsSinceEpoch,
-          docType: LedgerDocType.saleReturn,
-          docId: Value(returnId),
-          docNo: Value(docNo),
-          amount: -grossTotal,
-          description: Value('Satış iadesi $docNo'),
-          commandId: Value(ctx.commandId),
-          createdAt: ctx.nowMs,
-        ));
+    await db
+        .into(db.customerLedger)
+        .insert(
+          CustomerLedgerCompanion.insert(
+            id: uuid.v7(),
+            customerId: sale.customerId,
+            occurredAt: input.docDate.millisecondsSinceEpoch,
+            docType: LedgerDocType.saleReturn,
+            docId: Value(returnId),
+            docNo: Value(docNo),
+            amount: -grossTotal,
+            description: Value('Satış iadesi $docNo'),
+            commandId: Value(ctx.commandId),
+            createdAt: ctx.nowMs,
+          ),
+        );
 
-    await db.writeAudit(ctx,
-        entityType: 'sale_return',
-        entityId: returnId,
-        action: 'CREATE',
-        summary: 'Satış iadesi $docNo, tutar $grossTotal');
+    await db.writeAudit(
+      ctx,
+      entityType: 'sale_return',
+      entityId: returnId,
+      action: 'CREATE',
+      summary: 'Satış iadesi $docNo, tutar $grossTotal',
+    );
 
     return returnId;
   }
 
   Future<int> _alreadyReturnedPieces(String saleItemId) async {
-    final row = await db.customSelect(
-      'SELECT COALESCE(SUM(pieces), 0) AS total FROM sale_return_items '
-      'WHERE sale_item_id = ?',
-      variables: [Variable.withString(saleItemId)],
-      readsFrom: {db.saleReturnItems},
-    ).getSingle();
+    final row = await db
+        .customSelect(
+          'SELECT COALESCE(SUM(pieces), 0) AS total FROM sale_return_items '
+          'WHERE sale_item_id = ?',
+          variables: [Variable.withString(saleItemId)],
+          readsFrom: {db.saleReturnItems},
+        )
+        .getSingle();
     return row.read<int>('total');
   }
 
   /// Orijinal satışın bu varyant için tükettiği partiler, tüketim sırasında.
   Future<List<CostAllocation>> _originalAllocations(
-      String saleId, String variantId) async {
-    final rows = await db.customSelect(
-      '''
+    String saleId,
+    String variantId,
+  ) async {
+    final rows = await db
+        .customSelect(
+          '''
       SELECT ca.batch_id, ca.pieces, ca.volume, ca.unit_cost_m3, ca.total_cost,
              ca.sequence_no
       FROM cost_allocations ca
@@ -228,9 +265,13 @@ final class ReturnRepository {
         AND sm.variant_id = ? AND sm.type = 'SALE_OUT'
       ORDER BY ca.sequence_no ASC
       ''',
-      variables: [Variable.withString(saleId), Variable.withString(variantId)],
-      readsFrom: {db.costAllocations, db.stockMovements},
-    ).get();
+          variables: [
+            Variable.withString(saleId),
+            Variable.withString(variantId),
+          ],
+          readsFrom: {db.costAllocations, db.stockMovements},
+        )
+        .get();
 
     return [
       for (final r in rows)
@@ -241,7 +282,7 @@ final class ReturnRepository {
           unitCost: UnitPrice.fromStored(r.read<int>('unit_cost_m3')),
           cost: Money.fromStored(r.read<int>('total_cost')),
           sequenceNo: r.read<int>('sequence_no'),
-        )
+        ),
     ];
   }
 }

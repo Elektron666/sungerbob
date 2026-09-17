@@ -47,13 +47,13 @@ class InventoryBatches extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (source_type IN (${BatchSourceType.all.map((e) => "'$e'").join(',')}))",
-        'CHECK (in_pieces > 0 AND in_volume > 0)',
-        // Negatif stok yasağının veritabanı tarafındaki güvencesi (BRIEF §3.8).
-        'CHECK (remaining_pieces >= 0 AND remaining_volume >= 0)',
-        'CHECK (remaining_pieces <= in_pieces AND remaining_volume <= in_volume)',
-        'CHECK (bare_unit_cost_m3 >= 0 AND real_unit_cost_m3 >= 0)',
-      ];
+    "CHECK (source_type IN (${BatchSourceType.all.map((e) => "'$e'").join(',')}))",
+    'CHECK (in_pieces > 0 AND in_volume > 0)',
+    // Negatif stok yasağının veritabanı tarafındaki güvencesi (BRIEF §3.8).
+    'CHECK (remaining_pieces >= 0 AND remaining_volume >= 0)',
+    'CHECK (remaining_pieces <= in_pieces AND remaining_volume <= in_volume)',
+    'CHECK (bare_unit_cost_m3 >= 0 AND real_unit_cost_m3 >= 0)',
+  ];
 }
 
 /// 🔒 append-only. Tüm stok hareketleri (BRIEF §6).
@@ -68,7 +68,8 @@ class StockMovements extends Table {
   TextColumn get type => text()();
   TextColumn get locationId => text().references(Locations, #id)();
   TextColumn get variantId => text().references(ProductVariants, #id)();
-  TextColumn get batchId => text().nullable().references(InventoryBatches, #id)();
+  TextColumn get batchId =>
+      text().nullable().references(InventoryBatches, #id)();
 
   /// İşaretli: girişte pozitif, çıkışta negatif.
   IntColumn get pieces => integer()();
@@ -94,13 +95,13 @@ class StockMovements extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (type IN (${MovementType.all.map((e) => "'$e'").join(',')}))",
-        'CHECK (pieces <> 0)',
-        // Yön ile tip tutarlılığı.
-        "CHECK ((type IN (${MovementType.inbound.map((e) => "'$e'").join(',')}) AND pieces > 0)"
-            " OR (type IN (${MovementType.outbound.map((e) => "'$e'").join(',')}) AND pieces < 0)"
-            " OR type = '${MovementType.reversal}')",
-      ];
+    "CHECK (type IN (${MovementType.all.map((e) => "'$e'").join(',')}))",
+    'CHECK (pieces <> 0)',
+    // Yön ile tip tutarlılığı.
+    "CHECK ((type IN (${MovementType.inbound.map((e) => "'$e'").join(',')}) AND pieces > 0)"
+        " OR (type IN (${MovementType.outbound.map((e) => "'$e'").join(',')}) AND pieces < 0)"
+        " OR type = '${MovementType.reversal}')",
+  ];
 }
 
 /// 🔒 append-only. Her çıkışın parti bazlı maliyeti (BRIEF §3.6).
@@ -125,9 +126,9 @@ class CostAllocations extends Table {
 
   @override
   List<String> get customConstraints => [
-        'CHECK (pieces > 0)',
-        'CHECK (sequence_no >= 0)',
-      ];
+    'CHECK (pieces > 0)',
+    'CHECK (sequence_no >= 0)',
+  ];
 }
 
 /// 🔒 append-only. Sonradan gelen masrafın satılmış/firelenmiş kısma düşen payı
@@ -149,6 +150,6 @@ class CostAdjustments extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (reason IN ('LATE_EXPENSE','CUTTING_FEE_LATE','OTHER'))",
-      ];
+    "CHECK (reason IN ('LATE_EXPENSE','CUTTING_FEE_LATE','OTHER'))",
+  ];
 }

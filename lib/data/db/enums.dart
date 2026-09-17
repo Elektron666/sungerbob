@@ -2,7 +2,6 @@
 /// Yedek dosyası elle incelenebilir kalsın diye kod yerine okunabilir metin.
 library;
 
-
 abstract final class LocationCode {
   static const mainWarehouse = 'ANA_DEPO';
   static const cutting = 'KESIMDE';
@@ -45,18 +44,39 @@ abstract final class MovementType {
   static const reversal = 'REVERSAL';
 
   static const all = [
-    purchaseIn, saleOut, saleReturnIn, purchaseReturnOut, countIn, countOut,
-    wasteOut, transferOut, transferIn, cuttingOut, cuttingIn, openingIn, reversal,
+    purchaseIn,
+    saleOut,
+    saleReturnIn,
+    purchaseReturnOut,
+    countIn,
+    countOut,
+    wasteOut,
+    transferOut,
+    transferIn,
+    cuttingOut,
+    cuttingIn,
+    openingIn,
+    reversal,
   ];
 
   /// Stoğa giren hareketler (pozitif adet/hacim).
   static const inbound = [
-    purchaseIn, saleReturnIn, countIn, transferIn, cuttingIn, openingIn,
+    purchaseIn,
+    saleReturnIn,
+    countIn,
+    transferIn,
+    cuttingIn,
+    openingIn,
   ];
 
   /// Stoktan çıkan hareketler (negatif adet/hacim).
   static const outbound = [
-    saleOut, purchaseReturnOut, countOut, wasteOut, transferOut, cuttingOut,
+    saleOut,
+    purchaseReturnOut,
+    countOut,
+    wasteOut,
+    transferOut,
+    cuttingOut,
   ];
 }
 
@@ -111,8 +131,15 @@ abstract final class InstrumentStatus {
   static const takenBack = 'TAKEN_BACK';
 
   static const all = [
-    portfolio, atBank, collected, endorsed, bounced, returned,
-    issued, paid, takenBack,
+    portfolio,
+    atBank,
+    collected,
+    endorsed,
+    bounced,
+    returned,
+    issued,
+    paid,
+    takenBack,
   ];
 
   /// Alınan evrak için geçerli durum geçişleri (ERD §9).
@@ -189,12 +216,25 @@ abstract final class LedgerDocType {
   static const reversal = 'REVERSAL';
 
   static const customerAll = [
-    sale, saleReturn, collection, instrumentIn, instrumentBounced,
-    opening, adjustment, reversal,
+    sale,
+    saleReturn,
+    collection,
+    instrumentIn,
+    instrumentBounced,
+    opening,
+    adjustment,
+    reversal,
   ];
   static const supplierAll = [
-    purchase, purchaseReturn, payment, instrumentOut, instrumentEndorsed,
-    cuttingFee, opening, adjustment, reversal,
+    purchase,
+    purchaseReturn,
+    payment,
+    instrumentOut,
+    instrumentEndorsed,
+    cuttingFee,
+    opening,
+    adjustment,
+    reversal,
   ];
 }
 
@@ -209,8 +249,15 @@ abstract final class AccountMovementType {
   static const instrumentPaid = 'INSTRUMENT_PAID';
   static const reversal = 'REVERSAL';
   static const all = [
-    collection, payment, transferIn, transferOut, expense, opening,
-    instrumentCollected, instrumentPaid, reversal,
+    collection,
+    payment,
+    transferIn,
+    transferOut,
+    expense,
+    opening,
+    instrumentCollected,
+    instrumentPaid,
+    reversal,
   ];
 }
 
@@ -236,8 +283,17 @@ abstract final class DocPrefix {
   static const transfer = 'VRM';
   static const expense = 'GDR';
   static const all = [
-    sale, purchase, collection, quote, returnDoc, cutting, payment,
-    stockCount, waste, transfer, expense,
+    sale,
+    purchase,
+    collection,
+    quote,
+    returnDoc,
+    cutting,
+    payment,
+    stockCount,
+    waste,
+    transfer,
+    expense,
   ];
 }
 

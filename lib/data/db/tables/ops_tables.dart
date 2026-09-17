@@ -27,8 +27,8 @@ class StockCounts extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (status IN ('DRAFT','APPLIED','CANCELLED'))",
-      ];
+    "CHECK (status IN ('DRAFT','APPLIED','CANCELLED'))",
+  ];
 }
 
 class StockCountItems extends Table {
@@ -49,8 +49,8 @@ class StockCountItems extends Table {
 
   @override
   List<String> get customConstraints => [
-        'CHECK (system_pieces >= 0 AND counted_pieces >= 0)',
-      ];
+    'CHECK (system_pieces >= 0 AND counted_pieces >= 0)',
+  ];
 }
 
 /// Fire / hasar / stok düzeltme (SPEC §17 + §26 `stock_adjustments`).
@@ -75,13 +75,14 @@ class StockAdjustments extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (reason_code IN (${WasteReason.all.map((e) => "'$e'").join(',')}))",
-      ];
+    "CHECK (reason_code IN (${WasteReason.all.map((e) => "'$e'").join(',')}))",
+  ];
 }
 
 class StockAdjustmentItems extends Table {
   TextColumn get id => text()();
-  TextColumn get stockAdjustmentId => text().references(StockAdjustments, #id)();
+  TextColumn get stockAdjustmentId =>
+      text().references(StockAdjustments, #id)();
   TextColumn get variantId => text().references(ProductVariants, #id)();
   IntColumn get pieces => integer()();
   IntColumn get volume => integer().map(const VolumeConverter())();
@@ -102,7 +103,8 @@ class CuttingOrders extends Table {
 
   /// type = KESIMHANE olan tedarikçi.
   TextColumn get cutterSupplierId => text().references(Suppliers, #id)();
-  TextColumn get salesQuoteId => text().nullable().references(SalesQuotes, #id)();
+  TextColumn get salesQuoteId =>
+      text().nullable().references(SalesQuotes, #id)();
   TextColumn get customerId => text().nullable().references(Customers, #id)();
   IntColumn get sentDate => integer()();
   IntColumn get expectedReturnDate => integer().nullable()();
@@ -135,10 +137,10 @@ class CuttingOrders extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (status IN (${CuttingStatus.all.map((e) => "'$e'").join(',')}))",
-        // Hedef toplam m³ kaynağı aşamaz (BRIEF §5.3).
-        'CHECK (result_volume_total <= source_volume_total)',
-      ];
+    "CHECK (status IN (${CuttingStatus.all.map((e) => "'$e'").join(',')}))",
+    // Hedef toplam m³ kaynağı aşamaz (BRIEF §5.3).
+    'CHECK (result_volume_total <= source_volume_total)',
+  ];
 }
 
 class CuttingOrderSources extends Table {
@@ -226,6 +228,6 @@ class OpeningBalances extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (kind IN ('STOCK','CUSTOMER','SUPPLIER','CASH','INSTRUMENT'))",
-      ];
+    "CHECK (kind IN ('STOCK','CUSTOMER','SUPPLIER','CASH','INSTRUMENT'))",
+  ];
 }

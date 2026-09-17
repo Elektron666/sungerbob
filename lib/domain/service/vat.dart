@@ -31,7 +31,10 @@ final class VatLine {
 
   @override
   bool operator ==(Object other) =>
-      other is VatLine && other.net == net && other.vat == vat && other.gross == gross;
+      other is VatLine &&
+      other.net == net &&
+      other.vat == vat &&
+      other.gross == gross;
 
   @override
   int get hashCode => Object.hash(net, vat, gross);
@@ -52,14 +55,14 @@ abstract final class VatCalculator {
   }) {
     final raw = volume.m3 * unitPrice.perM3;
     final discounted = raw * (Decimal.one - discountRate.fraction);
-    return excludingFromNet(net: Money.fromDecimal(discounted), vatRate: vatRate);
+    return excludingFromNet(
+      net: Money.fromDecimal(discounted),
+      vatRate: vatRate,
+    );
   }
 
   /// Net tutar zaten belliyken KDV ve brütü türetir.
-  static VatLine excludingFromNet({
-    required Money net,
-    required Rate vatRate,
-  }) {
+  static VatLine excludingFromNet({required Money net, required Rate vatRate}) {
     final vat = Money.fromDecimal(net.tl * vatRate.fraction);
     return VatLine(net: net, vat: vat, gross: net + vat);
   }
@@ -93,15 +96,18 @@ abstract final class VatCalculator {
     switch (mode) {
       case PriceMode.excl:
         return excluding(
-            volume: volume,
-            unitPrice: unitPrice,
-            vatRate: vatRate,
-            discountRate: discountRate);
+          volume: volume,
+          unitPrice: unitPrice,
+          vatRate: vatRate,
+          discountRate: discountRate,
+        );
       case PriceMode.incl:
         final raw = volume.m3 * unitPrice.perM3;
         final discounted = raw * (Decimal.one - discountRate.fraction);
         return includingFromGross(
-            gross: Money.fromDecimal(discounted), vatRate: vatRate);
+          gross: Money.fromDecimal(discounted),
+          vatRate: vatRate,
+        );
     }
   }
 }
@@ -114,16 +120,19 @@ final class ProfitCalculator {
 
   const ProfitCalculator._({required this.netRevenue, required this.cost});
 
-  factory ProfitCalculator.of({required Money netRevenue, required Money cost}) =>
-      ProfitCalculator._(netRevenue: netRevenue, cost: cost);
+  factory ProfitCalculator.of({
+    required Money netRevenue,
+    required Money cost,
+  }) => ProfitCalculator._(netRevenue: netRevenue, cost: cost);
 
   Money get grossProfit => netRevenue - cost;
 
   /// Kâr marjı = kâr / net satış. Ciro sıfırsa tanımsız.
   Decimal? get marginPercent {
     if (netRevenue.isZero) return null;
-    return ((grossProfit.tl / netRevenue.tl)
-            .toDecimal(scaleOnInfinitePrecision: 12) *
+    return ((grossProfit.tl / netRevenue.tl).toDecimal(
+          scaleOnInfinitePrecision: 12,
+        ) *
         Decimal.fromInt(100));
   }
 

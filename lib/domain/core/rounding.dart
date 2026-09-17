@@ -11,6 +11,8 @@ Decimal roundHalfUp(Decimal value, int decimals) {
   final shifted = value * factor;
   final floor = shifted.floor();
   final fraction = shifted - floor;
-  final rounded = fraction >= Decimal.parse('0.5') ? floor + Decimal.one : floor;
+  final rounded = fraction >= Decimal.parse('0.5')
+      ? floor + Decimal.one
+      : floor;
   return (rounded / factor).toDecimal(scaleOnInfinitePrecision: decimals);
 }

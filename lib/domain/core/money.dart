@@ -34,7 +34,9 @@ final class Money implements Comparable<Money> {
   int get stored => minor;
 
   /// TL cinsinden kesin değer.
-  Decimal get tl => (Decimal.fromInt(minor) / _factor).toDecimal(scaleOnInfinitePrecision: Scales.money);
+  Decimal get tl => (Decimal.fromInt(minor) / _factor).toDecimal(
+    scaleOnInfinitePrecision: Scales.money,
+  );
 
   bool get isZero => minor == 0;
   bool get isNegative => minor < 0;

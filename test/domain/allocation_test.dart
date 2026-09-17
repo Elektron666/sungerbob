@@ -27,7 +27,11 @@ void main() {
         total: Money.parse('1.00'),
         weights: [Volume.parse('1'), Volume.parse('1'), Volume.parse('1')],
       );
-      expect(r, [Money.parse('0.33'), Money.parse('0.33'), Money.parse('0.34')]);
+      expect(r, [
+        Money.parse('0.33'),
+        Money.parse('0.33'),
+        Money.parse('0.34'),
+      ]);
       expect(sumMoney(r), Money.parse('1.00'));
     });
 
@@ -44,7 +48,11 @@ void main() {
           total: Money.parse(total),
           weights: ws.map(Volume.parse).toList(),
         );
-        expect(sumMoney(r), Money.parse(total), reason: 'toplam $total korunmalı');
+        expect(
+          sumMoney(r),
+          Money.parse(total),
+          reason: 'toplam $total korunmalı',
+        );
       }
     });
 

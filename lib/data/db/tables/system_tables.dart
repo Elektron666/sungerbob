@@ -12,7 +12,8 @@ class Users extends Table {
   TextColumn get roleId => text().references(Roles, #id)();
   TextColumn get pinHash => text()();
   TextColumn get pinSalt => text()();
-  BoolColumn get biometricEnabled => boolean().withDefault(const Constant(false))();
+  BoolColumn get biometricEnabled =>
+      boolean().withDefault(const Constant(false))();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   IntColumn get createdAt => integer()();
   TextColumn get createdBy => text().nullable()();
@@ -71,7 +72,10 @@ class Settings extends Table {
 
 /// Yıl bazlı, boşluksuz belge numarası (BRIEF §3.11).
 @TableIndex(
-    name: 'idx_docseq_type_year', columns: {#docType, #year}, unique: true)
+  name: 'idx_docseq_type_year',
+  columns: {#docType, #year},
+  unique: true,
+)
 class DocumentSequences extends Table {
   TextColumn get id => text()();
   TextColumn get docType => text()();
@@ -83,9 +87,9 @@ class DocumentSequences extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (doc_type IN (${DocPrefix.all.map((e) => "'$e'").join(',')}))",
-        'CHECK (last_number >= 0)',
-      ];
+    "CHECK (doc_type IN (${DocPrefix.all.map((e) => "'$e'").join(',')}))",
+    'CHECK (last_number >= 0)',
+  ];
 }
 
 /// 🔒 append-only. Birincil anahtar istemcide üretilen UUID'dir; aynı UUID
@@ -146,9 +150,9 @@ class BackupLog extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (kind IN (${BackupKind.all.map((e) => "'$e'").join(',')}))",
-        "CHECK (trigger IN (${BackupTrigger.all.map((e) => "'$e'").join(',')}))",
-        "CHECK (destination IN (${BackupDestination.all.map((e) => "'$e'").join(',')}))",
-        "CHECK (result IN ('OK','FAIL'))",
-      ];
+    "CHECK (kind IN (${BackupKind.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (trigger IN (${BackupTrigger.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (destination IN (${BackupDestination.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (result IN ('OK','FAIL'))",
+  ];
 }

@@ -24,7 +24,8 @@ final class InsufficientStockException implements Exception {
   });
 
   @override
-  String toString() => 'Yetersiz stok: $requiredPieces adet isteniyor, '
+  String toString() =>
+      'Yetersiz stok: $requiredPieces adet isteniyor, '
       '$availablePieces adet var (varyant $variantId).';
 }
 
@@ -39,7 +40,8 @@ final class CuttingVolumeException implements Exception {
   });
 
   @override
-  String toString() => 'Kesim hedefi kaynağı aşıyor: hedef $targetVolume, '
+  String toString() =>
+      'Kesim hedefi kaynağı aşıyor: hedef $targetVolume, '
       'kaynak $sourceVolume.';
 }
 
@@ -158,14 +160,16 @@ abstract final class CostingEngine {
 
       final unitCost = unitCostOverride ?? batch.realUnitCost;
 
-      allocations.add(CostAllocation(
-        batchId: batch.id,
-        pieces: takePieces,
-        volume: takeVolume,
-        unitCost: unitCost,
-        cost: unitCost.times(takeVolume),
-        sequenceNo: seq++,
-      ));
+      allocations.add(
+        CostAllocation(
+          batchId: batch.id,
+          pieces: takePieces,
+          volume: takeVolume,
+          unitCost: unitCost,
+          cost: unitCost.times(takeVolume),
+          sequenceNo: seq++,
+        ),
+      );
 
       remainingPieces -= takePieces;
       remainingVolume -= takeVolume;
@@ -183,12 +187,11 @@ abstract final class CostingEngine {
     required List<BatchView> batches,
     required int requiredPieces,
     required Volume requiredVolume,
-  }) =>
-      _consume(
-        batches: batches,
-        requiredPieces: requiredPieces,
-        requiredVolume: requiredVolume,
-      );
+  }) => _consume(
+    batches: batches,
+    requiredPieces: requiredPieces,
+    requiredVolume: requiredVolume,
+  );
 
   /// **Ağırlıklı ortalama birim maliyet.** Ürün (çeşit) bazında, ana depodaki
   /// tüm kalan partilerin m³ ağırlıklı ortalaması (BRIEF §3.6, DECISIONS D-11).
@@ -200,13 +203,15 @@ abstract final class CostingEngine {
     if (totalVolume.isZero) return UnitPrice.zero;
 
     final totalCost = sumMoney(
-        live.map((b) => b.realUnitCost.times(b.remainingVolume)));
+      live.map((b) => b.realUnitCost.times(b.remainingVolume)),
+    );
 
-    return UnitPrice.fromDecimal(roundHalfUp(
-      (totalCost.tl / totalVolume.m3)
-          .toDecimal(scaleOnInfinitePrecision: 12),
-      Scales.unitPrice,
-    ));
+    return UnitPrice.fromDecimal(
+      roundHalfUp(
+        (totalCost.tl / totalVolume.m3).toDecimal(scaleOnInfinitePrecision: 12),
+        Scales.unitPrice,
+      ),
+    );
   }
 
   /// **Ağırlıklı ortalama modu.** Fiziksel tüketim yine FIFO'dur; yalnızca
@@ -231,19 +236,23 @@ abstract final class CostingEngine {
     final diff = expected - result.totalCost;
     if (diff.isZero || result.allocations.isEmpty) {
       return CostingResult(
-          allocations: result.allocations, totalCost: expected);
+        allocations: result.allocations,
+        totalCost: expected,
+      );
     }
 
     final fixed = [...result.allocations];
     final last = fixed.removeLast();
-    fixed.add(CostAllocation(
-      batchId: last.batchId,
-      pieces: last.pieces,
-      volume: last.volume,
-      unitCost: last.unitCost,
-      cost: last.cost + diff,
-      sequenceNo: last.sequenceNo,
-    ));
+    fixed.add(
+      CostAllocation(
+        batchId: last.batchId,
+        pieces: last.pieces,
+        volume: last.volume,
+        unitCost: last.unitCost,
+        cost: last.cost + diff,
+        sequenceNo: last.sequenceNo,
+      ),
+    );
     return CostingResult(allocations: fixed, totalCost: expected);
   }
 
@@ -253,12 +262,15 @@ abstract final class CostingEngine {
     required Money expense,
     required List<ExpenseTarget> lines,
     bool byAmount = false,
-  }) =>
-      byAmount
-          ? allocateByAmount(
-              total: expense, weights: lines.map((l) => l.bareCost).toList())
-          : allocateByVolume(
-              total: expense, weights: lines.map((l) => l.volume).toList());
+  }) => byAmount
+      ? allocateByAmount(
+          total: expense,
+          weights: lines.map((l) => l.bareCost).toList(),
+        )
+      : allocateByVolume(
+          total: expense,
+          weights: lines.map((l) => l.volume).toList(),
+        );
 
   /// Sonradan gelen masrafın bir partiye düşen payını, **stokta kalan** ve
   /// **satılmış/firelenmiş** kısımlara böler (BRIEF §3.7).
@@ -274,8 +286,9 @@ abstract final class CostingEngine {
     if (totalInVolume.isZero) {
       return LateExpenseSplit(toStock: Money.zero, toAdjustment: expenseShare);
     }
-    final ratio = (remainingVolume.m3 / totalInVolume.m3)
-        .toDecimal(scaleOnInfinitePrecision: 12);
+    final ratio = (remainingVolume.m3 / totalInVolume.m3).toDecimal(
+      scaleOnInfinitePrecision: 12,
+    );
     final toStock = Money.fromDecimal(expenseShare.tl * ratio);
     return LateExpenseSplit(
       toStock: toStock,
@@ -298,17 +311,22 @@ abstract final class CostingEngine {
     final targetTotal = sumVolume(targets);
     if (targetTotal > sourceVolume) {
       throw CuttingVolumeException(
-          sourceVolume: sourceVolume, targetVolume: targetTotal);
+        sourceVolume: sourceVolume,
+        targetVolume: targetTotal,
+      );
     }
 
     final totalCost = sourceCost + cuttingFee + freight;
     final unitCost = targetTotal.isZero
         ? UnitPrice.zero
-        : UnitPrice.fromDecimal(roundHalfUp(
-            (totalCost.tl / targetTotal.m3)
-                .toDecimal(scaleOnInfinitePrecision: 12),
-            Scales.unitPrice,
-          ));
+        : UnitPrice.fromDecimal(
+            roundHalfUp(
+              (totalCost.tl / targetTotal.m3).toDecimal(
+                scaleOnInfinitePrecision: 12,
+              ),
+              Scales.unitPrice,
+            ),
+          );
 
     return CuttingCostResult(
       totalCost: totalCost,
@@ -327,7 +345,9 @@ abstract final class CostingEngine {
     final sold = originalAllocations.fold(0, (s, a) => s + a.pieces);
     if (returnPieces > sold) {
       throw ReturnExceedsSoldException(
-          soldPieces: sold, returnPieces: returnPieces);
+        soldPieces: sold,
+        returnPieces: returnPieces,
+      );
     }
 
     final reversed = [...originalAllocations]
@@ -346,17 +366,19 @@ abstract final class CostingEngine {
           ? alloc.volume
           : Volume(unitVolume.stored * take);
 
-      result.add(CostAllocation(
-        batchId: alloc.batchId,
-        pieces: take,
-        volume: volume,
-        unitCost: alloc.unitCost,
-        // İade, malın çıktığı maliyetle döner — yeniden hesaplanmaz.
-        cost: take == alloc.pieces
-            ? alloc.cost
-            : alloc.unitCost.times(volume),
-        sequenceNo: seq++,
-      ));
+      result.add(
+        CostAllocation(
+          batchId: alloc.batchId,
+          pieces: take,
+          volume: volume,
+          unitCost: alloc.unitCost,
+          // İade, malın çıktığı maliyetle döner — yeniden hesaplanmaz.
+          cost: take == alloc.pieces
+              ? alloc.cost
+              : alloc.unitCost.times(volume),
+          sequenceNo: seq++,
+        ),
+      );
 
       left -= take;
     }

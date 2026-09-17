@@ -34,8 +34,8 @@ class CustomerLedger extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (doc_type IN (${LedgerDocType.customerAll.map((e) => "'$e'").join(',')}))",
-      ];
+    "CHECK (doc_type IN (${LedgerDocType.customerAll.map((e) => "'$e'").join(',')}))",
+  ];
 }
 
 /// 🔒 append-only. **+ bizim borcumuz**, − azalış.
@@ -61,8 +61,8 @@ class SupplierLedger extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (doc_type IN (${LedgerDocType.supplierAll.map((e) => "'$e'").join(',')}))",
-      ];
+    "CHECK (doc_type IN (${LedgerDocType.supplierAll.map((e) => "'$e'").join(',')}))",
+  ];
 }
 
 @TableIndex(name: 'idx_collections_customer', columns: {#customerId})
@@ -89,10 +89,10 @@ class Collections extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (method IN (${PaymentMethod.all.map((e) => "'$e'").join(',')}))",
-        "CHECK (status IN (${DocStatus.all.map((e) => "'$e'").join(',')}))",
-        'CHECK (amount > 0)',
-      ];
+    "CHECK (method IN (${PaymentMethod.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (status IN (${DocStatus.all.map((e) => "'$e'").join(',')}))",
+    'CHECK (amount > 0)',
+  ];
 }
 
 @TableIndex(name: 'idx_spayments_supplier', columns: {#supplierId})
@@ -119,9 +119,9 @@ class SupplierPayments extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (method IN (${PaymentMethod.all.map((e) => "'$e'").join(',')}))",
-        'CHECK (amount > 0)',
-      ];
+    "CHECK (method IN (${PaymentMethod.all.map((e) => "'$e'").join(',')}))",
+    'CHECK (amount > 0)',
+  ];
 }
 
 /// 🔒 append-only. Tahsilatın hangi belgeyi kapattığı (BRIEF §3.10).
@@ -141,16 +141,17 @@ class PaymentAllocations extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (target_type IN ('SALE','OPENING','SALE_RETURN'))",
-        'CHECK (amount > 0)',
-      ];
+    "CHECK (target_type IN ('SALE','OPENING','SALE_RETURN'))",
+    'CHECK (amount > 0)',
+  ];
 }
 
 /// 🔒 append-only.
 @TableIndex(name: 'idx_spa_payment', columns: {#supplierPaymentId})
 class SupplierPaymentAllocations extends Table {
   TextColumn get id => text()();
-  TextColumn get supplierPaymentId => text().references(SupplierPayments, #id)();
+  TextColumn get supplierPaymentId =>
+      text().references(SupplierPayments, #id)();
   TextColumn get targetType => text()();
   TextColumn get targetId => text()();
   IntColumn get amount => integer().map(const MoneyConverter())();
@@ -162,9 +163,9 @@ class SupplierPaymentAllocations extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (target_type IN ('PURCHASE','OPENING','CUTTING_ORDER'))",
-        'CHECK (amount > 0)',
-      ];
+    "CHECK (target_type IN ('PURCHASE','OPENING','CUTTING_ORDER'))",
+    'CHECK (amount > 0)',
+  ];
 }
 
 /// 🔒 append-only. Bakiye = SUM(IN) − SUM(OUT).
@@ -194,10 +195,10 @@ class AccountMovements extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (direction IN ('IN','OUT'))",
-        "CHECK (type IN (${AccountMovementType.all.map((e) => "'$e'").join(',')}))",
-        'CHECK (amount > 0)',
-      ];
+    "CHECK (direction IN ('IN','OUT'))",
+    "CHECK (type IN (${AccountMovementType.all.map((e) => "'$e'").join(',')}))",
+    'CHECK (amount > 0)',
+  ];
 }
 
 class Transfers extends Table {
@@ -219,9 +220,9 @@ class Transfers extends Table {
 
   @override
   List<String> get customConstraints => [
-        'CHECK (from_account_id <> to_account_id)',
-        'CHECK (amount > 0)',
-      ];
+    'CHECK (from_account_id <> to_account_id)',
+    'CHECK (amount > 0)',
+  ];
 }
 
 class Expenses extends Table {
@@ -283,11 +284,11 @@ class Instruments extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (kind IN (${InstrumentKind.all.map((e) => "'$e'").join(',')}))",
-        "CHECK (direction IN (${InstrumentDirection.all.map((e) => "'$e'").join(',')}))",
-        "CHECK (current_status IN (${InstrumentStatus.all.map((e) => "'$e'").join(',')}))",
-        'CHECK (amount > 0)',
-      ];
+    "CHECK (kind IN (${InstrumentKind.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (direction IN (${InstrumentDirection.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (current_status IN (${InstrumentStatus.all.map((e) => "'$e'").join(',')}))",
+    'CHECK (amount > 0)',
+  ];
 }
 
 /// 🔒 append-only. Durum geçmişi.
@@ -315,6 +316,6 @@ class InstrumentEvents extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (to_status IN (${InstrumentStatus.all.map((e) => "'$e'").join(',')}))",
-      ];
+    "CHECK (to_status IN (${InstrumentStatus.all.map((e) => "'$e'").join(',')}))",
+  ];
 }

@@ -28,8 +28,14 @@ List<Money> _allocate(Money total, List<Decimal> weights) {
   // Son satır hariç hepsi orantıyla hesaplanır ve kuruşa yuvarlanır.
   for (var i = 0; i < weights.length - 1; i++) {
     final share = (total.tl * weights[i]) / weightSum;
-    result.add(Money.fromDecimal(
-        roundHalfUp(share.toDecimal(scaleOnInfinitePrecision: 12), Scales.money)));
+    result.add(
+      Money.fromDecimal(
+        roundHalfUp(
+          share.toDecimal(scaleOnInfinitePrecision: 12),
+          Scales.money,
+        ),
+      ),
+    );
   }
 
   // Son satır: kalanın tamamı. Toplamın korunmasını bu garanti eder.
@@ -41,12 +47,10 @@ List<Money> _allocate(Money total, List<Decimal> weights) {
 List<Money> allocateByVolume({
   required Money total,
   required List<Volume> weights,
-}) =>
-    _allocate(total, weights.map((v) => v.m3).toList());
+}) => _allocate(total, weights.map((v) => v.m3).toList());
 
 /// Tutar anahtarıyla dağıtım (alternatif).
 List<Money> allocateByAmount({
   required Money total,
   required List<Money> weights,
-}) =>
-    _allocate(total, weights.map((m) => m.tl).toList());
+}) => _allocate(total, weights.map((m) => m.tl).toList());

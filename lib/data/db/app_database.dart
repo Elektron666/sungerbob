@@ -33,7 +33,12 @@ part 'app_database.g.dart';
     Purchases, PurchaseItems, PurchaseExpenses, PurchaseExpenseAllocations,
     PurchaseReturns, PurchaseReturnItems,
     // satış
-    SalesQuotes, SalesQuoteItems, Sales, SaleItems, SaleReturns, SaleReturnItems,
+    SalesQuotes,
+    SalesQuoteItems,
+    Sales,
+    SaleItems,
+    SaleReturns,
+    SaleReturnItems,
     // finans
     CustomerLedger, SupplierLedger, Collections, SupplierPayments,
     PaymentAllocations, SupplierPaymentAllocations, AccountMovements,
@@ -54,21 +59,21 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) async {
-          await m.createAll();
-          await _installTriggers();
-          await seedInitialData(this);
-        },
-        onUpgrade: (m, from, to) async {
-          // Sürüm 1 ilk sürüm; buraya sonraki adımlar eklenecek.
-          // Her migration öncesi otomatik yedek alınır (BRIEF §4.3).
-          await _reinstallTriggers();
-        },
-        beforeOpen: (details) async {
-          // Yabancı anahtarlar her bağlantıda açık olmalı (BRIEF §6).
-          await customStatement('PRAGMA foreign_keys = ON');
-        },
-      );
+    onCreate: (m) async {
+      await m.createAll();
+      await _installTriggers();
+      await seedInitialData(this);
+    },
+    onUpgrade: (m, from, to) async {
+      // Sürüm 1 ilk sürüm; buraya sonraki adımlar eklenecek.
+      // Her migration öncesi otomatik yedek alınır (BRIEF §4.3).
+      await _reinstallTriggers();
+    },
+    beforeOpen: (details) async {
+      // Yabancı anahtarlar her bağlantıda açık olmalı (BRIEF §6).
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
+  );
 
   Future<void> _installTriggers() async {
     for (final sql in allTriggerSql()) {

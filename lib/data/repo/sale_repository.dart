@@ -25,7 +25,8 @@ final class RiskLimitExceededException implements Exception {
   });
 
   @override
-  String toString() => 'Risk limiti aşılıyor: mevcut bakiye $balance + '
+  String toString() =>
+      'Risk limiti aşılıyor: mevcut bakiye $balance + '
       'portföydeki evrak $pendingInstruments + bu satış $newTotal, limit $limit.';
 }
 
@@ -90,7 +91,10 @@ final class SaleRepository {
 
   Future<String> _create(SaleInput input, OperationContext ctx) async {
     final saleId = uuid.v7();
-    final docNo = await db.nextDocumentNumber(DocPrefix.sale, input.docDate.year);
+    final docNo = await db.nextDocumentNumber(
+      DocPrefix.sale,
+      input.docDate.year,
+    );
     final mainLocation = await db.locationId(LocationCode.mainWarehouse);
     final method = await _costingMethod();
 
@@ -103,7 +107,7 @@ final class SaleRepository {
           unitPrice: line.unitPriceM3,
           vatRate: line.vatRate,
           discountRate: line.discountRate,
-        )
+        ),
     ];
     final grandTotal = sumMoney(vatLines.map((v) => v.gross));
 
@@ -116,46 +120,54 @@ final class SaleRepository {
       final batches = await db.batchesForVariant(line.variantId);
 
       if (method == CostingMethod.weightedAverage) {
-        final variant = await (db.select(db.productVariants)
-              ..where((v) => v.id.equals(line.variantId)))
-            .getSingle();
+        final variant = await (db.select(
+          db.productVariants,
+        )..where((v) => v.id.equals(line.variantId))).getSingle();
         final productBatches = await db.batchesForProduct(variant.productId);
-        lineCosts.add(CostingEngine.weightedAverage(
-          batches: batches,
-          productBatches: productBatches,
-          requiredPieces: line.pieces,
-          requiredVolume: line.volume,
-        ));
+        lineCosts.add(
+          CostingEngine.weightedAverage(
+            batches: batches,
+            productBatches: productBatches,
+            requiredPieces: line.pieces,
+            requiredVolume: line.volume,
+          ),
+        );
       } else {
-        lineCosts.add(CostingEngine.fifo(
-          batches: batches,
-          requiredPieces: line.pieces,
-          requiredVolume: line.volume,
-        ));
+        lineCosts.add(
+          CostingEngine.fifo(
+            batches: batches,
+            requiredPieces: line.pieces,
+            requiredVolume: line.volume,
+          ),
+        );
       }
     }
 
     // 4) Belge başlığı. cost_total SABİTLENİR (BRIEF §3.6).
-    await db.into(db.sales).insert(SalesCompanion.insert(
-          id: saleId,
-          docNo: docNo,
-          customerId: input.customerId,
-          salesQuoteId: Value(input.salesQuoteId),
-          docDate: input.docDate.millisecondsSinceEpoch,
-          dueDate: Value(input.dueDate?.millisecondsSinceEpoch),
-          priceMode: input.priceMode,
-          invoiceNo: Value(input.invoiceNo),
-          waybillNo: Value(input.waybillNo),
-          subtotalNet: sumMoney(vatLines.map((v) => v.net)),
-          vatTotal: sumMoney(vatLines.map((v) => v.vat)),
-          grandTotal: grandTotal,
-          costTotal: sumMoney(lineCosts.map((c) => c.totalCost)),
-          commandId: Value(ctx.commandId),
-          createdAt: ctx.nowMs,
-          createdBy: Value(ctx.userId),
-          deviceId: Value(ctx.deviceId),
-          note: Value(input.note),
-        ));
+    await db
+        .into(db.sales)
+        .insert(
+          SalesCompanion.insert(
+            id: saleId,
+            docNo: docNo,
+            customerId: input.customerId,
+            salesQuoteId: Value(input.salesQuoteId),
+            docDate: input.docDate.millisecondsSinceEpoch,
+            dueDate: Value(input.dueDate?.millisecondsSinceEpoch),
+            priceMode: input.priceMode,
+            invoiceNo: Value(input.invoiceNo),
+            waybillNo: Value(input.waybillNo),
+            subtotalNet: sumMoney(vatLines.map((v) => v.net)),
+            vatTotal: sumMoney(vatLines.map((v) => v.vat)),
+            grandTotal: grandTotal,
+            costTotal: sumMoney(lineCosts.map((c) => c.totalCost)),
+            commandId: Value(ctx.commandId),
+            createdAt: ctx.nowMs,
+            createdBy: Value(ctx.userId),
+            deviceId: Value(ctx.deviceId),
+            note: Value(input.note),
+          ),
+        );
 
     // 5) Satırlar, stok hareketleri, maliyet dağıtımı, parti kalanları.
     for (var i = 0; i < input.lines.length; i++) {
@@ -163,70 +175,84 @@ final class SaleRepository {
       final vat = vatLines[i];
       final costing = lineCosts[i];
 
-      await db.into(db.saleItems).insert(SaleItemsCompanion.insert(
-            id: uuid.v7(),
-            saleId: saleId,
-            lineNo: i + 1,
-            variantId: line.variantId,
-            pieces: line.pieces,
-            volume: line.volume,
-            priceListId: Value(line.priceListId),
-            listPriceM3: line.listPriceM3,
-            discountRate: Value(line.discountRate),
-            unitPriceM3: line.unitPriceM3,
-            netTotal: vat.net,
-            vatRate: line.vatRate,
-            vatTotal: vat.vat,
-            grossTotal: vat.gross,
-            costTotal: costing.totalCost,
-          ));
+      await db
+          .into(db.saleItems)
+          .insert(
+            SaleItemsCompanion.insert(
+              id: uuid.v7(),
+              saleId: saleId,
+              lineNo: i + 1,
+              variantId: line.variantId,
+              pieces: line.pieces,
+              volume: line.volume,
+              priceListId: Value(line.priceListId),
+              listPriceM3: line.listPriceM3,
+              discountRate: Value(line.discountRate),
+              unitPriceM3: line.unitPriceM3,
+              netTotal: vat.net,
+              vatRate: line.vatRate,
+              vatTotal: vat.vat,
+              grossTotal: vat.gross,
+              costTotal: costing.totalCost,
+            ),
+          );
 
       final movementId = uuid.v7();
-      await db.into(db.stockMovements).insert(StockMovementsCompanion.insert(
-            id: movementId,
-            occurredAt: input.docDate.millisecondsSinceEpoch,
-            type: MovementType.saleOut,
-            locationId: mainLocation,
-            variantId: line.variantId,
-            pieces: -line.pieces,
-            volume: -line.volume,
-            unitCostM3: costing.allocations.isEmpty
-                ? UnitPrice.zero
-                : costing.allocations.first.unitCost,
-            totalCost: costing.totalCost,
-            sourceType: 'SALE',
-            sourceId: Value(saleId),
-            commandId: Value(ctx.commandId),
-            createdAt: ctx.nowMs,
-            createdBy: Value(ctx.userId),
-            deviceId: Value(ctx.deviceId),
-          ));
+      await db
+          .into(db.stockMovements)
+          .insert(
+            StockMovementsCompanion.insert(
+              id: movementId,
+              occurredAt: input.docDate.millisecondsSinceEpoch,
+              type: MovementType.saleOut,
+              locationId: mainLocation,
+              variantId: line.variantId,
+              pieces: -line.pieces,
+              volume: -line.volume,
+              unitCostM3: costing.allocations.isEmpty
+                  ? UnitPrice.zero
+                  : costing.allocations.first.unitCost,
+              totalCost: costing.totalCost,
+              sourceType: 'SALE',
+              sourceId: Value(saleId),
+              commandId: Value(ctx.commandId),
+              createdAt: ctx.nowMs,
+              createdBy: Value(ctx.userId),
+              deviceId: Value(ctx.deviceId),
+            ),
+          );
 
       await _applyAllocations(movementId, costing.allocations, ctx);
     }
 
     // 6) Müşteri carisine BRÜT (BRIEF §3.4).
-    await db.into(db.customerLedger).insert(CustomerLedgerCompanion.insert(
-          id: uuid.v7(),
-          customerId: input.customerId,
-          occurredAt: input.docDate.millisecondsSinceEpoch,
-          docType: LedgerDocType.sale,
-          docId: Value(saleId),
-          docNo: Value(docNo),
-          amount: grandTotal,
-          dueDate: Value(input.dueDate?.millisecondsSinceEpoch),
-          description: Value('Satış $docNo'),
-          commandId: Value(ctx.commandId),
-          createdAt: ctx.nowMs,
-          createdBy: Value(ctx.userId),
-          deviceId: Value(ctx.deviceId),
-        ));
+    await db
+        .into(db.customerLedger)
+        .insert(
+          CustomerLedgerCompanion.insert(
+            id: uuid.v7(),
+            customerId: input.customerId,
+            occurredAt: input.docDate.millisecondsSinceEpoch,
+            docType: LedgerDocType.sale,
+            docId: Value(saleId),
+            docNo: Value(docNo),
+            amount: grandTotal,
+            dueDate: Value(input.dueDate?.millisecondsSinceEpoch),
+            description: Value('Satış $docNo'),
+            commandId: Value(ctx.commandId),
+            createdAt: ctx.nowMs,
+            createdBy: Value(ctx.userId),
+            deviceId: Value(ctx.deviceId),
+          ),
+        );
 
-    await db.writeAudit(ctx,
-        entityType: 'sale',
-        entityId: saleId,
-        action: 'CREATE',
-        summary: 'Satış $docNo kaydedildi, tutar $grandTotal');
+    await db.writeAudit(
+      ctx,
+      entityType: 'sale',
+      entityId: saleId,
+      action: 'CREATE',
+      summary: 'Satış $docNo kaydedildi, tutar $grandTotal',
+    );
 
     return saleId;
   }
@@ -238,49 +264,57 @@ final class SaleRepository {
     OperationContext ctx,
   ) async {
     for (final alloc in allocations) {
-      await db.into(db.costAllocations).insert(CostAllocationsCompanion.insert(
-            id: uuid.v7(),
-            movementId: movementId,
-            batchId: alloc.batchId,
-            pieces: alloc.pieces,
-            volume: alloc.volume,
-            unitCostM3: alloc.unitCost,
-            totalCost: alloc.cost,
-            sequenceNo: alloc.sequenceNo,
-            createdAt: ctx.nowMs,
-          ));
+      await db
+          .into(db.costAllocations)
+          .insert(
+            CostAllocationsCompanion.insert(
+              id: uuid.v7(),
+              movementId: movementId,
+              batchId: alloc.batchId,
+              pieces: alloc.pieces,
+              volume: alloc.volume,
+              unitCostM3: alloc.unitCost,
+              totalCost: alloc.cost,
+              sequenceNo: alloc.sequenceNo,
+              createdAt: ctx.nowMs,
+            ),
+          );
 
-      final batch = await (db.select(db.inventoryBatches)
-            ..where((b) => b.id.equals(alloc.batchId)))
-          .getSingle();
+      final batch = await (db.select(
+        db.inventoryBatches,
+      )..where((b) => b.id.equals(alloc.batchId))).getSingle();
 
       // remaining_* bir ÖNBELLEKTİR (D-10); CHECK kısıtı negatife düşmeyi
       // veritabanı seviyesinde de engeller.
-      await (db.update(db.inventoryBatches)
-            ..where((b) => b.id.equals(alloc.batchId)))
-          .write(InventoryBatchesCompanion(
-        remainingPieces: Value(batch.remainingPieces - alloc.pieces),
-        remainingVolume: Value(batch.remainingVolume - alloc.volume),
-      ));
+      await (db.update(
+        db.inventoryBatches,
+      )..where((b) => b.id.equals(alloc.batchId))).write(
+        InventoryBatchesCompanion(
+          remainingPieces: Value(batch.remainingPieces - alloc.pieces),
+          remainingVolume: Value(batch.remainingVolume - alloc.volume),
+        ),
+      );
     }
   }
 
   Future<void> _checkRiskLimit(SaleInput input, Money newTotal) async {
     if (input.riskLimitApproved) return;
 
-    final customer = await (db.select(db.customers)
-          ..where((c) => c.id.equals(input.customerId)))
-        .getSingle();
+    final customer = await (db.select(
+      db.customers,
+    )..where((c) => c.id.equals(input.customerId))).getSingle();
     if (customer.riskLimit.isZero) return; // 0 = limitsiz
 
     final balance = await db.customerBalance(input.customerId);
     final statuses = InstrumentStatus.inPortfolio.map((s) => "'$s'").join(',');
-    final row = await db.customSelect(
-      'SELECT COALESCE(SUM(amount), 0) AS total FROM instruments '
-      "WHERE direction = 'IN' AND customer_id = ? AND current_status IN ($statuses)",
-      variables: [Variable.withString(input.customerId)],
-      readsFrom: {db.instruments},
-    ).getSingle();
+    final row = await db
+        .customSelect(
+          'SELECT COALESCE(SUM(amount), 0) AS total FROM instruments '
+          "WHERE direction = 'IN' AND customer_id = ? AND current_status IN ($statuses)",
+          variables: [Variable.withString(input.customerId)],
+          readsFrom: {db.instruments},
+        )
+        .getSingle();
     final pending = Money.fromStored(row.read<int>('total'));
 
     if (balance + pending + newTotal > customer.riskLimit) {
@@ -294,9 +328,9 @@ final class SaleRepository {
   }
 
   Future<String> _costingMethod() async {
-    final row = await (db.select(db.settings)
-          ..where((s) => s.key.equals('costing_method')))
-        .getSingleOrNull();
+    final row = await (db.select(
+      db.settings,
+    )..where((s) => s.key.equals('costing_method'))).getSingleOrNull();
     return row?.value ?? CostingMethod.fifo;
   }
 }

@@ -4,11 +4,11 @@ import 'package:sungerbob/domain/core/money.dart';
 import 'package:sungerbob/domain/core/quantity.dart';
 
 Volume volOf(String w, String h, String t, int pieces) => Volume.fromDimensions(
-      width: Dimension.cm(w),
-      height: Dimension.cm(h),
-      thickness: Dimension.cm(t),
-      pieces: pieces,
-    );
+  width: Dimension.cm(w),
+  height: Dimension.cm(h),
+  thickness: Dimension.cm(t),
+  pieces: pieces,
+);
 
 void main() {
   group('m³ hesabı (BRIEF §3.3)', () {
@@ -58,7 +58,10 @@ void main() {
     });
 
     test('hacim toplamı kesin', () {
-      final total = sumVolume([volOf('140', '200', '10', 50), volOf('140', '200', '5', 40)]);
+      final total = sumVolume([
+        volOf('140', '200', '10', 50),
+        volOf('140', '200', '5', 40),
+      ]);
       expect(total, Volume.parse('19.6'));
     });
   });
@@ -71,7 +74,10 @@ void main() {
 
     test('toplama ve çıkarma kesin', () {
       expect(Money.parse('0.10') + Money.parse('0.20'), Money.parse('0.30'));
-      expect(sumMoney([Money.parse('42420'), Money.parse('8862')]), Money.parse('51282'));
+      expect(
+        sumMoney([Money.parse('42420'), Money.parse('8862')]),
+        Money.parse('51282'),
+      );
     });
 
     test('karşılaştırma', () {
@@ -82,32 +88,56 @@ void main() {
 
   group('UnitPrice × Volume = Money', () {
     test('14 m³ × 3.030,0000 = 42.420,00 (Altın Senaryo parti A1)', () {
-      expect(UnitPrice.parse('3030').times(Volume.parse('14')), Money.parse('42420'));
+      expect(
+        UnitPrice.parse('3030').times(Volume.parse('14')),
+        Money.parse('42420'),
+      );
     });
 
     test('2,8 m³ × 3.165 = 8.862,00 (parti B)', () {
-      expect(UnitPrice.parse('3165').times(Volume.parse('2.8')), Money.parse('8862'));
+      expect(
+        UnitPrice.parse('3165').times(Volume.parse('2.8')),
+        Money.parse('8862'),
+      );
     });
 
     test('19,6 m³ × 2.930 = 57.428,00 (çıplak alış A)', () {
-      expect(UnitPrice.parse('2930').times(Volume.parse('19.6')), Money.parse('57428'));
+      expect(
+        UnitPrice.parse('2930').times(Volume.parse('19.6')),
+        Money.parse('57428'),
+      );
     });
 
     test('16,8 m³ × 3.500 = 58.800,00 (satış)', () {
-      expect(UnitPrice.parse('3500').times(Volume.parse('16.8')), Money.parse('58800'));
+      expect(
+        UnitPrice.parse('3500').times(Volume.parse('16.8')),
+        Money.parse('58800'),
+      );
     });
 
     test('1,12 m³ × 3.300 = 3.696,00 (alış C)', () {
-      expect(UnitPrice.parse('3300').times(Volume.parse('1.12')), Money.parse('3696'));
+      expect(
+        UnitPrice.parse('3300').times(Volume.parse('1.12')),
+        Money.parse('3696'),
+      );
     });
 
     test('ağırlıklı ortalama: 16,8 × 3.070,5000 = 51.584,40', () {
-      expect(UnitPrice.parse('3070.5').times(Volume.parse('16.8')), Money.parse('51584.40'));
+      expect(
+        UnitPrice.parse('3070.5').times(Volume.parse('16.8')),
+        Money.parse('51584.40'),
+      );
     });
 
     test('kesim: 2,52 × 3.500 = 8.820,00 · 1,08 × 3.500 = 3.780,00', () {
-      expect(UnitPrice.parse('3500').times(Volume.parse('2.52')), Money.parse('8820'));
-      expect(UnitPrice.parse('3500').times(Volume.parse('1.08')), Money.parse('3780'));
+      expect(
+        UnitPrice.parse('3500').times(Volume.parse('2.52')),
+        Money.parse('8820'),
+      );
+      expect(
+        UnitPrice.parse('3500').times(Volume.parse('1.08')),
+        Money.parse('3780'),
+      );
     });
   });
 

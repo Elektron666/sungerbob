@@ -38,8 +38,8 @@ class Purchases extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (status IN (${DocStatus.all.map((e) => "'$e'").join(',')}))",
-      ];
+    "CHECK (status IN (${DocStatus.all.map((e) => "'$e'").join(',')}))",
+  ];
 }
 
 @TableIndex(name: 'idx_pitems_purchase', columns: {#purchaseId})
@@ -59,17 +59,18 @@ class PurchaseItems extends Table {
   IntColumn get grossTotal => integer().map(const MoneyConverter())();
 
   /// Bu satırın ürettiği parti.
-  TextColumn get batchId => text().nullable().references(InventoryBatches, #id)();
+  TextColumn get batchId =>
+      text().nullable().references(InventoryBatches, #id)();
 
   @override
   Set<Column> get primaryKey => {id};
 
   @override
   List<String> get customConstraints => [
-        'CHECK (pieces > 0 AND volume > 0)',
-        'CHECK (vat_rate >= 0 AND vat_rate <= 10000)',
-        'CHECK (discount_rate >= 0 AND discount_rate <= 10000)',
-      ];
+    'CHECK (pieces > 0 AND volume > 0)',
+    'CHECK (vat_rate >= 0 AND vat_rate <= 10000)',
+    'CHECK (discount_rate >= 0 AND discount_rate <= 10000)',
+  ];
 }
 
 /// Nakliye, hamaliye ve diğer masraflar (BRIEF §3.7).
@@ -99,17 +100,18 @@ class PurchaseExpenses extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (kind IN ('NAKLIYE','HAMALIYE','DIGER'))",
-        "CHECK (allocation_key IN (${AllocationKey.all.map((e) => "'$e'").join(',')}))",
-        'CHECK (amount >= 0)',
-      ];
+    "CHECK (kind IN ('NAKLIYE','HAMALIYE','DIGER'))",
+    "CHECK (allocation_key IN (${AllocationKey.all.map((e) => "'$e'").join(',')}))",
+    'CHECK (amount >= 0)',
+  ];
 }
 
 /// Masrafın partilere nasıl bölündüğünün denetim izi.
 @TableIndex(name: 'idx_pea_expense', columns: {#purchaseExpenseId})
 class PurchaseExpenseAllocations extends Table {
   TextColumn get id => text()();
-  TextColumn get purchaseExpenseId => text().references(PurchaseExpenses, #id)();
+  TextColumn get purchaseExpenseId =>
+      text().references(PurchaseExpenses, #id)();
   TextColumn get batchId => text().references(InventoryBatches, #id)();
   IntColumn get volumeShare => integer().map(const VolumeConverter())();
 
@@ -193,8 +195,8 @@ class SalesQuotes extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (status IN (${QuoteStatus.all.map((e) => "'$e'").join(',')}))",
-      ];
+    "CHECK (status IN (${QuoteStatus.all.map((e) => "'$e'").join(',')}))",
+  ];
 }
 
 class SalesQuoteItems extends Table {
@@ -227,7 +229,8 @@ class Sales extends Table {
   TextColumn get id => text()();
   TextColumn get docNo => text().unique()();
   TextColumn get customerId => text().references(Customers, #id)();
-  TextColumn get salesQuoteId => text().nullable().references(SalesQuotes, #id)();
+  TextColumn get salesQuoteId =>
+      text().nullable().references(SalesQuotes, #id)();
   IntColumn get docDate => integer()();
   IntColumn get dueDate => integer().nullable()();
   TextColumn get priceMode => text().map(const PriceModeConverter())();
@@ -255,8 +258,8 @@ class Sales extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (status IN (${DocStatus.all.map((e) => "'$e'").join(',')}))",
-      ];
+    "CHECK (status IN (${DocStatus.all.map((e) => "'$e'").join(',')}))",
+  ];
 }
 
 @TableIndex(name: 'idx_sitems_sale', columns: {#saleId})
@@ -286,10 +289,10 @@ class SaleItems extends Table {
 
   @override
   List<String> get customConstraints => [
-        'CHECK (pieces > 0 AND volume > 0)',
-        'CHECK (vat_rate >= 0 AND vat_rate <= 10000)',
-        'CHECK (discount_rate >= 0 AND discount_rate <= 10000)',
-      ];
+    'CHECK (pieces > 0 AND volume > 0)',
+    'CHECK (vat_rate >= 0 AND vat_rate <= 10000)',
+    'CHECK (discount_rate >= 0 AND discount_rate <= 10000)',
+  ];
 }
 
 @TableIndex(name: 'idx_sreturns_sale', columns: {#saleId})

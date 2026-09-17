@@ -32,8 +32,8 @@ final class OperationContext {
     this.userId,
     this.deviceId,
     DateTime? now,
-  })  : commandId = commandId ?? uuid.v7(),
-        now = now ?? DateTime.now();
+  }) : commandId = commandId ?? uuid.v7(),
+       now = now ?? DateTime.now();
 
   int get nowMs => now.millisecondsSinceEpoch;
 }
@@ -52,14 +52,16 @@ extension UnitOfWork on AppDatabase {
   }) async {
     return transaction(() async {
       try {
-        await into(commandLog).insert(CommandLogCompanion.insert(
-          id: ctx.commandId,
-          commandType: ctx.commandType,
-          payloadHash: payloadHash,
-          createdAt: ctx.nowMs,
-          createdBy: Value(ctx.userId),
-          deviceId: Value(ctx.deviceId),
-        ));
+        await into(commandLog).insert(
+          CommandLogCompanion.insert(
+            id: ctx.commandId,
+            commandType: ctx.commandType,
+            payloadHash: payloadHash,
+            createdAt: ctx.nowMs,
+            createdBy: Value(ctx.userId),
+            deviceId: Value(ctx.deviceId),
+          ),
+        );
       } on SqliteException catch (e) {
         if (e.message.contains('UNIQUE') || e.message.contains('PRIMARY KEY')) {
           throw DuplicateCommandException(ctx.commandId);
@@ -74,13 +76,20 @@ extension UnitOfWork on AppDatabase {
   /// artırıldığı için işlem geri alınırsa numara da geri alınır → boşluk
   /// oluşmaz (BRIEF §3.11, D-15).
   Future<String> nextDocumentNumber(String prefix, int year) async {
-    final existing = await (select(documentSequences)
-          ..where((s) => s.docType.equals(prefix) & s.year.equals(year)))
-        .getSingleOrNull();
+    final existing =
+        await (select(documentSequences)
+              ..where((s) => s.docType.equals(prefix) & s.year.equals(year)))
+            .getSingleOrNull();
 
     if (existing == null) {
-      await into(documentSequences).insert(DocumentSequencesCompanion.insert(
-          id: uuid.v7(), docType: prefix, year: year, lastNumber: const Value(1)));
+      await into(documentSequences).insert(
+        DocumentSequencesCompanion.insert(
+          id: uuid.v7(),
+          docType: prefix,
+          year: year,
+          lastNumber: const Value(1),
+        ),
+      );
       return '$prefix-$year-${'1'.padLeft(6, '0')}';
     }
 
@@ -99,18 +108,19 @@ extension UnitOfWork on AppDatabase {
     required String summary,
     String? beforeJson,
     String? afterJson,
-  }) =>
-      into(auditLogs).insert(AuditLogsCompanion.insert(
-        id: uuid.v7(),
-        occurredAt: ctx.nowMs,
-        actorUserId: Value(ctx.userId),
-        deviceId: Value(ctx.deviceId),
-        entityType: entityType,
-        entityId: entityId,
-        action: action,
-        summary: summary,
-        beforeJson: Value(beforeJson),
-        afterJson: Value(afterJson),
-        commandId: Value(ctx.commandId),
-      ));
+  }) => into(auditLogs).insert(
+    AuditLogsCompanion.insert(
+      id: uuid.v7(),
+      occurredAt: ctx.nowMs,
+      actorUserId: Value(ctx.userId),
+      deviceId: Value(ctx.deviceId),
+      entityType: entityType,
+      entityId: entityId,
+      action: action,
+      summary: summary,
+      beforeJson: Value(beforeJson),
+      afterJson: Value(afterJson),
+      commandId: Value(ctx.commandId),
+    ),
+  );
 }

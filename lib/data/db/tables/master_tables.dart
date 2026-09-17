@@ -19,8 +19,8 @@ class Locations extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (code IN (${LocationCode.all.map((e) => "'$e'").join(',')}))",
-      ];
+    "CHECK (code IN (${LocationCode.all.map((e) => "'$e'").join(',')}))",
+  ];
 }
 
 /// Sünger çeşidi. Fiyat katsayısı burada (SPEC §1 + §13, BRIEF §3.1).
@@ -58,9 +58,9 @@ class Products extends Table {
 
   @override
   List<String> get customConstraints => [
-        'CHECK (price_coefficient > 0)',
-        'CHECK (critical_stock_pieces >= 0)',
-      ];
+    'CHECK (price_coefficient > 0)',
+    'CHECK (critical_stock_pieces >= 0)',
+  ];
 }
 
 /// en × boy × kalınlık × tip (BRIEF §3.1).
@@ -91,10 +91,10 @@ class ProductVariants extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (kind IN (${VariantKind.all.map((e) => "'$e'").join(',')}))",
-        'CHECK (width > 0 AND height > 0 AND thickness > 0)',
-        'CHECK (unit_volume > 0)',
-      ];
+    "CHECK (kind IN (${VariantKind.all.map((e) => "'$e'").join(',')}))",
+    'CHECK (width > 0 AND height > 0 AND thickness > 0)',
+    'CHECK (unit_volume > 0)',
+  ];
 }
 
 @TableIndex(name: 'idx_customers_norm', columns: {#titleNormalized})
@@ -129,11 +129,11 @@ class Customers extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (default_price_mode IS NULL OR default_price_mode IN ('EXCL','INCL'))",
-        'CHECK (default_discount_rate >= 0 AND default_discount_rate <= 10000)',
-        'CHECK (risk_limit >= 0)',
-        'CHECK (payment_term_days >= 0)',
-      ];
+    "CHECK (default_price_mode IS NULL OR default_price_mode IN ('EXCL','INCL'))",
+    'CHECK (default_discount_rate >= 0 AND default_discount_rate <= 10000)',
+    'CHECK (risk_limit >= 0)',
+    'CHECK (payment_term_days >= 0)',
+  ];
 }
 
 @TableIndex(name: 'idx_suppliers_norm', columns: {#titleNormalized})
@@ -157,8 +157,8 @@ class Suppliers extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (type IN (${SupplierType.all.map((e) => "'$e'").join(',')}))",
-      ];
+    "CHECK (type IN (${SupplierType.all.map((e) => "'$e'").join(',')}))",
+  ];
 }
 
 /// Fiyat listesi versiyonu. Eski versiyonlar SİLİNMEZ (SPEC §30.11).
@@ -182,17 +182,18 @@ class PriceLists extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (rounding_rule IN (${RoundingRule.all.map((e) => "'$e'").join(',')}))",
-        "CHECK (status IN ('DRAFT','ACTIVE','ARCHIVED'))",
-        'CHECK (base_price_m3 > 0)',
-        'CHECK (version_no > 0)',
-      ];
+    "CHECK (rounding_rule IN (${RoundingRule.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (status IN ('DRAFT','ACTIVE','ARCHIVED'))",
+    'CHECK (base_price_m3 > 0)',
+    'CHECK (version_no > 0)',
+  ];
 }
 
 @TableIndex(
-    name: 'idx_pli_list_product',
-    columns: {#priceListId, #productId},
-    unique: true)
+  name: 'idx_pli_list_product',
+  columns: {#priceListId, #productId},
+  unique: true,
+)
 class PriceListItems extends Table {
   TextColumn get id => text()();
   TextColumn get priceListId => text().references(PriceLists, #id)();
@@ -214,7 +215,10 @@ class PriceListItems extends Table {
 }
 
 @TableIndex(
-    name: 'idx_cpd_unique', columns: {#customerId, #productId}, unique: true)
+  name: 'idx_cpd_unique',
+  columns: {#customerId, #productId},
+  unique: true,
+)
 class CustomerProductDiscounts extends Table {
   TextColumn get id => text()();
   TextColumn get customerId => text().references(Customers, #id)();
@@ -226,8 +230,8 @@ class CustomerProductDiscounts extends Table {
 
   @override
   List<String> get customConstraints => [
-        'CHECK (discount_rate >= 0 AND discount_rate <= 10000)',
-      ];
+    'CHECK (discount_rate >= 0 AND discount_rate <= 10000)',
+  ];
 }
 
 class CashAccounts extends Table {
@@ -244,8 +248,8 @@ class CashAccounts extends Table {
 
   @override
   List<String> get customConstraints => [
-        "CHECK (type IN (${CashAccountType.all.map((e) => "'$e'").join(',')}))",
-      ];
+    "CHECK (type IN (${CashAccountType.all.map((e) => "'$e'").join(',')}))",
+  ];
 }
 
 class ExpenseCategories extends Table {

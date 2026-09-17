@@ -5,18 +5,22 @@ import 'package:sungerbob/domain/core/money.dart';
 import 'package:sungerbob/domain/core/quantity.dart';
 
 /// Altın Senaryo partileri (docs/GOLDEN_SCENARIO.md).
-BatchView batch(String id, String pieces, String vol, String unitCost,
-        {int seq = 0}) =>
-    BatchView(
-      id: id,
-      variantId: 'v10',
-      productId: 'beyaz',
-      receivedAt: DateTime.utc(2026, 9, seq == 0 ? 1 : seq),
-      sequence: seq,
-      remainingPieces: int.parse(pieces),
-      remainingVolume: Volume.parse(vol),
-      realUnitCost: UnitPrice.parse(unitCost),
-    );
+BatchView batch(
+  String id,
+  String pieces,
+  String vol,
+  String unitCost, {
+  int seq = 0,
+}) => BatchView(
+  id: id,
+  variantId: 'v10',
+  productId: 'beyaz',
+  receivedAt: DateTime.utc(2026, 9, seq == 0 ? 1 : seq),
+  sequence: seq,
+  remainingPieces: int.parse(pieces),
+  remainingVolume: Volume.parse(vol),
+  realUnitCost: UnitPrice.parse(unitCost),
+);
 
 void main() {
   group('FIFO tüketimi (Altın Senaryo 3)', () {
@@ -131,9 +135,13 @@ void main() {
     test('satış maliyeti 16,8 m³ × 3.070,5000 = 51.584,40', () {
       final a1 = batch('A1', '50', '14', '3030', seq: 1);
       final a2 = BatchView(
-        id: 'A2', variantId: 'v5', productId: 'beyaz',
-        receivedAt: DateTime.utc(2026, 9, 1), sequence: 1,
-        remainingPieces: 40, remainingVolume: Volume.parse('5.6'),
+        id: 'A2',
+        variantId: 'v5',
+        productId: 'beyaz',
+        receivedAt: DateTime.utc(2026, 9, 1),
+        sequence: 1,
+        remainingPieces: 40,
+        remainingVolume: Volume.parse('5.6'),
         realUnitCost: UnitPrice.parse('3030'),
       );
       final b = batch('B', '30', '8.4', '3165', seq: 15);
@@ -169,29 +177,42 @@ void main() {
   });
 
   group('Masraf dağıtımı (BRIEF §3.7)', () {
-    test('Altın Senaryo 1: nakliye 1.960 → gerçek maliyet 3.030,0000 TL/m³', () {
-      final r = CostingEngine.allocatePurchaseExpense(
-        expense: Money.parse('1960'),
-        lines: [
-          ExpenseTarget(volume: Volume.parse('14'), bareCost: Money.parse('41020')),
-          ExpenseTarget(volume: Volume.parse('5.6'), bareCost: Money.parse('16408')),
-        ],
-      );
-      expect(r[0], Money.parse('1400'));
-      expect(r[1], Money.parse('560'));
+    test(
+      'Altın Senaryo 1: nakliye 1.960 → gerçek maliyet 3.030,0000 TL/m³',
+      () {
+        final r = CostingEngine.allocatePurchaseExpense(
+          expense: Money.parse('1960'),
+          lines: [
+            ExpenseTarget(
+              volume: Volume.parse('14'),
+              bareCost: Money.parse('41020'),
+            ),
+            ExpenseTarget(
+              volume: Volume.parse('5.6'),
+              bareCost: Money.parse('16408'),
+            ),
+          ],
+        );
+        expect(r[0], Money.parse('1400'));
+        expect(r[1], Money.parse('560'));
 
-      // A1: (41.020 + 1.400) / 14 = 3.030,0000
-      final a1Real = UnitPrice.fromDecimal(
-          ((Money.parse('41020') + r[0]).tl / Volume.parse('14').m3)
-              .toDecimal(scaleOnInfinitePrecision: 8));
-      expect(a1Real, UnitPrice.parse('3030'));
+        // A1: (41.020 + 1.400) / 14 = 3.030,0000
+        final a1Real = UnitPrice.fromDecimal(
+          ((Money.parse('41020') + r[0]).tl / Volume.parse('14').m3).toDecimal(
+            scaleOnInfinitePrecision: 8,
+          ),
+        );
+        expect(a1Real, UnitPrice.parse('3030'));
 
-      // A2: (16.408 + 560) / 5,6 = 3.030,0000
-      final a2Real = UnitPrice.fromDecimal(
-          ((Money.parse('16408') + r[1]).tl / Volume.parse('5.6').m3)
-              .toDecimal(scaleOnInfinitePrecision: 8));
-      expect(a2Real, UnitPrice.parse('3030'));
-    });
+        // A2: (16.408 + 560) / 5,6 = 3.030,0000
+        final a2Real = UnitPrice.fromDecimal(
+          ((Money.parse('16408') + r[1]).tl / Volume.parse('5.6').m3).toDecimal(
+            scaleOnInfinitePrecision: 8,
+          ),
+        );
+        expect(a2Real, UnitPrice.parse('3030'));
+      },
+    );
 
     test('sonradan gelen masraf: stok / satılmış ayrımı', () {
       // Parti 10 m³ girdi, 4 m³ satıldı, 6 m³ stokta. Masraf 1.000 TL.
@@ -272,19 +293,21 @@ void main() {
     test('A1\'den 50 + B\'den 10 tüketildi; 5 adet iade B\'ye döner', () {
       final consumed = [
         CostAllocation(
-            batchId: 'A1',
-            pieces: 50,
-            volume: Volume.parse('14'),
-            unitCost: UnitPrice.parse('3030'),
-            cost: Money.parse('42420'),
-            sequenceNo: 0),
+          batchId: 'A1',
+          pieces: 50,
+          volume: Volume.parse('14'),
+          unitCost: UnitPrice.parse('3030'),
+          cost: Money.parse('42420'),
+          sequenceNo: 0,
+        ),
         CostAllocation(
-            batchId: 'B',
-            pieces: 10,
-            volume: Volume.parse('2.8'),
-            unitCost: UnitPrice.parse('3165'),
-            cost: Money.parse('8862'),
-            sequenceNo: 1),
+          batchId: 'B',
+          pieces: 10,
+          volume: Volume.parse('2.8'),
+          unitCost: UnitPrice.parse('3165'),
+          cost: Money.parse('8862'),
+          sequenceNo: 1,
+        ),
       ];
 
       final r = CostingEngine.reverseForReturn(
@@ -302,13 +325,21 @@ void main() {
     test('iade son partiyi aşarsa bir öncekine taşar', () {
       final consumed = [
         CostAllocation(
-            batchId: 'A1', pieces: 50, volume: Volume.parse('14'),
-            unitCost: UnitPrice.parse('3030'), cost: Money.parse('42420'),
-            sequenceNo: 0),
+          batchId: 'A1',
+          pieces: 50,
+          volume: Volume.parse('14'),
+          unitCost: UnitPrice.parse('3030'),
+          cost: Money.parse('42420'),
+          sequenceNo: 0,
+        ),
         CostAllocation(
-            batchId: 'B', pieces: 10, volume: Volume.parse('2.8'),
-            unitCost: UnitPrice.parse('3165'), cost: Money.parse('8862'),
-            sequenceNo: 1),
+          batchId: 'B',
+          pieces: 10,
+          volume: Volume.parse('2.8'),
+          unitCost: UnitPrice.parse('3165'),
+          cost: Money.parse('8862'),
+          sequenceNo: 1,
+        ),
       ];
       final r = CostingEngine.reverseForReturn(
         originalAllocations: consumed,
@@ -322,13 +353,19 @@ void main() {
     test('satılandan fazla iade reddedilir', () {
       final consumed = [
         CostAllocation(
-            batchId: 'B', pieces: 10, volume: Volume.parse('2.8'),
-            unitCost: UnitPrice.parse('3165'), cost: Money.parse('8862'),
-            sequenceNo: 0),
+          batchId: 'B',
+          pieces: 10,
+          volume: Volume.parse('2.8'),
+          unitCost: UnitPrice.parse('3165'),
+          cost: Money.parse('8862'),
+          sequenceNo: 0,
+        ),
       ];
       expect(
         () => CostingEngine.reverseForReturn(
-            originalAllocations: consumed, returnPieces: 11),
+          originalAllocations: consumed,
+          returnPieces: 11,
+        ),
         throwsA(isA<ReturnExceedsSoldException>()),
       );
     });

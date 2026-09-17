@@ -12,61 +12,81 @@ import '../db/enums.dart';
 /// SQL'de yalnızca toplama/çıkarma yapılır (ARCHITECTURE §3).
 extension StockQueries on AppDatabase {
   Future<String> locationId(String code) async {
-    final row = await (select(locations)..where((l) => l.code.equals(code)))
-        .getSingle();
+    final row = await (select(
+      locations,
+    )..where((l) => l.code.equals(code))).getSingle();
     return row.id;
   }
 
   /// Bir varyantın ana depodaki partileri, FIFO sırasında.
-  Future<List<BatchView>> batchesForVariant(String variantId,
-      {String locationCode = LocationCode.mainWarehouse}) async {
+  Future<List<BatchView>> batchesForVariant(
+    String variantId, {
+    String locationCode = LocationCode.mainWarehouse,
+  }) async {
     final locId = await locationId(locationCode);
-    final query = select(inventoryBatches).join([
-      innerJoin(productVariants,
-          productVariants.id.equalsExp(inventoryBatches.variantId)),
-    ])
-      ..where(inventoryBatches.variantId.equals(variantId) &
-          inventoryBatches.locationId.equals(locId) &
-          inventoryBatches.remainingPieces.isBiggerThanValue(0))
-      ..orderBy([
-        OrderingTerm.asc(inventoryBatches.receivedAt),
-        OrderingTerm.asc(inventoryBatches.id),
-      ]);
+    final query =
+        select(inventoryBatches).join([
+            innerJoin(
+              productVariants,
+              productVariants.id.equalsExp(inventoryBatches.variantId),
+            ),
+          ])
+          ..where(
+            inventoryBatches.variantId.equals(variantId) &
+                inventoryBatches.locationId.equals(locId) &
+                inventoryBatches.remainingPieces.isBiggerThanValue(0),
+          )
+          ..orderBy([
+            OrderingTerm.asc(inventoryBatches.receivedAt),
+            OrderingTerm.asc(inventoryBatches.id),
+          ]);
 
     final rows = await query.get();
     return [
       for (var i = 0; i < rows.length; i++)
-        _toBatchView(rows[i].readTable(inventoryBatches),
-            rows[i].readTable(productVariants), i)
+        _toBatchView(
+          rows[i].readTable(inventoryBatches),
+          rows[i].readTable(productVariants),
+          i,
+        ),
     ];
   }
 
   /// Bir **ürünün** ana depodaki tüm partileri — ağırlıklı ortalama için (D-11).
-  Future<List<BatchView>> batchesForProduct(String productId,
-      {String locationCode = LocationCode.mainWarehouse}) async {
+  Future<List<BatchView>> batchesForProduct(
+    String productId, {
+    String locationCode = LocationCode.mainWarehouse,
+  }) async {
     final locId = await locationId(locationCode);
-    final query = select(inventoryBatches).join([
-      innerJoin(productVariants,
-          productVariants.id.equalsExp(inventoryBatches.variantId)),
-    ])
-      ..where(productVariants.productId.equals(productId) &
-          inventoryBatches.locationId.equals(locId) &
-          inventoryBatches.remainingPieces.isBiggerThanValue(0))
-      ..orderBy([
-        OrderingTerm.asc(inventoryBatches.receivedAt),
-        OrderingTerm.asc(inventoryBatches.id),
-      ]);
+    final query =
+        select(inventoryBatches).join([
+            innerJoin(
+              productVariants,
+              productVariants.id.equalsExp(inventoryBatches.variantId),
+            ),
+          ])
+          ..where(
+            productVariants.productId.equals(productId) &
+                inventoryBatches.locationId.equals(locId) &
+                inventoryBatches.remainingPieces.isBiggerThanValue(0),
+          )
+          ..orderBy([
+            OrderingTerm.asc(inventoryBatches.receivedAt),
+            OrderingTerm.asc(inventoryBatches.id),
+          ]);
 
     final rows = await query.get();
     return [
       for (var i = 0; i < rows.length; i++)
-        _toBatchView(rows[i].readTable(inventoryBatches),
-            rows[i].readTable(productVariants), i)
+        _toBatchView(
+          rows[i].readTable(inventoryBatches),
+          rows[i].readTable(productVariants),
+          i,
+        ),
     ];
   }
 
-  BatchView _toBatchView(
-          InventoryBatch b, ProductVariant v, int seq) =>
+  BatchView _toBatchView(InventoryBatch b, ProductVariant v, int seq) =>
       BatchView(
         id: b.id,
         variantId: b.variantId,
@@ -110,8 +130,7 @@ extension StockQueries on AppDatabase {
 
   /// Portföydeki evrak toplamı (alınan, henüz tahsil/ciro edilmemiş).
   Future<Money> instrumentPortfolioTotal() async {
-    final statuses =
-        InstrumentStatus.inPortfolio.map((s) => "'$s'").join(',');
+    final statuses = InstrumentStatus.inPortfolio.map((s) => "'$s'").join(',');
     final row = await customSelect(
       'SELECT COALESCE(SUM(amount), 0) AS total FROM instruments '
       "WHERE direction = 'IN' AND current_status IN ($statuses)",
@@ -121,8 +140,10 @@ extension StockQueries on AppDatabase {
   }
 
   /// Varyantın bir konumdaki stoğu (adet ve m³), partilerden.
-  Future<({int pieces, Volume volume})> variantStock(String variantId,
-      {String locationCode = LocationCode.mainWarehouse}) async {
+  Future<({int pieces, Volume volume})> variantStock(
+    String variantId, {
+    String locationCode = LocationCode.mainWarehouse,
+  }) async {
     final locId = await locationId(locationCode);
     final row = await customSelect(
       'SELECT COALESCE(SUM(remaining_pieces), 0) AS pcs, '
@@ -138,14 +159,17 @@ extension StockQueries on AppDatabase {
   }
 
   /// Stok maliyeti (bir konumdaki tüm partiler).
-  Future<Money> stockCostTotal(
-      {String locationCode = LocationCode.mainWarehouse}) async {
+  Future<Money> stockCostTotal({
+    String locationCode = LocationCode.mainWarehouse,
+  }) async {
     final locId = await locationId(locationCode);
-    final rows = await (select(inventoryBatches)
-          ..where((b) =>
-              b.locationId.equals(locId) & b.remainingPieces.isBiggerThanValue(0)))
-        .get();
-    return sumMoney(
-        rows.map((b) => b.realUnitCostM3.times(b.remainingVolume)));
+    final rows =
+        await (select(inventoryBatches)..where(
+              (b) =>
+                  b.locationId.equals(locId) &
+                  b.remainingPieces.isBiggerThanValue(0),
+            ))
+            .get();
+    return sumMoney(rows.map((b) => b.realUnitCostM3.times(b.remainingVolume)));
   }
 }

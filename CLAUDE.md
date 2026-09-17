@@ -124,7 +124,7 @@ Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
 | **Faz 4 — Analiz ve raporlar** | ✅ müşteri/ürün analizi, kârlılık, CSV |
 | **Faz 5 — Yayına alma** | ✅ kılavuzlar, imzalama, performans ölçümü |
 
-**275 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
+**308 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
 
 Faz 1'de hazır olanlar:
 
@@ -170,6 +170,12 @@ Faz 5 sonrası eklenenler:
 - `ui/screens/ops/` — teklifler (satışa çevirme), kesim emirleri (gönder /
   dönüş al), sayım (taslak → onay), fire
 - `ui/widgets/variant_picker.dart` — stoktaki varyantı seçtiren ortak sayfa
+- `ui/theme/app_theme.dart` — sıcak minimalist palet (elle yazılmış, tohumdan
+  türetilmiyor), Inter + Lora tipografi, kontrast testli (K-03)
+- `ui/content/daily_quote.dart` — **Günün Sözü** (imza öğesi), gün bazında
+  sabit, tamamı Türk atasözü
+- `ui/widgets/signature.dart` — Günün Sözü kartı, karşılama satırı, tasarım
+  imzası
 - `ui/screens/settings/drive_screen.dart` — cihaz dışı yedek
 - `ui/startup.dart` — kilit açıldıktan sonra bildirim kurulumu ve açılış yedeği
 - `data/notifications/notification_service.dart` — `flutter_local_notifications`

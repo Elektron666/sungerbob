@@ -333,6 +333,70 @@ taraf hesaplıyor; bayat değer aritmetiği kalmadı.
 PIN aşaması (belirleme / doğrulama) artık `pin.length` gibi dolaylı bir
 işaretten çıkarılmıyor, açık bir alanda tutuluyor.
 
+## K-03 · Tasarım dili: sıcak minimalizm
+
+BRIEF §7 "sade, premium, kurumsal; nötr tonlar, tek vurgu rengi" diyor.
+Referans olarak mobilya vitrinlerinin dili alındı: kâğıt tonunda zemin, doğal
+malzeme renkleri, ince çizgiler, bol boşluk. Ekran bir muhasebe tablosu değil,
+**düzenli bir tezgâh** gibi görünmeli — çünkü kullanıcı güne buradan başlıyor.
+
+### Palet
+
+Renkler `ColorScheme.fromSeed` ile türetilmiyor, **elle** yazıldı: tohumdan
+üretilen Material paleti mor/mavi tarafa kayıyor ve istenen sıcaklığı vermiyor.
+
+| Rol | Açık | Koyu | Neden |
+|---|---|---|---|
+| Zemin | `#FBF9F6` | `#16130F` | Saf beyaz/siyah değil; kâğıt ve is tonu |
+| Vurgu | `#6E5843` | `#DCBD9B` | Ceviz. Tek vurgu rengi kuralı |
+| İkincil | `#6B7263` | `#B9C0AE` | Adaçayı — olumlu durum |
+| Üçüncül | `#9A6C3C` | `#E2B784` | Pirinç — kâr, ince süs çizgileri |
+| Hata | `#8F3A2C` | `#F0B0A2` | Kiremit; ekranın sıcaklığını bozmayan kırmızı |
+
+Zeminin kırmızı kanalı maviden yüksek olmak zorunda — test bunu doğruluyor,
+böylece palet ileride soğuk griye kaymaz.
+
+**Kontrast test ediliyor:** her iki temada da gövde metni, düğme yüzeyi ve
+hata rengi için WCAG AA (4.5:1) sınanıyor. Estetik uğruna okunabilirlik
+feda edilemez; depoda telefona bakan bir kullanıcı için bu konfor değil,
+kullanılabilirlik meselesi.
+
+### Tipografi
+
+- **Inter** — arayüz, rakamlar, etiketler. BRIEF §2 zaten adını veriyor.
+  Rakamlar tabular figürle: sütunlarda kayma olmaz.
+- **Lora** — yalnızca **iki yerde**: ekran başlıkları (display seviyesi) ve
+  Günün Sözü. Serif her yere serpilirse ciddiyetini kaybeder; kısıtlı
+  kullanım onu vurgu yapar.
+
+Fontlar **gömülü**: uygulama tamamen çevrimdışı, `google_fonts` gibi çalışma
+anında indiren bir çözüm kabul edilemez. Latin + Türkçe + ₺ aralığına budandı:
+1,9 MB → **528 KB**.
+
+### Günün Sözü — imza öğesi
+
+Ana sayfada rakamlardan **önce** durur: kullanıcı güne sayıyla değil bir
+cümleyle başlar.
+
+- **Gün bazında sabit**, rastgele değil. Sabah gördüğü sözü akşam bulamayan
+  kullanıcı için rastgelelik hoş değil, dağınıktır. Seçim tarihten türetilir;
+  kayıt tutulmaz, rastgele sayı üretilmez — saf ve test edilebilir.
+- **Tamamı Türk atasözü.** Kişiye atfedilen söz bilerek kullanılmadı:
+  dolaşımdaki alıntıların büyük bölümü yanlış kişiye mal edilmiş oluyor ve
+  uygulamanın her gün birine yanlış söz yakıştırması kabul edilemez.
+  Atasözünün kaynağı ortak kültürdür, yanlış atıf riski yoktur.
+- Konular işe göre seçildi: emek, sabır, ölçü, dürüst ticaret, itibar,
+  tutumluluk. 42 söz — bir aydan uzun süre tekrar etmez, test bunu doğruluyor.
+
+Listeyi genişletmek için `lib/ui/content/daily_quote.dart` içindeki diziye
+satır eklemek yeterli; testler tekrar ve boş kaynak kontrolünü kendisi yapar.
+
+### İmza
+
+`DesignSignature` — ana sayfanın en altında, kurulum sihirbazının son
+adımında ve Ayarlar → Hakkında'da: **"Tasarım · Fatih Özdemir"**. Sessiz
+tutuldu; göz onu ararsa bulur, aramazsa rahatsız etmez.
+
 ## K-02 · Performans ölçümü (BRIEF §9 Faz 5)
 
 "50.000 satış satırıyla ana sayfa ve raporların makul sürede açıldığını ölç."

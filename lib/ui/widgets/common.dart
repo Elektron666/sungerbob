@@ -29,11 +29,19 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 48, color: scheme.onSurfaceVariant),
-            const SizedBox(height: 16),
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 30, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 20),
             Text(
               title,
-              style: Theme.of(context).textTheme.titleMedium,
+              style: Theme.of(context).textTheme.headlineSmall,
               textAlign: TextAlign.center,
             ),
             if (description != null) ...[
@@ -126,9 +134,9 @@ class StatCard extends StatelessWidget {
     return Card(
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.radius),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -136,20 +144,20 @@ class StatCard extends StatelessWidget {
               Row(
                 children: [
                   if (icon != null) ...[
-                    Icon(icon, size: 16, color: context.labelStyle.color),
-                    const SizedBox(width: 6),
+                    Icon(icon, size: 15, color: context.eyebrowStyle.color),
+                    const SizedBox(width: 7),
                   ],
                   Expanded(
                     child: Text(
-                      label,
-                      style: context.labelStyle,
+                      label.toUpperCase(),
+                      style: context.eyebrowStyle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
@@ -197,17 +205,18 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+    padding: const EdgeInsets.fromLTRB(16, 28, 16, 10),
     child: Row(
       children: [
+        Text(title.toUpperCase(), style: context.eyebrowStyle),
+        const SizedBox(width: 12),
         Expanded(
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.titleSmall
-                ?.copyWith(fontWeight: FontWeight.w600),
+          child: Divider(
+            color: Theme.of(context).colorScheme.outlineVariant,
+            height: 1,
           ),
         ),
-        ?trailing,
+        if (trailing != null) ...[const SizedBox(width: 12), trailing!],
       ],
     ),
   );

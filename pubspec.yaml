@@ -70,6 +70,26 @@ flutter:
   assets:
     - assets/fonts/
 
+  # Arayüz tipografisi (BRIEF §2 "Inter veya Noto Sans").
+  # Fontlar gömülü: uygulama tamamen çevrimdışı, indirme yok.
+  # Latin + Türkçe + ₺ aralığına budandılar (1,9 MB → 528 KB).
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+    # Başlık ve Günün Sözü için sıcak, editoryal bir serif.
+    - family: Lora
+      fonts:
+        - asset: assets/fonts/Lora-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Lora-SemiBold.ttf
+          weight: 600
+
 # SQLCipher ile şifreli veritabanı (BRIEF §2, DECISIONS SK-07).
 # sqlite3 3.x'te yerel kütüphane build-hook ile seçilir; sqlcipher_flutter_libs
 # artık kullanılmıyor.

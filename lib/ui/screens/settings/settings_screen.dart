@@ -6,6 +6,7 @@ import '../../../data/db/connection.dart';
 import '../../providers/app_providers.dart';
 import '../../startup.dart';
 import '../../widgets/common.dart';
+import '../../widgets/signature.dart';
 
 /// Ayarlar (BRIEF §7).
 class SettingsScreen extends ConsumerWidget {
@@ -98,12 +99,20 @@ class SettingsScreen extends ConsumerWidget {
                     : 'SQLCipher bulunamadı',
               ),
             ),
-            const SectionHeader(title: 'Uygulama'),
+            const SectionHeader(title: 'Hakkında'),
             const ListTile(
               leading: Icon(Icons.info_outline),
               title: Text('Sürüm'),
-              subtitle: Text('0.1.0 (Faz 2)'),
+              subtitle: Text('0.1.0'),
             ),
+            const ListTile(
+              leading: Icon(Icons.draw_outlined),
+              title: Text('Tasarım'),
+              subtitle: Text(
+                '${DesignSignature.designer} tarafından tasarlanmıştır',
+              ),
+            ),
+            const DesignSignature(),
           ],
         ),
       ),

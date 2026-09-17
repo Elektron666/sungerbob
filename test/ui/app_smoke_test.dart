@@ -7,6 +7,7 @@ import 'package:sungerbob/ui/app_router.dart';
 import 'package:sungerbob/ui/format/tr_format.dart';
 import 'package:sungerbob/ui/providers/app_providers.dart';
 import 'package:sungerbob/ui/shell.dart';
+import 'package:sungerbob/ui/widgets/signature.dart';
 
 /// Duman testi: uygulamanın tamamının derlendiğini ve açıldığını doğrular.
 ///
@@ -42,17 +43,32 @@ void main() {
     expect(find.byIcon(Icons.add), findsOneWidget);
   });
 
+  testWidgets('ana sayfa Günün Sözü ve imzayı taşır', (tester) async {
+    await tester.pumpWidget(_unlockedApp());
+    await tester.pump();
+
+    expect(find.text('GÜNÜN SÖZÜ'), findsOneWidget);
+
+    // İmza listenin en altında; tembel liste onu ancak görünürken kurar.
+    await tester.scrollUntilVisible(
+      find.byType(DesignSignature),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.byType(DesignSignature), findsOneWidget);
+  });
+
   testWidgets('hızlı işlem sayfası SPEC §22 butonlarını gösteriyor', (
     tester,
   ) async {
     await tester.pumpWidget(_unlockedApp());
     await tester.pump();
 
-    expect(find.text('+ SATIŞ'), findsOneWidget);
-    expect(find.text('+ STOK GİRİŞİ'), findsOneWidget);
-    expect(find.text('+ TAHSİLAT'), findsOneWidget);
-    expect(find.text('STOK SORGULA'), findsOneWidget);
-    expect(find.text('CARİ SORGULA'), findsOneWidget);
+    expect(find.text('Satış'), findsOneWidget);
+    expect(find.text('Stok Girişi'), findsOneWidget);
+    expect(find.text('Tahsilat'), findsOneWidget);
+    expect(find.text('Stok Sorgula'), findsOneWidget);
+    expect(find.text('Cari Sorgula'), findsOneWidget);
   });
 
   testWidgets('kurulum bitmeden ana sayfa gösterilmez', (tester) async {

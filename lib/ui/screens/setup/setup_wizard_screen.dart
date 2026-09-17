@@ -9,6 +9,7 @@ import '../../../data/repo/unit_of_work.dart';
 import '../../providers/app_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/pin_pad.dart';
+import '../../widgets/signature.dart';
 
 /// Kurulum sihirbazı (BRIEF §7).
 ///
@@ -225,25 +226,34 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
   Widget _startStep() => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
+      const SizedBox(height: 32),
+      // Pirinç ince çizgi — markanın tek süs öğesi.
+      Center(
+        child: Container(
+          width: 40,
+          height: 1.5,
+          color: Theme.of(context).colorScheme.tertiary,
+        ),
+      ),
       const SizedBox(height: 24),
-      Icon(
-        Icons.inventory_2_outlined,
-        size: 64,
-        color: Theme.of(context).colorScheme.primary,
-      ),
-      const SizedBox(height: 16),
       Text(
-        'Sünger Stok & Cari',
+        'Sünger',
         textAlign: TextAlign.center,
-        style: Theme.of(context).textTheme.headlineSmall,
+        style: Theme.of(context).textTheme.displayMedium,
       ),
-      const SizedBox(height: 8),
+      const SizedBox(height: 6),
+      Text(
+        'STOK & CARİ',
+        textAlign: TextAlign.center,
+        style: context.eyebrowStyle,
+      ),
+      const SizedBox(height: 20),
       Text(
         'Verileriniz yalnızca bu telefonda, şifreli olarak tutulur.',
         textAlign: TextAlign.center,
         style: context.labelStyle,
       ),
-      const SizedBox(height: 32),
+      const SizedBox(height: 36),
       Card(
         child: ListTile(
           leading: const Icon(Icons.play_arrow),
@@ -564,6 +574,7 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
           'Sonradan Menü → Açılış İşlemleri\'nden de yapılır',
         ),
       ),
+      const DesignSignature(),
     ],
   );
 }

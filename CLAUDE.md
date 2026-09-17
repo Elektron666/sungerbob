@@ -21,7 +21,8 @@ Toptan sünger alım-satımı yapan işletme için **tek kullanıcılı, sunucus
 
 ## Komutlar
 
-Flutter projesi Faz 1'de oluşturulur; o ana kadar bu komutlar henüz çalışmaz.
+Flutter `/opt/sdk/flutter/bin` altında; PATH'e ekle:
+`export PATH=/opt/sdk/flutter/bin:$PATH`
 
 ```bash
 flutter pub get
@@ -110,4 +111,25 @@ Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
 
 - Flutter **3.47.4** / Dart **3.13.3** → `/opt/sdk/flutter/bin` (PATH'e ekle).
 - **Android SDK kurulu değil** — `dl.google.com` bu ortamın ağ politikasıyla engelli.
-  Faz 1 bunu gerektirmez; APK derlemesi GitHub Actions ile yapılacak (`DECISIONS.md` SK-01, D-K2).
+  Faz 1 bunu gerektirmedi; APK derlemesi GitHub Actions ile yapılacak (`DECISIONS.md` SK-01, D-K2).
+
+## Durum
+
+| Faz | Durum |
+|---|---|
+| Faz 0 — Mimari | ✅ tamam |
+| **Faz 1 — Domain ve veri katmanı** | ✅ **tamam — 124 test geçiyor, analyze temiz** |
+| Faz 2 — Mobil çekirdek + yedekleme | ⏳ sırada |
+| Faz 3–5 | ⏳ |
+
+Faz 1'de hazır olanlar:
+
+- `domain/core` — ölçekler, ROUND_HALF_UP, Money/Volume/UnitPrice/Rate, dağıtım
+- `domain/costing` — FIFO, ağırlıklı ortalama, masraf, fason kesim, iade tersine çevirme
+- `domain/service/vat.dart` — EXCL/INCL, kâr marjı ve maliyet üzerine kâr
+- `data/db` — 49 tablo, append-only trigger'ları, CHECK kısıtları, seed, migration
+- `data/repo` — alış, satış, iade, iptal, tahsilat, ödeme, virman, evrak, açılış,
+  fiyat listesi, `checkIntegrity`
+
+**Faz 2'nin ilk iki işi:** (1) SQLCipher'ı `sqlite3` 3.x build-hook'u ile devreye almak
+(SK-07), (2) GitHub Actions workflow'u (D-K2).

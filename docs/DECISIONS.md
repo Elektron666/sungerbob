@@ -87,6 +87,48 @@ Yalnızca adım 5 ve adım 7'deki "10 adet" ifadesi "5 adet" olur.
 **Senin yapman gereken:** Onayla ya da düzelt. Eğer asıl niyet "140×200×**4** × 10 adet" idiyse
 söyle — o durumda yalnızca varyant etiketi değişir, rakamlar yine aynı kalır.
 
+### SK-07 · SQLCipher paketleri değişti — şifreleme Faz 2'ye kaldı
+
+`sqlite3_flutter_libs` ve `sqlcipher_flutter_libs` **artık kullanılmıyor**
+(pub.dev'de `0.6.0+eol` / `0.7.0+eol`, açıklama: *"Not used anymore, update to version 3.x
+of package:sqlite3 instead"*). Yerlerini `sqlite3` 3.x aldı; SQLCipher artık paketin
+**build-hook** ayarıyla devreye giriyor.
+
+Faz 1 arayüzsüz ve testleri bellek içi veritabanında koştuğu için şifreleme gerekmiyor;
+`sqlite3` düz kullanılıyor. **SQLCipher yapılandırması Faz 2'nin ilk işi** (BRIEF §2:
+"Yerel veritabanı Drift (SQLite), SQLCipher ile şifreli"). Yedek dosyasının şifrelemesi
+zaten veritabanı anahtarından bağımsızdır (D-13), bu yüzden bu erteleme yedekleme
+tasarımını etkilemez.
+
+### SK-08 · Faz 1'de doğrulanan paket sürümleri
+
+Ezberden yazılmadı, pub.dev'den doğrulandı (BRIEF §0):
+
+| Paket | Sürüm |
+|---|---|
+| Flutter / Dart | 3.47.4 / 3.13.3 |
+| decimal | ^3.2.6 |
+| drift / drift_dev | ^2.35.0 |
+| sqlite3 | ^3.6.0 |
+| uuid | ^4.6.0 (v7 desteği doğrulandı) |
+| build_runner | ^2.16.1 |
+| crypto / path / collection / meta | ^3.0.7 / ^1.9.1 / ^1.19.1 / ^1.17.0 |
+
+Riverpod, go_router, cryptography, googleapis, pdf, excel, fl_chart, local_auth,
+workmanager ve flutter_secure_storage **henüz eklenmedi** — Faz 2 ve sonrasının işi.
+Kullanılmayan bağımlılık eklemek yerine sırası gelince sürümü yeniden doğrulanacak.
+
+### SK-09 · Faz 1'de testin yakaladığı iki hata (düzeltildi, bilgi amaçlı)
+
+1. **`checkIntegrity` evrak zincirini yanlış sıralıyordu.** Zincirin sonu `occurred_at`'e
+   göre okunuyordu; vadesi ileri tarihli bir çek bugün karşılıksız çıkınca "son durum"
+   yanlış bulunuyordu. Zincirin sırası **kayıt sırasıdır** — `created_at` + UUID v7 id ile
+   düzeltildi. Altın Senaryo adım 10 bunu yakaladı.
+2. **Fiyat katsayısı 100 katına çıkıyordu.** `Rate.fraction` zaten çarpanı veriyor
+   (10000 → 1,0); formülde fazladan `×100` vardı. Fiyat listesi testi yakaladı.
+
+Her ikisi de kural gereği **önce yazılan testler** sayesinde koda değil teste düştü.
+
 ---
 
 ## K-01 · Ortam kaydı

@@ -79,10 +79,16 @@ class QuotesScreen extends ConsumerWidget {
                         subtitle: Text(
                           '${q.docNo} · '
                           '${TrFormat.date(DateTime.fromMillisecondsSinceEpoch(q.docDate))}'
-                          ' · ${_statusLabel(q.status)}'
+                          ' · ${QuoteStatus.label(q.status)}'
                           '${q.validUntil == null ? "" : " · geçerlilik ${TrFormat.date(DateTime.fromMillisecondsSinceEpoch(q.validUntil!))}"}',
                           style: context.labelStyle,
                         ),
+                        // Durum elle işaretlenemiyordu; liste sonsuza kadar
+                        // "Taslak" görünüyordu. Menü YALNIZCA izin verilen
+                        // geçişleri gösterir (Faz 6'daki evrak kuralı gibi):
+                        // yapılamayacak seçeneği sunup hata vermek kötü
+                        // tasarımdır.
+                        trailing: _statusMenu(context, ref, q),
                       ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -153,14 +159,44 @@ class QuotesScreen extends ConsumerWidget {
     if (created == true) ref.invalidate(quotesProvider);
   }
 
-  static String _statusLabel(String status) => switch (status) {
-    QuoteStatus.draft => 'Taslak',
-    QuoteStatus.sent => 'Gönderildi',
-    QuoteStatus.accepted => 'Kabul edildi',
-    QuoteStatus.rejected => 'Reddedildi',
-    QuoteStatus.expired => 'Süresi doldu',
-    _ => 'Satışa çevrildi',
-  };
+  /// İzin verilen durum geçişleri; hiçbiri yoksa menü hiç çizilmez.
+  Widget? _statusMenu(BuildContext context, WidgetRef ref, QuoteRow q) {
+    final allowed = QuoteStatus.transitions[q.status] ?? const <String>[];
+    if (allowed.isEmpty) return null;
+
+    return PopupMenuButton<String>(
+      tooltip: 'Durumu değiştir',
+      icon: const Icon(Icons.more_vert),
+      itemBuilder: (_) => [
+        for (final status in allowed)
+          PopupMenuItem(value: status, child: Text(QuoteStatus.label(status))),
+      ],
+      onSelected: (status) => _setStatus(context, ref, q.id, status),
+    );
+  }
+
+  Future<void> _setStatus(
+    BuildContext context,
+    WidgetRef ref,
+    String quoteId,
+    String status,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final db = await ref.read(databaseProvider.future);
+      await QuoteRepository(db).setStatus(
+        quoteId: quoteId,
+        status: status,
+        ctx: OperationContext(commandType: 'QUOTE_STATUS'),
+      );
+      ref.invalidate(quotesProvider);
+      messenger.showSnackBar(
+        SnackBar(content: Text('Teklif: ${QuoteStatus.label(status)}')),
+      );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
 
   Future<void> _convert(
     BuildContext context,

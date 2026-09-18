@@ -129,6 +129,31 @@ abstract final class QuoteStatus {
   static const expired = 'EXPIRED';
   static const converted = 'CONVERTED';
   static const all = [draft, sent, accepted, rejected, expired, converted];
+
+  /// Elle yapılabilecek durum geçişleri (SPEC §15).
+  ///
+  /// `CONVERTED` bu haritada yok: satışa çevirme ayrı bir iş işlemidir,
+  /// stok ve cari hareketi üretir; durum elle işaretlenerek atlanamaz.
+  /// `EXPIRED` de yok — geçerlilik tarihi geçince sistem kendisi koyar.
+  static const transitions = <String, List<String>>{
+    draft: [sent],
+    sent: [accepted, rejected],
+    accepted: [],
+    rejected: [],
+    expired: [],
+    converted: [],
+  };
+
+  /// Ekranda görünen Türkçe ad.
+  static String label(String status) => switch (status) {
+    draft => 'Taslak',
+    sent => 'Gönderildi',
+    accepted => 'Kabul edildi',
+    rejected => 'Reddedildi',
+    expired => 'Süresi doldu',
+    converted => 'Satışa çevrildi',
+    _ => status,
+  };
 }
 
 abstract final class CuttingStatus {

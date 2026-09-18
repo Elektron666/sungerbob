@@ -5,6 +5,7 @@ import '../../../data/db/app_database.dart';
 import '../../../data/db/enums.dart';
 import '../../../data/repo/product_repository.dart';
 import '../../../data/repo/purchase_repository.dart';
+import '../../../data/repo/price_memory.dart';
 import '../../../data/repo/unit_of_work.dart';
 import '../../../data/repo/variant_helper.dart';
 import '../../../domain/core/quantity.dart';
@@ -239,6 +240,19 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
               ),
             ],
           ),
+          // Fiyatı yazarken en çok gereken bilgi: bu tedarikçiden bu malı
+          // en son kaça almıştın. Satış ekranındaki ipucunun karşılığı;
+          // burada olmaması bir eksiklikti (SK-22).
+          if (_supplierId case final supplierId?)
+            if (_productId case final productId?)
+              _LastPurchaseHint(
+                supplierId: supplierId,
+                productId: productId,
+                unit: _unit,
+                onUse: (price) => setState(
+                  () => _priceController.text = TrFormat.unitPrice(price),
+                ),
+              ),
           const SizedBox(height: 16),
           _numField(_freightController, 'Nakliye (TL, opsiyonel)'),
           const SizedBox(height: 24),
@@ -318,3 +332,58 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
     ),
   );
 }
+
+/// "Son alış: 2.500,0000 TL/m³ · 12.09.2026" — dokununca fiyatı doldurur.
+///
+/// Doldurmaz, **hatırlatır**: fabrika zam yapmışsa eski fiyatı sessizce
+/// tekrarlamak yanlış maliyet yazdırırdı.
+class _LastPurchaseHint extends ConsumerWidget {
+  final String supplierId;
+  final String productId;
+  final String unit;
+  final ValueChanged<UnitPrice> onUse;
+
+  const _LastPurchaseHint({
+    required this.supplierId,
+    required this.productId,
+    required this.unit,
+    required this.onUse,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hint = ref.watch(
+      lastPurchasePriceProvider((supplierId: supplierId, productId: productId)),
+    );
+
+    return hint.maybeWhen(
+      data: (value) => value == null
+          ? const SizedBox.shrink()
+          : Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => onUse(value.unitPrice),
+                icon: const Icon(Icons.history, size: 16),
+                label: Text(
+                  'Son alış: '
+                  '${TrFormat.unitPriceFor(value.unitPrice, unit)} · '
+                  '${TrFormat.date(value.date)}',
+                ),
+              ),
+            ),
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+final lastPurchasePriceProvider = FutureProvider.autoDispose
+    .family<PriceHint?, ({String supplierId, String productId})>((
+      ref,
+      args,
+    ) async {
+      final db = await ref.watch(databaseProvider.future);
+      return PriceMemory(db).lastPurchasePrice(
+        supplierId: args.supplierId,
+        productId: args.productId,
+      );
+    });

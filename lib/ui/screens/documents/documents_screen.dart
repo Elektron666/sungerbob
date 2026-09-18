@@ -9,6 +9,9 @@ import '../../format/tr_format.dart';
 import '../../providers/app_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../../data/db/app_database.dart';
+import '../../../data/repo/purchase_repository.dart';
+import '../../../data/repo/unit_of_work.dart';
 import '../../documents/pdf_share.dart';
 import '../sale/sale_return_screen.dart';
 
@@ -395,6 +398,8 @@ class DocumentDetailSheet extends ConsumerWidget {
                 // Müşteri malı geri getirdiğinde girilecek yer burası.
                 // Satış **iptal edilmez**: iade ayrı bir belgedir, orijinal
                 // satış olduğu gibi durur (D-12).
+                // Alışta: mevcut masraflar ve "sonradan gelen fatura".
+                if (!sales) _ExpenseSection(purchaseId: doc.id),
                 if (sales && !doc.isCancelled) ...[
                   const SizedBox(height: 20),
                   // Fişi müşteriye göndermek günlük iş; PDF Faz 3'te
@@ -425,12 +430,56 @@ class DocumentDetailSheet extends ConsumerWidget {
                     ],
                   ),
                 ],
+                if (!sales && !doc.isCancelled) ...[
+                  const SizedBox(height: 20),
+                  OutlinedButton.icon(
+                    onPressed: () => _addLateExpense(context, ref),
+                    icon: const Icon(Icons.local_shipping_outlined),
+                    label: const Text('Masraf ekle (sonradan gelen fatura)'),
+                  ),
+                ],
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  /// Nakliye faturası malla birlikte gelmez; bir hafta sonra gelir.
+  ///
+  /// O anda partinin bir kısmı satılmış olabilir: stokta kalana düşen pay
+  /// partinin maliyetini artırır, satılmış kısma düşen pay **dönem maliyet
+  /// farkı** olur. Geçmiş satışın kârı değişmez (BRIEF §3.4) — bu yüzden
+  /// masraf satışa geri yazılmaz.
+  Future<void> _addLateExpense(BuildContext context, WidgetRef ref) async {
+    final result = await showModalBottomSheet<_LateExpense>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => const _LateExpenseSheet(),
+    );
+    if (result == null) return;
+
+    if (!context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final repo = await ref.read(purchaseRepositoryProvider.future);
+      await repo.addLateExpense(
+        purchaseId: doc.id,
+        expense: PurchaseExpenseInput(
+          kind: result.kind,
+          amount: result.amount,
+          allocationKey: result.allocationKey,
+        ),
+        ctx: OperationContext(commandType: 'PURCHASE_LATE_EXPENSE'),
+      );
+      ref.invalidate(purchaseExpensesProvider(doc.id));
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Masraf partilere dağıtıldı')),
+      );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('$e')));
+    }
   }
 
   Future<void> _sharePdf(BuildContext context, WidgetRef ref) async {
@@ -460,5 +509,184 @@ class DocumentDetailSheet extends ConsumerWidget {
     ref.invalidate(documentLinesProvider((sales: sales, id: doc.id)));
     // İade kaydedildi; detay sayfası eski tutarları göstermesin.
     navigator.pop();
+  }
+}
+
+/// Alış belgesindeki masraflar (nakliye, hamaliye).
+class _ExpenseSection extends ConsumerWidget {
+  final String purchaseId;
+
+  const _ExpenseSection({required this.purchaseId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final expenses = ref.watch(purchaseExpensesProvider(purchaseId));
+
+    return expenses.maybeWhen(
+      data: (list) => list.isEmpty
+          ? const SizedBox.shrink()
+          : Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('MASRAFLAR', style: context.eyebrowStyle),
+                  const SizedBox(height: 8),
+                  for (final e in list)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              PurchaseExpenseKind.label(e.kind) +
+                                  (e.addedLater ? ' · sonradan' : ''),
+                              style: context.labelStyle,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            TrFormat.moneyWithCurrency(e.amount),
+                            style: context.numberStyle,
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+final purchaseExpensesProvider = FutureProvider.autoDispose
+    .family<List<PurchaseExpense>, String>((ref, purchaseId) async {
+      final db = await ref.watch(databaseProvider.future);
+      return (db.select(
+        db.purchaseExpenses,
+      )..where((e) => e.purchaseId.equals(purchaseId))).get();
+    });
+
+/// Sonradan gelen masrafın girildiği sayfa.
+final class _LateExpense {
+  final String kind;
+  final Money amount;
+  final String allocationKey;
+
+  const _LateExpense({
+    required this.kind,
+    required this.amount,
+    required this.allocationKey,
+  });
+}
+
+class _LateExpenseSheet extends StatefulWidget {
+  const _LateExpenseSheet();
+
+  @override
+  State<_LateExpenseSheet> createState() => _LateExpenseSheetState();
+}
+
+class _LateExpenseSheetState extends State<_LateExpenseSheet> {
+  final _amount = TextEditingController();
+  String _kind = PurchaseExpenseKind.freight;
+  String _allocationKey = AllocationKey.volume;
+
+  @override
+  void dispose() {
+    _amount.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final amount = TrFormat.parseMoney(_amount.text);
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Sonradan gelen masraf',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Stokta kalana düşen pay maliyeti artırır; satılmış kısma '
+              'düşen pay dönem maliyet farkı olur. Geçmiş satışın kârı '
+              'değişmez.',
+              style: context.labelStyle,
+            ),
+            const SizedBox(height: 20),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final kind in PurchaseExpenseKind.all)
+                  ChoiceChip(
+                    label: Text(PurchaseExpenseKind.label(kind)),
+                    selected: _kind == kind,
+                    onSelected: (_) => setState(() => _kind = kind),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _amount,
+              autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: const InputDecoration(labelText: 'Tutar (TL)'),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 16),
+            Text('DAĞITIM', style: context.eyebrowStyle),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                ChoiceChip(
+                  label: const Text('Hacme göre (m³)'),
+                  selected: _allocationKey == AllocationKey.volume,
+                  onSelected: (_) =>
+                      setState(() => _allocationKey = AllocationKey.volume),
+                ),
+                ChoiceChip(
+                  label: const Text('Tutara göre'),
+                  selected: _allocationKey == AllocationKey.amount,
+                  onSelected: (_) =>
+                      setState(() => _allocationKey = AllocationKey.amount),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            FilledButton(
+              onPressed: amount == null || !amount.isPositive
+                  ? null
+                  : () => Navigator.of(context).pop(
+                      _LateExpense(
+                        kind: _kind,
+                        amount: amount,
+                        allocationKey: _allocationKey,
+                      ),
+                    ),
+              child: const Text('Masrafı ekle'),
+            ),
+            if (amount == null || !amount.isPositive) ...[
+              const SizedBox(height: 8),
+              Text('Tutar girin', style: context.labelStyle),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }

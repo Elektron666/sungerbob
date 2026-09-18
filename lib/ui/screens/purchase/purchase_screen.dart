@@ -139,7 +139,10 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
           ],
           expenses: [
             if (freight != null && freight.isPositive)
-              PurchaseExpenseInput(kind: 'NAKLIYE', amount: freight),
+              PurchaseExpenseInput(
+                kind: PurchaseExpenseKind.freight,
+                amount: freight,
+              ),
           ],
         ),
         OperationContext(commandType: 'PURCHASE_CREATE', commandId: _commandId),

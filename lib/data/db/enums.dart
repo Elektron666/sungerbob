@@ -253,6 +253,23 @@ abstract final class RoundingRule {
   static const all = [none, nearest1, nearest5, nearest10];
 }
 
+/// Alış masrafı türü (nakliye, hamaliye, diğer).
+///
+/// Elle yazılmış `'NAKLIYE'` metinleriyle dolaşıyordu; enum'a alındı ki
+/// şema kısıtı ile kod aynı listeden beslensin (D-23).
+abstract final class PurchaseExpenseKind {
+  static const freight = 'NAKLIYE';
+  static const handling = 'HAMALIYE';
+  static const other = 'DIGER';
+  static const all = [freight, handling, other];
+
+  static String label(String kind) => switch (kind) {
+    freight => 'Nakliye',
+    handling => 'Hamaliye',
+    _ => 'Diğer',
+  };
+}
+
 abstract final class AllocationKey {
   static const volume = 'VOLUME';
   static const amount = 'AMOUNT';

@@ -66,6 +66,7 @@ void main() {
     expectEnumCheck('purchases', 'status', DocStatus.all);
     expectEnumCheck('sales', 'status', DocStatus.all);
     expectEnumCheck('sales_quotes', 'status', QuoteStatus.all);
+    expectEnumCheck('purchase_expenses', 'kind', PurchaseExpenseKind.all);
     expectEnumCheck('purchase_expenses', 'allocation_key', AllocationKey.all);
   });
 

@@ -101,9 +101,15 @@ bankaya giriş yazarsınız. Karşılıksız çıkarsa borç müşteriye **geri 
 
 ### Hiçbir kayıt silinemez
 
-Yanlış giriş yaptıysanız **iptal** edersiniz. Sistem ters bir kayıt oluşturur;
-orijinal kayıt yerinde kalır ve geçmişte görünür. Bu, muhasebe açısından
+Yanlış giriş yaptıysanız kaydı silmezsiniz; **ters bir kayıt** oluşturursunuz.
+Orijinal kayıt yerinde kalır ve geçmişte görünür. Bu, muhasebe açısından
 doğrudur ve denetlenebilir bir geçmiş bırakır.
+
+**Satışta bunun adı iadedir.** Müşteri malı geri getirdiğinde satışı iptal
+etmezsiniz: *Satışlar → belge → İade al* deyip kaç adet geri geldiğini
+girersiniz. Satış olduğu gibi durur, mal aynı maliyetle stoğa döner, müşterinin
+borcu azalır. Böylece ciro ve kâr raporları gerçeği anlatmaya devam eder —
+iptal edilmiş bir satış, hiç olmamış gibi görünürdü.
 
 ### Geçmiş kâr değişmez
 
@@ -175,6 +181,101 @@ yedek alınır.
 
 **Fire:** Hasarlı, nemlenmiş veya numune verilen mal. **Neden belirtmek
 zorunludur.** Fire satış olarak görünmez, kârlılık raporunda ayrı kalem olur.
+
+---
+
+## Ürünler ve ince malzeme
+
+*Menü → Depo → Ürünler*
+
+Uygulama 12 sünger çeşidiyle kurulur. Kendi çeşidinizi ekleyebilir, yanında
+sattığınız **çivi, yapıştırıcı, zikzak yay** gibi malzemeleri de
+tanımlayabilirsiniz.
+
+Ürün kartı açarken **birim** seçersiniz:
+
+| Birim | Ne zaman |
+|---|---|
+| **m³ (sünger)** | Ölçüye göre satılan sünger. En, boy, kalınlık sorulur. |
+| adet, kg, kutu, litre, metre | İnce malzeme. **Ölçü sorulmaz**, miktarı kendi biriminden girersiniz. |
+
+Birim ürün kartında sabittir; sonradan değiştirilemez, çünkü geçmiş
+hareketlerin maliyeti o birime göre hesaplanmıştır.
+
+Ana sayfadaki "Toplam Stok m³" yalnızca süngeri sayar: 50 kg tutkal o rakama
+karışmaz.
+
+---
+
+## Fiyat listesi (zam yapmak)
+
+*Menü → Depo → Fiyat Listeleri → Yeni fiyat listesi*
+
+1. **Baz fiyatı** girin — beyaz süngerin metreküp fiyatı. Diğer çeşitler kendi
+   katsayılarıyla hesaplanır.
+2. İsterseniz **yuvarlama** seçin (en yakın 1, 5 veya 10 TL).
+3. **Önizle** deyin. Her çeşidin eski fiyatı, yeni fiyatı ve değişim yüzdesi
+   yan yana çıkar. Düşen bir fiyat varsa kırmızı görünür.
+4. Doğruysa **Listeyi yürürlüğe al**.
+
+Önizlemeyi görmeden kaydedemezsiniz: tek bir sayı girerek bütün ürünlerin
+fiyatını aynı anda değiştiriyorsunuz.
+
+Eski liste **silinmez**, arşivlenir. Geçmiş satışlar kendi listesine bağlı
+kalır.
+
+Satış ekranında fiyat alanının altında iki ipucu çıkar: **son satış** (bu
+müşteriye ne demiştiniz) ve **liste fiyatı** (bugünkü fiyatınız). İkisi de
+dokununca alanı doldurur; kendiliğinden doldurmaz.
+
+---
+
+## Teklif
+
+*Menü → Kayıtlar → Teklifler → Yeni teklif*
+
+Müşteri, geçerlilik tarihi ve kalemler. Teklifte ölçü serbesttir: elinizde
+olmayan bir ölçüye de fiyat verebilirsiniz, çünkü teklif **stoğa dokunmaz**.
+
+Müşteri kabul edince **Satışa çevir** deyin; stok o anda düşer, cariye borç
+yazılır. Aynı teklif ikinci kez çevrilemez.
+
+---
+
+## Belgeleri müşteriye gönderme
+
+Dört belge PDF olarak üretilir ve doğrudan WhatsApp'a (ya da e-postaya)
+paylaşılır:
+
+| Belge | Nereden |
+|---|---|
+| **Satış fişi** | Satışlar → belgeye dokun → *Fişi paylaş* |
+| **Fiyat teklifi** | Teklifler → *PDF paylaş* |
+| **Kesim emri** | Kesim Emirleri → paylaş simgesi |
+| **Cari ekstre** | Müşteriler → müşteri → başlıktaki paylaş simgesi |
+
+Belgelerde firma adınız, adresiniz ve logonuz görünür — bunları *Ayarlar →
+İşletme* bölümünden girersiniz.
+
+**Kesim emrinde fiyat yazmaz.** Kesimhanenin görmesi gereken yalnızca ölçü ve
+adettir.
+
+**Cari ekstre tahsilatın ilk adımıdır:** "sana şu kadar borcun var" demenin en
+kibar yolu belgedir.
+
+---
+
+## Ayarlar
+
+*Menü → Kurulum → Ayarlar*
+
+| Ayar | Ne yapar |
+|---|---|
+| **KDV oranı** | Yeni satış, alış ve tekliflerde kullanılan varsayılan oran. Değiştirdiğinizde bundan sonraki belgeler yeni oranla hesaplanır; **geçmiş belgeler değişmez.** |
+| **Varsayılan fiyat modu** | Satış ekranının KDV hariç mi dahil mi açılacağı |
+| **Maliyet yöntemi** | FIFO veya ağırlıklı ortalama. İlk stok hareketinden sonra kilitlenir. |
+| **Otomatik yedek saati** | Her gün yedeğin alınacağı saat |
+| **Tutarlılık kontrolü** | Stok ve cari bakiyeleri hareketlerden yeniden hesaplar; fark varsa gösterir |
 
 ---
 

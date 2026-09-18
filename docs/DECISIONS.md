@@ -499,6 +499,21 @@ sürülebiliyorsa tamamdır.
 Testler artık **boş veritabanından başlayıp** kart açmayı ve stok girişi
 ekranındaki açılır listeden kart açıp seçmeyi doğruluyor.
 
+### SK-22 · Ekranı olmayan iş kuralları (kalan liste)
+
+Faz 13'ün taraması, `lib/data` içinde yazılmış ama arayüzden hiç
+çağrılmayan şunları gösterdi. Hiçbiri hata değil; hepsi eksik:
+
+| Yetenek | Nerede | İş karşılığı |
+|---|---|---|
+| `QuoteRepository.setStatus` | teklif | Teklif "gönderildi / kabul / ret" işaretlenemiyor; liste hep "Taslak" görünüyor |
+| `PurchaseRepository.addLateExpense` | alış | Nakliye faturası sonradan geldiğinde parti maliyetine eklenemiyor |
+| `ReversalRepository.cancelCollection` | tahsilat | Yanlış girilen tahsilat ters kayıtla düzeltilemiyor |
+| `AnalyticsQueries.customerAnalysis` | rapor | "Hangi müşteri ne kadar aldı, ne kadar kâr bıraktı" raporu yok |
+| `PriceMemory.lastPurchasePrice` | alış | Satışta olan "son fiyat" ipucu alışta yok |
+
+Sıra bende değil: hangisinin önce geleceğine kullanıcı karar vermeli.
+
 ## K-04 · Ürün gözden geçirmesi: neyin eksik olduğu
 
 Kullanıcı "çok karmaşık ve düzensiz" dedi ve haklıydı. Hataları tek tek
@@ -915,6 +930,51 @@ kesimhaneye göstermek işletmenin aleyhinedir; belge bu yüzden fiyatsız
 üretiyor ve çıktının `%PDF-` ile başladığını doğruluyor; ayrıca paylaş
 düğmelerinin ekranda durduğunu kontrol ediyor. Paylaşım sayfasının kendisi
 platform işi olduğu için çağrılmıyor.
+
+## K-12 · Faz 13 — ayarlar nihayet uygulanıyor
+
+Faz 12'nin dersini ("yazılmış ama hiç çağrılmamış kod") sistematik aramaya
+çevirdim: `lib/data` içindeki genel metotlardan hangileri uygulamanın geri
+kalanında hiç geçmiyor? Liste kısa ama içinde **para hesabını bozan bir
+hata** vardı.
+
+### D-32 · KDV oranı ayardan okunur — **Hata düzeltmesi**
+
+Satış, alış ve teklif ekranlarının üçü de KDV oranını `Rate.percent('20')`
+olarak **koda gömülü** tutuyordu. `SettingsRepository.defaultVatRate()`
+yazılmıştı, kurulum sihirbazı da oranı soruyordu — ama hiçbir ekran onu
+okumuyordu. Kullanıcı %10 seçse bile her belge %20 hesaplıyordu ve bunu
+söyleyen hiçbir uyarı yoktu.
+
+Bu, arayüzün eksikliği değil **yanlış rakam** üretmesidir: fatura tutarı,
+cari bakiye ve KDV beyanı yanlış çıkardı.
+
+`documentDefaultsProvider` eklendi; üç ekran da oranı (ve satış ekranı fiyat
+modunu) buradan alıyor. Ayar okunana kadar %20 varsayılıyor — eski davranış,
+yani ayar hiç yazılmamışsa hiçbir şey değişmiyor.
+
+Testi doğrudan rakama bakıyor: oran %10'a çekilince 7.000 TL'lik alışın KDV'si
+1.400 değil **700** çıkmalı; 980 TL'lik satışınki 98 olmalı.
+
+### Ayarlar artık değiştirilebiliyor
+
+"KDV oranı" ve "Varsayılan fiyat modu" satırları yalnızca **gösteriliyordu**;
+kurulum sihirbazından sonra değiştirmenin yolu yoktu. İkisi de artık
+dokunulabilir ve değişiklik anında belgelere yansıyor
+(`documentDefaultsProvider` tazeleniyor).
+
+### Alış ve teklif fiyatı KDV hariçtir, ekran bunu yazıyor
+
+İkisinde de fiyat modunu değiştirecek bir düğme yok ve belge KDV hariç
+kaydediliyor. Varsayılanı sessizce KDV dahile çevirmek, girilen rakamın
+anlamını kullanıcıya sormadan değiştirirdi; onun yerine fiyat alanının
+altına "KDV hariç" yazıldı.
+
+### Tarama sonucunun geri kalanı
+
+Aynı taramanın gösterdiği, ekranı olmayan diğer iş kuralları — teklif durumu
+(gönderildi/kabul/ret), sonradan gelen nakliye faturası, tahsilat iptali,
+müşteri analizi — **SK-22** olarak kaydedildi; hata değil, eksik.
 
 ## K-02 · Performans ölçümü (BRIEF §9 Faz 5)
 

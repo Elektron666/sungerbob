@@ -85,6 +85,9 @@ class _QuoteFormScreenState extends ConsumerState<QuoteFormScreen> {
 
   String? _customerId;
   DateTime? _validUntil;
+
+  /// Ayarlardaki KDV oranı; okunana kadar %20 varsayılır (D-32).
+  Rate _vatRate = Rate.percent('20');
   final _lines = <_DraftLine>[];
   bool _saving = false;
   String? _error;
@@ -113,7 +116,7 @@ class _QuoteFormScreenState extends ConsumerState<QuoteFormScreen> {
     final line = await showModalBottomSheet<_DraftLine>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => const _LineSheet(),
+      builder: (_) => _LineSheet(vatRate: _vatRate),
     );
     if (line != null) setState(() => _lines.add(line));
   }
@@ -190,6 +193,7 @@ class _QuoteFormScreenState extends ConsumerState<QuoteFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _vatRate = ref.watch(documentDefaultsProvider).value?.vatRate ?? _vatRate;
     final blocked = _blockedReason;
 
     return Scaffold(
@@ -359,7 +363,10 @@ class _QuoteFormScreenState extends ConsumerState<QuoteFormScreen> {
 
 /// Tek kalem girişi: çeşit, ölçü, miktar, fiyat.
 class _LineSheet extends ConsumerStatefulWidget {
-  const _LineSheet();
+  /// Ayarlardaki KDV oranı; kalem bu oranla değerlenir (D-32).
+  final Rate vatRate;
+
+  const _LineSheet({required this.vatRate});
 
   @override
   ConsumerState<_LineSheet> createState() => _LineSheetState();
@@ -432,7 +439,7 @@ class _LineSheetState extends ConsumerState<_LineSheet> {
         pieces: TrFormat.parsePieces(_pieces.text)!,
         volume: volume,
         unitPrice: TrFormat.parseUnitPrice(_price.text)!,
-        vatRate: Rate.percent('20'),
+        vatRate: widget.vatRate,
       ),
     );
   }
@@ -493,7 +500,19 @@ class _LineSheetState extends ConsumerState<_LineSheet> {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _numField(_price, ProductUnit.priceLabel(_unit)),
+                  child: TextField(
+                    controller: _price,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    // Teklif KDV hariç fiyatla yazılır; KDV özet kartında
+                    // ayrıca gösterilir.
+                    decoration: InputDecoration(
+                      labelText: ProductUnit.priceLabel(_unit),
+                      helperText: 'KDV hariç',
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
                 ),
               ],
             ),

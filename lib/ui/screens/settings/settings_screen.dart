@@ -24,11 +24,20 @@ class SettingsScreen extends ConsumerWidget {
         data: (map) => ListView(
           children: [
             const SectionHeader(title: 'İşletme'),
+            // Bu üç satır yalnızca gösteriliyordu; kurulum sihirbazından
+            // sonra değiştirmenin yolu yoktu. Oran değişince belgeler de
+            // yeni oranla hesaplanır (D-32).
             ListTile(
               leading: const Icon(Icons.percent),
               title: const Text('KDV oranı'),
               subtitle: Text(
                 '%${(int.tryParse(map['default_vat_rate'] ?? '2000') ?? 2000) ~/ 100}',
+              ),
+              trailing: const Icon(Icons.chevron_right, size: 18),
+              onTap: () => _pickVatRate(
+                context,
+                ref,
+                int.tryParse(map['default_vat_rate'] ?? '2000') ?? 2000,
               ),
             ),
             ListTile(
@@ -37,6 +46,9 @@ class SettingsScreen extends ConsumerWidget {
               subtitle: Text(
                 map['default_price_mode'] == 'INCL' ? 'KDV Dahil' : 'KDV Hariç',
               ),
+              trailing: const Icon(Icons.chevron_right, size: 18),
+              onTap: () =>
+                  _pickPriceMode(context, ref, map['default_price_mode']),
             ),
             ListTile(
               leading: const Icon(Icons.calculate),
@@ -142,6 +154,82 @@ class SettingsScreen extends ConsumerWidget {
       '${picked.minute.toString().padLeft(2, '0')}',
     );
     ref.invalidate(settingsMapProvider);
+  }
+
+  /// KDV oranı seçimi. SPEC'in izin verdiği oranlar: %0, %1, %10, %20.
+  Future<void> _pickVatRate(
+    BuildContext context,
+    WidgetRef ref,
+    int current,
+  ) async {
+    final picked = await showDialog<int>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Varsayılan KDV oranı'),
+        children: [
+          RadioGroup<int>(
+            groupValue: current,
+            onChanged: (v) => Navigator.of(context).pop(v),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final rate in const [0, 100, 1000, 2000])
+                  RadioListTile<int>(
+                    value: rate,
+                    title: Text('%${rate ~/ 100}'),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    if (picked == null) return;
+
+    final settings = await ref.read(settingsRepositoryProvider.future);
+    await settings.setDefaultVatRate(picked);
+    ref.invalidate(settingsMapProvider);
+    // Belge ekranları oranı buradan okur; tazelenmezse eski oranla
+    // hesaplamaya devam ederdi.
+    ref.invalidate(documentDefaultsProvider);
+  }
+
+  Future<void> _pickPriceMode(
+    BuildContext context,
+    WidgetRef ref,
+    String? current,
+  ) async {
+    final picked = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Varsayılan fiyat modu'),
+        children: [
+          RadioGroup<String>(
+            groupValue: current ?? 'EXCL',
+            onChanged: (v) => Navigator.of(context).pop(v),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final entry in const {
+                  'EXCL': 'KDV Hariç',
+                  'INCL': 'KDV Dahil',
+                }.entries)
+                  RadioListTile<String>(
+                    value: entry.key,
+                    title: Text(entry.value),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    if (picked == null) return;
+
+    final settings = await ref.read(settingsRepositoryProvider.future);
+    await settings.setDefaultPriceMode(picked);
+    ref.invalidate(settingsMapProvider);
+    ref.invalidate(documentDefaultsProvider);
   }
 
   Future<void> _runIntegrityCheck(BuildContext context, WidgetRef ref) async {

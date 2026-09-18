@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../../domain/core/quantity.dart';
+import '../../domain/service/vat.dart';
 import '../../data/backup/auto_backup.dart';
 import '../../data/backup/backup_password_store.dart';
 import '../../data/backup/backup_service.dart';
@@ -220,3 +222,25 @@ class AppLockNotifier extends Notifier<AppGate> {
     if (state == AppGate.ready) state = AppGate.locked;
   }
 }
+
+/// Belge girişinde kullanılan varsayılanlar (Ayarlar → İşletme).
+///
+/// Ekranlar KDV oranını koda gömülü %20 olarak tutuyordu: kullanıcı
+/// Ayarlar'da %10 seçse bile her satış %20 hesaplıyordu. Para hesabının
+/// ayarı görmezden gelmesi kabul edilemez (D-32).
+final class DocumentDefaults {
+  final Rate vatRate;
+  final PriceMode priceMode;
+
+  const DocumentDefaults({required this.vatRate, required this.priceMode});
+}
+
+final documentDefaultsProvider = FutureProvider<DocumentDefaults>((ref) async {
+  final settings = await ref.watch(settingsRepositoryProvider.future);
+  return DocumentDefaults(
+    vatRate: await settings.defaultVatRate(),
+    priceMode: await settings.defaultPriceMode() == 'INCL'
+        ? PriceMode.incl
+        : PriceMode.excl,
+  );
+});

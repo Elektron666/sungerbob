@@ -42,7 +42,24 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
   int _pieces = 1;
 
   bool get _isFoam => ProductUnit.hasDimensions(_unit);
+
+  /// Ayarlardaki varsayılanlar (KDV oranı ve fiyat modu). Kullanıcı bu
+  /// belgede değiştirebilir ama başlangıç değeri **ayardan** gelir: koda
+  /// gömülü %20, Ayarlar'da %10 seçen kullanıcıyı sessizce yanıltıyordu
+  /// (D-32).
   PriceMode _priceMode = PriceMode.excl;
+  Rate _vatRate = Rate.percent('20');
+  bool _defaultsApplied = false;
+
+  /// Ayar okunduğunda bir kez uygulanır; sonrasında kullanıcının bu belgede
+  /// yaptığı değişiklik korunur.
+  void _applyDefaults(DocumentDefaults? defaults) {
+    if (defaults == null || _defaultsApplied) return;
+    _defaultsApplied = true;
+    _vatRate = defaults.vatRate;
+    _priceMode = defaults.priceMode;
+  }
+
   final _priceController = TextEditingController();
   bool _saving = false;
   String? _error;
@@ -68,7 +85,7 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
       mode: _priceMode,
       volume: _volume,
       unitPrice: price,
-      vatRate: Rate.percent('20'),
+      vatRate: _vatRate,
     );
   }
 
@@ -100,7 +117,7 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
               pieces: _pieces,
               volume: _volume,
               unitPriceM3: price,
-              vatRate: Rate.percent('20'),
+              vatRate: _vatRate,
             ),
           ],
         ),
@@ -165,6 +182,7 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _applyDefaults(ref.watch(documentDefaultsProvider).value);
     final hideCost = ref.watch(hideCostProvider);
     final line = _line;
 

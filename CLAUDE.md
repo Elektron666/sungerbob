@@ -124,7 +124,7 @@ Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
 | **Faz 4 — Analiz ve raporlar** | ✅ müşteri/ürün analizi, kârlılık, CSV |
 | **Faz 5 — Yayına alma** | ✅ kılavuzlar, imzalama, performans ölçümü |
 
-**401 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
+**403 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
 Şema sürümü **2** (ürün birimi); `drift_schemas/` altında v1 ve v2 anlık
 görüntüsü, `test/data/generated_migrations/` altında üretilmiş yardımcı var.
 
@@ -253,7 +253,18 @@ Faz 12'de eklenenler (K-11 — belge paylaşımı):
 - Firma bilgisi Ayarlar'dan okunur; logo dosyası silinmişse belge logosuz
   üretilir. Kesim emri fiyat içermez (D-31).
 
+Faz 13'te eklenenler (K-12 — ayarlar uygulanıyor):
+
+- **Hata düzeltmesi:** satış, alış ve teklif KDV oranını koda gömülü %20
+  tutuyordu; artık `documentDefaultsProvider` üzerinden Ayarlar'dan okunuyor
+  (D-32). Kullanıcı %10 seçtiğinde belgeler gerçekten %10 hesaplıyor.
+- Ayarlar'daki "KDV oranı" ve "Varsayılan fiyat modu" artık değiştirilebiliyor
+  (eskiden yalnızca gösteriliyordu).
+- Alış ve teklif fiyat alanının altında "KDV hariç" yazıyor.
+
 **Kalan işler:**
 
 - Google Drive API istemcisi (SK-12 — OAuth istemci kimliği bekleniyor)
-- Ekransız iş mantığı **kalmadı**.
+- **SK-22** — ekranı olmayan beş iş kuralı: teklif durumu, sonradan gelen
+  nakliye faturası, tahsilat iptali, müşteri analizi, alışta son fiyat ipucu.
+  Hangisinin önce geleceğine kullanıcı karar vermeli.

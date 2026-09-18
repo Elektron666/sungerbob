@@ -38,6 +38,9 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
 
   /// Seçili ürünün birimi. İnce malzemede ölçü sorulmaz (D-22).
   String _unit = ProductUnit.m3;
+
+  /// Ayarlardaki KDV oranı; okunana kadar %20 varsayılır (D-32).
+  Rate _vatRate = Rate.percent('20');
   bool get _isFoam => _unit == ProductUnit.m3;
   String? _productId;
   bool _saving = false;
@@ -130,7 +133,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
               pieces: pieces,
               volume: volume,
               unitPriceM3: price,
-              vatRate: Rate.percent('20'),
+              vatRate: _vatRate,
             ),
           ],
           expenses: [
@@ -173,6 +176,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _vatRate = ref.watch(documentDefaultsProvider).value?.vatRate ?? _vatRate;
     final volume = _volume;
     final price = TrFormat.parseUnitPrice(_priceController.text);
 
@@ -219,9 +223,18 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _numField(
-                  _priceController,
-                  ProductUnit.priceLabel(_unit),
+                child: TextField(
+                  controller: _priceController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  // Alış her zaman KDV hariç kaydedilir ve bunu değiştirecek
+                  // bir düğme yok; ekran bunu söylemeli.
+                  decoration: InputDecoration(
+                    labelText: ProductUnit.priceLabel(_unit),
+                    helperText: 'KDV hariç',
+                  ),
+                  onChanged: (_) => setState(() {}),
                 ),
               ),
             ],

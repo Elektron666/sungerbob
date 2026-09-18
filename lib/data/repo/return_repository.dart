@@ -237,6 +237,55 @@ final class ReturnRepository {
     return returnId;
   }
 
+  /// Bir satışın iade edilebilir kalemleri.
+  ///
+  /// İade ekranı "neyi, en fazla kaç tane" sorusuyla başlar; bu bilgi
+  /// repository dışında yoktu ve ekran kuralı kendi başına yeniden
+  /// hesaplamak zorunda kalırdı — aynı kuralın iki yerde yazılması,
+  /// ikisinin ayrışmasının başlangıcıdır.
+  Future<List<ReturnableLine>> returnableLines(String saleId) async {
+    final rows = await db
+        .customSelect(
+          '''
+      SELECT i.id, i.pieces, i.volume, i.unit_price_m3,
+             pr.name AS product, pr.unit AS unit,
+             v.width, v.height, v.thickness,
+             COALESCE((
+               SELECT SUM(ri.pieces) FROM sale_return_items ri
+               WHERE ri.sale_item_id = i.id
+             ), 0) AS returned
+      FROM sale_items i
+      JOIN product_variants v ON v.id = i.variant_id
+      JOIN products pr ON pr.id = v.product_id
+      WHERE i.sale_id = ?
+      ORDER BY i.line_no
+      ''',
+          variables: [Variable.withString(saleId)],
+          readsFrom: {
+            db.saleItems,
+            db.saleReturnItems,
+            db.productVariants,
+            db.products,
+          },
+        )
+        .get();
+
+    return [
+      for (final r in rows)
+        ReturnableLine(
+          saleItemId: r.read<String>('id'),
+          productName: r.read<String>('product'),
+          unit: r.read<String>('unit'),
+          width: Dimension.fromStored(r.read<int>('width')),
+          height: Dimension.fromStored(r.read<int>('height')),
+          thickness: Dimension.fromStored(r.read<int>('thickness')),
+          soldPieces: r.read<int>('pieces'),
+          returnedPieces: r.read<int>('returned'),
+          unitPrice: UnitPrice.fromStored(r.read<int>('unit_price_m3')),
+        ),
+    ];
+  }
+
   Future<int> _alreadyReturnedPieces(String saleItemId) async {
     final row = await db
         .customSelect(
@@ -285,6 +334,36 @@ final class ReturnRepository {
         ),
     ];
   }
+}
+
+/// İade ekranının bir satırı: ne satıldı, ne kadarı zaten iade edildi.
+final class ReturnableLine {
+  final String saleItemId;
+  final String productName;
+  final String unit;
+  final Dimension width;
+  final Dimension height;
+  final Dimension thickness;
+  final int soldPieces;
+  final int returnedPieces;
+  final UnitPrice unitPrice;
+
+  const ReturnableLine({
+    required this.saleItemId,
+    required this.productName,
+    required this.unit,
+    required this.width,
+    required this.height,
+    required this.thickness,
+    required this.soldPieces,
+    required this.returnedPieces,
+    required this.unitPrice,
+  });
+
+  /// Bu kalemden daha kaç tane iade alınabilir.
+  int get remainingPieces => soldPieces - returnedPieces;
+
+  bool get isFullyReturned => remainingPieces <= 0;
 }
 
 final class _PendingReturnLine {

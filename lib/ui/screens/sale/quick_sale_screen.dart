@@ -548,10 +548,18 @@ class _SummaryCard extends StatelessWidget {
     bool bold = false,
   }) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
+    // Dar telefonda "GENEL TOPLAM" + büyük tutar satıra sığmıyordu.
+    // Kısalacak olan etikettir; rakam asla kırpılmaz.
     child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: bold ? null : context.labelStyle),
+        Expanded(
+          child: Text(
+            label,
+            style: bold ? null : context.labelStyle,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 12),
         Text(
           value,
           style: bold

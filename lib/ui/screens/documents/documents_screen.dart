@@ -2,12 +2,14 @@ import 'package:drift/drift.dart' show Variable;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../data/db/enums.dart';
 import '../../../domain/core/money.dart';
 import '../../../domain/core/quantity.dart';
 import '../../format/tr_format.dart';
 import '../../providers/app_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../sale/sale_return_screen.dart';
 
 /// Satışlar ve Alışlar (BRIEF §7 menüsü).
 ///
@@ -36,6 +38,10 @@ final class DocumentRow {
   final Money grandTotal;
   final String status;
 
+  /// Bu satışa kesilmiş iade tutarı. Satış olduğu gibi durur ama listede
+  /// "bunun bir kısmı geri geldi" bilgisi görünmezse defter yanıltır.
+  final Money returned;
+
   const DocumentRow({
     required this.id,
     required this.docNo,
@@ -44,9 +50,12 @@ final class DocumentRow {
     required this.dueDate,
     required this.grandTotal,
     required this.status,
+    this.returned = Money.zero,
   });
 
   bool get isCancelled => status != 'ACTIVE';
+
+  bool get hasReturn => returned.stored > 0;
 }
 
 final documentsProvider = FutureProvider.autoDispose
@@ -60,7 +69,11 @@ final documentsProvider = FutureProvider.autoDispose
           .customSelect(
             '''
         SELECT d.id, d.doc_no, d.doc_date, d.due_date, d.grand_total,
-               d.status, p.title AS party
+               d.status, p.title AS party,
+               ${sales ? '''COALESCE((
+                 SELECT SUM(r.grand_total) FROM sale_returns r
+                 WHERE r.sale_id = d.id AND r.status = 'ACTIVE'
+               ), 0)''' : '0'} AS returned
         FROM $table d
         JOIN $partyTable p ON p.id = d.$partyKey
         ORDER BY d.doc_date DESC, d.created_at DESC
@@ -69,6 +82,7 @@ final documentsProvider = FutureProvider.autoDispose
             readsFrom: {
               if (sales) db.sales else db.purchases,
               if (sales) db.customers else db.suppliers,
+              if (sales) db.saleReturns,
             },
           )
           .get();
@@ -84,6 +98,7 @@ final documentsProvider = FutureProvider.autoDispose
                 ? null
                 : DateTime.fromMillisecondsSinceEpoch(r.read<int>('due_date')),
             grandTotal: Money.fromStored(r.read<int>('grand_total')),
+            returned: Money.fromStored(r.read<int>('returned')),
             status: r.read<String>('status'),
           ),
       ];
@@ -144,7 +159,8 @@ class _DocumentList extends ConsumerWidget {
                     subtitle: Text(
                       '${doc.docNo} · ${TrFormat.date(doc.date)}'
                       '${doc.dueDate == null ? '' : ' · vade ${TrFormat.date(doc.dueDate)}'}'
-                      '${doc.isCancelled ? ' · İPTAL' : ''}',
+                      '${doc.isCancelled ? ' · İPTAL' : ''}'
+                      '${doc.hasReturn ? ' · ${TrFormat.moneyWithCurrency(doc.returned)} iade' : ''}',
                       style: context.labelStyle,
                     ),
                     onTap: () => showModalBottomSheet<void>(
@@ -161,6 +177,20 @@ class _DocumentList extends ConsumerWidget {
   }
 }
 
+/// Belge satırının adı: "Beyaz Sünger · 140×200×10" ya da ölçüsüz
+/// malzemede yalnızca "Sünger Yapıştırıcı" (D-22).
+String describeLine({
+  required String product,
+  required String unit,
+  required int width,
+  required int height,
+  required int thickness,
+}) {
+  if (!ProductUnit.hasDimensions(unit)) return product;
+  return '$product · '
+      '${TrFormat.dimensions(Dimension.fromStored(width), Dimension.fromStored(height), Dimension.fromStored(thickness))}';
+}
+
 /// Belge satırı — kalem bilgileri.
 final class DocumentLine {
   final String description;
@@ -170,6 +200,9 @@ final class DocumentLine {
   final Money net;
   final Money gross;
 
+  /// Ürünün birimi; ince malzemede ölçü ve m³ yazılmaz (D-22).
+  final String unit;
+
   const DocumentLine({
     required this.description,
     required this.pieces,
@@ -177,7 +210,15 @@ final class DocumentLine {
     required this.unitPrice,
     required this.net,
     required this.gross,
+    this.unit = ProductUnit.m3,
   });
+
+  /// "12 adet · 2,8 m³ · 2.500,00 TL/m³" veya "50 kg · 120,00 TL/kg".
+  String get quantityText => ProductUnit.hasDimensions(unit)
+      ? '${TrFormat.pieces(pieces)} · ${TrFormat.volume(volume)} · '
+            '${TrFormat.unitPrice(unitPrice)}'
+      : '${TrFormat.quantity(volume, unit)} · '
+            '${TrFormat.unitPriceFor(unitPrice, unit)}';
 }
 
 final documentLinesProvider = FutureProvider.autoDispose
@@ -190,7 +231,7 @@ final documentLinesProvider = FutureProvider.autoDispose
           .customSelect(
             '''
         SELECT i.pieces, i.volume, i.unit_price_m3, i.net_total,
-               i.gross_total, pr.name AS product,
+               i.gross_total, pr.name AS product, pr.unit AS unit,
                v.width, v.height, v.thickness
         FROM $table i
         JOIN product_variants v ON v.id = i.variant_id
@@ -210,14 +251,19 @@ final documentLinesProvider = FutureProvider.autoDispose
       return [
         for (final r in rows)
           DocumentLine(
-            description:
-                '${r.read<String>('product')} · '
-                '${TrFormat.dimensions(Dimension.fromStored(r.read<int>('width')), Dimension.fromStored(r.read<int>('height')), Dimension.fromStored(r.read<int>('thickness')))}',
+            description: describeLine(
+              product: r.read<String>('product'),
+              unit: r.read<String>('unit'),
+              width: r.read<int>('width'),
+              height: r.read<int>('height'),
+              thickness: r.read<int>('thickness'),
+            ),
             pieces: r.read<int>('pieces'),
             volume: Volume.fromStored(r.read<int>('volume')),
             unitPrice: UnitPrice.fromStored(r.read<int>('unit_price_m3')),
             net: Money.fromStored(r.read<int>('net_total')),
             gross: Money.fromStored(r.read<int>('gross_total')),
+            unit: r.read<String>('unit'),
           ),
       ];
     });
@@ -248,7 +294,8 @@ class DocumentDetailSheet extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(
             '${doc.docNo} · ${TrFormat.date(doc.date)}'
-            '${doc.isCancelled ? ' · İPTAL EDİLDİ' : ''}',
+            '${doc.isCancelled ? ' · İPTAL EDİLDİ' : ''}'
+            '${doc.hasReturn ? ' · ${TrFormat.moneyWithCurrency(doc.returned)} iade edildi' : ''}',
             style: context.labelStyle,
           ),
           const SizedBox(height: 20),
@@ -273,9 +320,7 @@ class DocumentDetailSheet extends ConsumerWidget {
                           children: [
                             Expanded(
                               child: Text(
-                                '${TrFormat.pieces(line.pieces)} · '
-                                '${TrFormat.volume(line.volume)} · '
-                                '${TrFormat.unitPrice(line.unitPrice)}',
+                                line.quantityText,
                                 style: context.labelStyle,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -308,11 +353,40 @@ class DocumentDetailSheet extends ConsumerWidget {
                     ),
                   ],
                 ),
+                // Müşteri malı geri getirdiğinde girilecek yer burası.
+                // Satış **iptal edilmez**: iade ayrı bir belgedir, orijinal
+                // satış olduğu gibi durur (D-12).
+                if (sales && !doc.isCancelled) ...[
+                  const SizedBox(height: 20),
+                  OutlinedButton.icon(
+                    onPressed: () => _openReturn(context, ref),
+                    icon: const Icon(Icons.assignment_return),
+                    label: const Text('İade al'),
+                  ),
+                ],
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _openReturn(BuildContext context, WidgetRef ref) async {
+    final navigator = Navigator.of(context);
+    final saved = await navigator.push<bool>(
+      MaterialPageRoute(
+        builder: (_) => SaleReturnScreen(
+          saleId: doc.id,
+          saleTitle: '${doc.partyTitle} · ${doc.docNo}',
+        ),
+      ),
+    );
+    if (saved != true) return;
+
+    ref.invalidate(documentsProvider(sales));
+    ref.invalidate(documentLinesProvider((sales: sales, id: doc.id)));
+    // İade kaydedildi; detay sayfası eski tutarları göstermesin.
+    navigator.pop();
   }
 }

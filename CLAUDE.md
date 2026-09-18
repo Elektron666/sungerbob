@@ -124,7 +124,7 @@ Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
 | **Faz 4 — Analiz ve raporlar** | ✅ müşteri/ürün analizi, kârlılık, CSV |
 | **Faz 5 — Yayına alma** | ✅ kılavuzlar, imzalama, performans ölçümü |
 
-**364 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
+**366 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
 Şema sürümü **2** (ürün birimi); `drift_schemas/` altında v1 ve v2 anlık
 görüntüsü, `test/data/generated_migrations/` altında üretilmiş yardımcı var.
 
@@ -212,9 +212,17 @@ Faz 7'de eklenenler (K-06 — ince malzeme):
   ölçü alanları yalnızca süngerde görünür, etiketler ürünün kendi birimini
   yazar ("Miktar (kg)", "TL/kg")
 
+Faz 8'de eklenenler (K-07 — iade):
+
+- `ui/screens/sale/sale_return_screen.dart` — `Satışlar → belge → İade al`.
+  Kalem başına iade miktarı; artı tuşu tavanda kilitlenir (iade satılandan
+  fazla olamaz), daha önce iade alınmışsa tavan kalan miktardır.
+- `ReturnRepository.returnableLines` — "neyi, en fazla kaç tane" sorgusu
+- Satışlar listesinde ve belge detayında iade tutarı görünüyor
+- Satış iptali **eklenmedi**: düzeltmenin doğru yolu iadedir (D-25)
+
 **Kalan işler** (iş mantığı hazır, ekranı yok):
 
-- Fiyat Listeleri, İade
-- Satış iptali (repository'de de yok; iade doğru iş kuralı)
+- Fiyat Listeleri
 - Teklif oluşturma formu (liste ve satışa çevirme hazır)
 - Google Drive API istemcisi (SK-12 — OAuth istemci kimliği bekleniyor)

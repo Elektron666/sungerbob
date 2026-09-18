@@ -715,6 +715,51 @@ sürüyor: boş veritabanı → ürün kartı → tedarikçi → 50 kg alış �
 ana sayfadaki m³ toplamı sıfır. SK-21'in dersi burada da geçerli: iş
 mantığının testten geçmesi ekranın kullanılabilir olduğunu göstermez.
 
+## K-07 · Faz 8 — iade: müşteri malı geri getirdiğinde
+
+K-04'ün eksik listesinde **İade** ve **Satış iptali** yan yana duruyordu.
+İş kuralı Faz 1'den beri hazırdı, Altın Senaryo'da test ediliyordu — ama
+ekranı yoktu. Müşteri iki plakayı geri getirdiğinde kullanıcı defterde
+hiçbir şey yapamıyordu; elinde kalan tek "çözüm" satışı silmekti, ki
+append-only defterde o zaten mümkün değil.
+
+### D-25 · Düzeltme yolu iadedir, iptal değil — **Karar (D-12'nin devamı)**
+
+Satış iptali repository'de de yoktu ve **eklenmedi.** Mal geri geldiğinde
+doğru kayıt, orijinal satışı silmek ya da iptal etmek değil, ayrı bir iade
+belgesi kesmektir: satış olduğu gibi durur, mal aynı maliyetle (orijinal
+tüketimin tersinden, son tüketilen partiden başlayarak) stoğa döner, cariye
+alacak yazılır. Ciro ve kâr raporları da böylece gerçeği anlatır — iptal
+edilen satış, hiç olmamış gibi görünürdü.
+
+### Ekran
+
+`Satışlar → belge → İade al`. Menüde ayrı bir giriş yok: iade bir satışın
+üstünde durur, kendi başına anlamı yoktur; kullanıcı da onu "şu satıştan"
+diye arar.
+
+Her kalem için iade miktarı artı/eksi ile girilir ve **artı tuşu tavanda
+kilitlenir**: iade satılandan fazla olamaz kuralı veritabanında zaten var,
+ama kullanıcıya hatayı yaptırıp sonra söylemek yerine yaptırmamak daha iyi.
+Daha önce iade alınmış kalemlerde tavan kalan miktardır.
+
+`ReturnRepository.returnableLines` eklendi. Kalan miktar hesabı ekranda
+yeniden yazılabilirdi; aynı kuralın iki yerde durması, ikisinin ayrışmasının
+başlangıcıdır.
+
+### Liste görünürlüğü
+
+Satışlar listesinde ve belge detayında iade tutarı görünür
+("… · 1.400,00 ₺ iade"). Satış tutarı değişmediği için bu bilgi olmadan
+liste yanıltırdı: 4.200 ₺ görünen satışın 1.400 ₺'si geri gelmişti.
+
+### Yol boyunca çıkan gerçek hata
+
+İade testi yazılırken satış özet kartındaki "GENEL TOPLAM" satırının dar
+telefonda **14 piksel taştığı** ortaya çıktı. Etiket artık `Expanded` ve
+gerekirse kırpılıyor; rakam asla kırpılmıyor. Ekran testi olmasa bu hata
+kullanıcının telefonunda bulunacaktı — SK-21'in dersi burada da geçerli.
+
 ## K-02 · Performans ölçümü (BRIEF §9 Faz 5)
 
 "50.000 satış satırıyla ana sayfa ve raporların makul sürede açıldığını ölç."

@@ -124,7 +124,7 @@ Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
 | **Faz 4 — Analiz ve raporlar** | ✅ müşteri/ürün analizi, kârlılık, CSV |
 | **Faz 5 — Yayına alma** | ✅ kılavuzlar, imzalama, performans ölçümü |
 
-**366 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
+**368 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
 Şema sürümü **2** (ürün birimi); `drift_schemas/` altında v1 ve v2 anlık
 görüntüsü, `test/data/generated_migrations/` altında üretilmiş yardımcı var.
 
@@ -221,8 +221,13 @@ Faz 8'de eklenenler (K-07 — iade):
 - Satışlar listesinde ve belge detayında iade tutarı görünüyor
 - Satış iptali **eklenmedi**: düzeltmenin doğru yolu iadedir (D-25)
 
+Faz 9'da eklenenler (K-08 — teklif yazma):
+
+- `ui/screens/ops/quote_form_screen.dart` — çok kalemli teklif; ölçü
+  serbest, teklif stoğa dokunmaz (D-26)
+- `ui/widgets/product_picker.dart` — alış ve teklifin ortak ürün seçicisi
+
 **Kalan işler** (iş mantığı hazır, ekranı yok):
 
 - Fiyat Listeleri
-- Teklif oluşturma formu (liste ve satışa çevirme hazır)
 - Google Drive API istemcisi (SK-12 — OAuth istemci kimliği bekleniyor)

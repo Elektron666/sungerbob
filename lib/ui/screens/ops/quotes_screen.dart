@@ -11,6 +11,7 @@ import '../../providers/app_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../home/home_screen.dart' show dashboardProvider;
+import 'quote_form_screen.dart';
 
 /// Teklifler (SPEC §10 · FLOWS §5).
 ///
@@ -25,6 +26,11 @@ class QuotesScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Teklifler')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _newQuote(context, ref),
+        icon: const Icon(Icons.add),
+        label: const Text('Yeni teklif'),
+      ),
       body: quotes.when(
         loading: () => const LoadingState(),
         error: (e, _) =>
@@ -38,6 +44,7 @@ class QuotesScreen extends ConsumerWidget {
                     'edilince tek dokunuşla satışa dönüşür.',
               )
             : ListView.separated(
+                padding: const EdgeInsets.only(bottom: 88),
                 itemCount: list.length,
                 separatorBuilder: (_, _) => const Divider(height: 1),
                 itemBuilder: (context, i) {
@@ -46,34 +53,60 @@ class QuotesScreen extends ConsumerWidget {
                       q.status == QuoteStatus.draft ||
                       q.status == QuoteStatus.sent ||
                       q.status == QuoteStatus.accepted;
-                  return ListTile(
-                    title: Text('${q.docNo} · ${q.customerTitle}'),
-                    subtitle: Text(
-                      '${TrFormat.date(DateTime.fromMillisecondsSinceEpoch(q.docDate))}'
-                      ' · ${_statusLabel(q.status)}'
-                      '${q.validUntil == null ? "" : " · geçerlilik ${TrFormat.date(DateTime.fromMillisecondsSinceEpoch(q.validUntil!))}"}',
-                      style: context.labelStyle,
-                    ),
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          TrFormat.moneyWithCurrency(q.grandTotal),
-                          style: context.numberStyle,
+                  // Tutar ile düğme `trailing` içinde alt alta duruyordu ve
+                  // ListTile'ın 56 px'ine sığmıyordu. Tutar başlık satırının
+                  // sağında, eylem kendi satırında.
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ListTile(
+                        title: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                q.customerTitle,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              TrFormat.moneyWithCurrency(q.grandTotal),
+                              style: context.numberStyle,
+                            ),
+                          ],
                         ),
-                        if (convertible)
-                          TextButton(
-                            onPressed: () => _convert(context, ref, q.id),
-                            child: const Text('Satışa çevir'),
+                        subtitle: Text(
+                          '${q.docNo} · '
+                          '${TrFormat.date(DateTime.fromMillisecondsSinceEpoch(q.docDate))}'
+                          ' · ${_statusLabel(q.status)}'
+                          '${q.validUntil == null ? "" : " · geçerlilik ${TrFormat.date(DateTime.fromMillisecondsSinceEpoch(q.validUntil!))}"}',
+                          style: context.labelStyle,
+                        ),
+                      ),
+                      if (convertible)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _convert(context, ref, q.id),
+                              icon: const Icon(Icons.point_of_sale, size: 18),
+                              label: const Text('Satışa çevir'),
+                            ),
                           ),
-                      ],
-                    ),
+                        ),
+                    ],
                   );
                 },
               ),
       ),
     );
+  }
+
+  Future<void> _newQuote(BuildContext context, WidgetRef ref) async {
+    final created = await Navigator.of(context)
+        .push<bool>(MaterialPageRoute(builder: (_) => const QuoteFormScreen()));
+    if (created == true) ref.invalidate(quotesProvider);
   }
 
   static String _statusLabel(String status) => switch (status) {

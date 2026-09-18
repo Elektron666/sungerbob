@@ -12,6 +12,7 @@ import '../../../domain/service/vat.dart';
 import '../../format/tr_format.dart';
 import '../../providers/app_providers.dart';
 import '../../widgets/party_picker.dart';
+import '../../widgets/product_picker.dart';
 import '../../theme/app_theme.dart';
 import '../home/home_screen.dart';
 import '../stock/stock_screen.dart';
@@ -187,7 +188,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
             onChanged: (id) => setState(() => _supplierId = id),
           ),
           const SizedBox(height: 16),
-          _ProductPicker(
+          ProductPicker(
             selectedId: _productId,
             onSelected: (id, unit) => setState(() {
               _productId = id;
@@ -303,46 +304,4 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
       ],
     ),
   );
-}
-
-class _ProductPicker extends ConsumerWidget {
-  final String? selectedId;
-
-  /// Ürünle birlikte **birimi** de bildirir: ekran ölçü soracak mı,
-  /// miktarı hangi birimde isteyecek, buna göre karar verir.
-  final void Function(String id, String unit) onSelected;
-
-  const _ProductPicker({required this.selectedId, required this.onSelected});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final products = ref.watch(productsProvider);
-    return products.when(
-      loading: () => const LinearProgressIndicator(),
-      error: (e, _) => Text('$e'),
-      data: (list) => DropdownButtonFormField<String>(
-        initialValue: selectedId,
-        // Uzun ürün adları dar telefonda satırı taşırıyordu.
-        isExpanded: true,
-        decoration: const InputDecoration(labelText: 'Sünger çeşidi'),
-        hint: const Text('Çeşit seçin'),
-        items: [
-          for (final p in list)
-            DropdownMenuItem(
-              value: p.id,
-              child: Text(
-                p.unit == ProductUnit.m3
-                    ? p.name
-                    : '${p.name} · ${ProductUnit.label(p.unit)}',
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-        ],
-        onChanged: (id) {
-          if (id == null) return;
-          onSelected(id, list.firstWhere((p) => p.id == id).unit);
-        },
-      ),
-    );
-  }
 }

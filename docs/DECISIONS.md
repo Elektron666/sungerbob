@@ -760,6 +760,40 @@ telefonda **14 piksel taştığı** ortaya çıktı. Etiket artık `Expanded` ve
 gerekirse kırpılıyor; rakam asla kırpılmıyor. Ekran testi olmasa bu hata
 kullanıcının telefonunda bulunacaktı — SK-21'in dersi burada da geçerli.
 
+## K-08 · Faz 9 — teklif yazma
+
+Teklif listesi ve "satışa çevir" Faz 3'ten beri hazırdı. Teklifi **yazacak**
+ekran yoktu; yani liste hiç dolmuyordu ve "satışa çevir" düğmesi hiç
+görünmüyordu. Bir daha aynı hata: ekranı olmayan iş mantığı, olmayan
+özelliktir.
+
+### D-26 · Teklifte ölçü serbesttir — **Karar**
+
+Satışta ölçü stoktan seçilir; teklifte seçilmez. Müşteri elde olmayan bir
+ölçüyü sorabilir ve ona da fiyat verilir — teklifin işi zaten bu. Bu yüzden
+kalem girişi alış ekranınınkiyle aynıdır: çeşit + en/boy/kalınlık + adet +
+fiyat. Ölçü ilk kez giriliyorsa varyant kaydederken açılır
+(`ensureVariant`), teklif reddedilse bile ana veride kalır — varyant bir
+ölçü tanımıdır, stok değildir.
+
+Teklif **stoğa dokunmaz**; testi bunu açıkça doğruluyor: teklif
+kaydedildikten sonra stok 10 adette kalır, ancak satışa çevrilince 7'ye
+düşer.
+
+### Ortak `ProductPicker`
+
+Alış ve teklif ekranı aynı soruyla başlıyordu. Ayrı ayrı yazılsalardı
+birinde birim farkındalığı (D-22) olur, ötekinde unutulurdu; seçici
+`lib/ui/widgets/product_picker.dart`'a çıkarıldı.
+
+### Yol boyunca çıkan gerçek hata
+
+Teklif listesinde tutar ile "Satışa çevir" düğmesi `trailing` içinde alt
+alta duruyordu ve `ListTile`'ın 56 piksellik yüksekliğine sığmıyordu —
+**16 piksel taşma**. Tutar artık başlık satırının sağında, eylem kendi
+satırında. Faz 8'deki 14 piksellik taşma gibi, bu da yalnızca ekran testi
+yazıldığı için bulundu.
+
 ## K-02 · Performans ölçümü (BRIEF §9 Faz 5)
 
 "50.000 satış satırıyla ana sayfa ve raporların makul sürede açıldığını ölç."

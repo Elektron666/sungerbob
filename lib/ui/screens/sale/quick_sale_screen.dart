@@ -8,6 +8,7 @@ import '../../../domain/costing/costing_engine.dart';
 import '../../../domain/core/quantity.dart';
 import '../../../domain/service/vat.dart';
 import '../../format/tr_format.dart';
+import '../../../data/repo/price_memory.dart';
 import '../../providers/app_providers.dart';
 import '../master/party_form.dart';
 import '../../theme/app_theme.dart';
@@ -222,6 +223,18 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
               ),
               onChanged: (_) => setState(() {}),
             ),
+            // Fiyatı yazarken en çok gereken bilgi: bu müşteriye en son
+            // kaça satmıştın. Doldurmaz, yalnızca hatırlatır — otomatik
+            // doldurmak zam yapılması gereken yerde eski fiyatı sessizce
+            // tekrarlardı.
+            if (_customer case final customer?)
+              _LastPriceHint(
+                customerId: customer.id,
+                productId: _productId!,
+                onUse: (price) => setState(
+                  () => _priceController.text = TrFormat.unitPrice(price),
+                ),
+              ),
             const SizedBox(height: 24),
             _SummaryCard(volume: _volume, line: line, hideCost: hideCost),
           ],
@@ -508,3 +521,51 @@ class _SummaryCard extends StatelessWidget {
     ),
   );
 }
+
+/// "Son satış: 3.500,0000 TL/m³ · 12.09.2026" — dokununca fiyatı doldurur.
+class _LastPriceHint extends ConsumerWidget {
+  final String customerId;
+  final String productId;
+  final ValueChanged<UnitPrice> onUse;
+
+  const _LastPriceHint({
+    required this.customerId,
+    required this.productId,
+    required this.onUse,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hint = ref.watch(
+      lastSalePriceProvider((customerId: customerId, productId: productId)),
+    );
+
+    return hint.maybeWhen(
+      data: (value) => value == null
+          ? const SizedBox.shrink()
+          : Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => onUse(value.unitPrice),
+                icon: const Icon(Icons.history, size: 16),
+                label: Text(
+                  'Son satış: ${TrFormat.unitPrice(value.unitPrice)} TL/m³ · '
+                  '${TrFormat.date(value.date)}',
+                ),
+              ),
+            ),
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+final lastSalePriceProvider = FutureProvider.autoDispose
+    .family<PriceHint?, ({String customerId, String productId})>((
+      ref,
+      args,
+    ) async {
+      final db = await ref.watch(databaseProvider.future);
+      return PriceMemory(
+        db,
+      ).lastSalePrice(customerId: args.customerId, productId: args.productId);
+    });

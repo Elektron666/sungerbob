@@ -64,6 +64,7 @@ class AppShell extends StatelessWidget {
                 route: '/collection/new',
                 icon: Icons.payments,
               ),
+              (label: 'Ödeme', route: '/payment/new', icon: Icons.outbox),
               (
                 label: 'Kesime Gönder',
                 route: '/cutting/new',
@@ -108,6 +109,17 @@ class MenuScreen extends StatelessWidget {
         (label: 'Kesim Emirleri', route: '/cutting', icon: Icons.content_cut),
         (label: 'Sayım', route: '/count', icon: Icons.fact_check),
         (label: 'Fire', route: '/waste', icon: Icons.delete_sweep),
+      ],
+    ),
+    (
+      title: 'Para',
+      items: [
+        (
+          label: 'Kasa & Banka',
+          route: '/accounts',
+          icon: Icons.account_balance_wallet,
+        ),
+        (label: 'Çek & Senet', route: '/instruments', icon: Icons.receipt_long),
       ],
     ),
     (

@@ -4,7 +4,10 @@ import 'screens/backup/backup_screen.dart';
 import 'screens/backup/restore_screen.dart';
 import 'screens/finance/collection_screen.dart';
 import 'screens/documents/documents_screen.dart';
+import 'screens/finance/accounts_screen.dart';
 import 'screens/finance/customers_screen.dart';
+import 'screens/finance/instruments_screen.dart';
+import 'screens/finance/payment_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/master/parties_screen.dart';
 import 'screens/opening/opening_screen.dart';
@@ -15,6 +18,7 @@ import 'screens/ops/waste_screen.dart';
 import 'screens/purchase/purchase_screen.dart';
 import 'screens/reports/reports_screen.dart';
 import 'screens/sale/quick_sale_screen.dart';
+import 'screens/search/search_screen.dart';
 import 'screens/settings/drive_screen.dart';
 import 'screens/settings/settings_screen.dart';
 import 'screens/stock/stock_screen.dart';
@@ -41,6 +45,9 @@ GoRouter buildRouter() => GoRouter(
     ),
     GoRoute(path: '/sale/new', builder: (_, _) => const QuickSaleScreen()),
     GoRoute(path: '/purchase/new', builder: (_, _) => const PurchaseScreen()),
+    GoRoute(path: '/payment/new', builder: (_, _) => const PaymentScreen()),
+    GoRoute(path: '/accounts', builder: (_, _) => const AccountsScreen()),
+    GoRoute(path: '/instruments', builder: (_, _) => const InstrumentsScreen()),
     GoRoute(
       path: '/collection/new',
       builder: (_, _) => const CollectionScreen(),
@@ -50,6 +57,7 @@ GoRouter buildRouter() => GoRouter(
     GoRoute(path: '/restore', builder: (_, _) => const RestoreScreen()),
     GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
     GoRoute(path: '/settings/drive', builder: (_, _) => const DriveScreen()),
+    GoRoute(path: '/search', builder: (_, _) => const SearchScreen()),
     GoRoute(path: '/reports', builder: (_, _) => const ReportsScreen()),
     GoRoute(path: '/opening', builder: (_, _) => const OpeningScreen()),
     GoRoute(

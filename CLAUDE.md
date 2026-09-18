@@ -124,7 +124,7 @@ Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
 | **Faz 4 — Analiz ve raporlar** | ✅ müşteri/ürün analizi, kârlılık, CSV |
 | **Faz 5 — Yayına alma** | ✅ kılavuzlar, imzalama, performans ölçümü |
 
-**330 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
+**344 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
 
 Faz 1'de hazır olanlar:
 
@@ -185,9 +185,19 @@ Faz 5 sonrası eklenenler:
 - `data/backup/backup_password_store.dart` — yedek şifresi güvenli depoda
 - `data/repo/settings_repository.dart` — PIN karması, maliyet yöntemi kilidi
 
-**Kalan işler** (iş mantığı ve testleri hazır, ekranı yok — K-04):
+Faz 6'da eklenenler (K-05 — paranın hareketi):
 
-- Ödeme (tedarikçiye), Çek & Senet, Kasa & Banka, Fiyat Listeleri, İade
+- `ui/screens/finance/payment_screen.dart` — tedarikçiye ödeme, güncel borç
+  görünür
+- `ui/screens/finance/accounts_screen.dart` — kasa/banka, hesap açma, virman
+- `ui/screens/finance/instruments_screen.dart` — çek & senet portföyü,
+  yalnızca izin verilen durum geçişleri
+- `ui/screens/search/search_screen.dart` — ölü `/search` bağlantısı kapatıldı
+- `data/repo/price_memory.dart` — "bu müşteriye en son kaça sattın" ipucu
+
+**Kalan işler** (iş mantığı hazır, ekranı yok):
+
+- Fiyat Listeleri, İade
 - Satış iptali (repository'de de yok; iade doğru iş kuralı)
 - Teklif oluşturma formu (liste ve satışa çevirme hazır)
 - Google Drive API istemcisi (SK-12 — OAuth istemci kimliği bekleniyor)

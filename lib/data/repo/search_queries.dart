@@ -12,12 +12,17 @@ final class SearchHit {
   final String subtitle;
   final String route;
 
+  /// Varsa gösterilecek tutar. **Biçimlendirme arayüzün işi** — veri
+  /// katmanı para formatlamaz (yuvarlama tek yerde: rounding.dart).
+  final Money? amount;
+
   const SearchHit({
     required this.kind,
     required this.id,
     required this.title,
     required this.subtitle,
     required this.route,
+    this.amount,
   });
 }
 
@@ -55,8 +60,8 @@ extension SearchQueries on AppDatabase {
           kind: 'Müşteri',
           id: r.read<String>('id'),
           title: r.read<String>('title'),
-          subtitle:
-              '${balance.tl} TL ${balance.isPositive ? "BORÇ" : "ALACAK"}',
+          subtitle: balance.isPositive ? 'BORÇ' : 'ALACAK',
+          amount: balance,
           route: '/customers/${r.read<String>('id')}',
         ),
       );
@@ -77,7 +82,8 @@ extension SearchQueries on AppDatabase {
           id: r.read<String>('id'),
           title: r.read<String>('title'),
           subtitle: 'Tedarikçi kartı',
-          route: '/suppliers/${r.read<String>('id')}',
+          // Tedarikçi detay ekranı yok; listeye götürülür.
+          route: '/suppliers',
         ),
       );
     }
@@ -129,7 +135,8 @@ extension SearchQueries on AppDatabase {
           id: r.read<String>('id'),
           title: r.read<String>('doc_no'),
           subtitle: r.read<String>('title'),
-          route: '/sales/${r.read<String>('id')}',
+          // Satış detayı listeden açılır; ayrı rota yok.
+          route: '/sales',
         ),
       );
     }

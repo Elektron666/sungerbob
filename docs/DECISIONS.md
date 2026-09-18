@@ -559,6 +559,73 @@ Bu testin var olma sebebi SK-21'in dersi: **iş mantığının testten geçmesi,
 ekranın kullanılabilir olduğunu göstermez.** Bir akış ancak sıfırdan, boş
 veritabanıyla baştan sona sürülebiliyorsa tamamdır.
 
+## K-05 · Faz 6 — paranın hareketi ve günlük kolaylıklar
+
+Faz 6'nın sınırı şu soruyla çizildi: **para nereden girip nereye çıkıyor ve
+adam bunu telefondan görebiliyor mu?** K-04'te satış/alış kayıtları
+görünür olmuştu; halkanın kapanması için paranın kendisi eksikti.
+
+### Ödeme (tedarikçiye)
+
+Tahsilatın aynadaki görüntüsü: para dışarı çıkar, tedarikçi borcu azalır.
+Eşleştirme en eski borçtan başlar, repository tarafında.
+
+Ekranda **güncel borç** tedarikçi seçilir seçilmez görünür — tutarı yazarken
+en çok gereken bilgi bu. Eksik alan adıyla söylenir ("Kasa/banka hesabı
+seçin"), toplu bir "şunlar gerekli" mesajı değil.
+
+### Kasa & Banka
+
+"Kasada ne var?" sorusunun tek cevabı. Toplam mevcut en üstte, hesaplar
+altında. Hesap açma ve **virman** buradan; virmanda para yer değiştirir,
+cari bakiyeler etkilenmez — ekran bunu açıkça yazar.
+
+Hesap kodu kullanıcıya sorulmaz, addan türetilir (cari kartlarla aynı kural).
+
+### Çek & Senet
+
+Toptan süngercilikte para büyük ölçüde evrakla döner. Portföy toplamı üstte;
+**vadesi geçen kırmızı, bir hafta içinde doleni amber.**
+
+Durum geçişleri iş kuralıyla sınırlı (`enums.dart`): portföydeki bir çek
+bankaya verilebilir veya ciro edilebilir ama doğrudan "tahsil edildi"
+yapılamaz. **Ekran yalnızca izin verilen geçişleri gösterir** — kullanıcıya
+yapamayacağı seçeneği sunup sonra hata vermek kötü tasarımdır. Tahsil ve
+ödemede hangi hesaba işleneceği sorulur; tek hesap varsa sorulmaz.
+
+### Arama — ölü bağlantı
+
+Ana sayfadaki büyüteç `/search`'e gidiyordu ama **o rota tanımlı değildi**;
+düğme hiçbir şey yapmıyordu. Rotaları taradım: bir tane daha vardı — arama
+sonuçları `/sales/:id` ve `/suppliers/:id`'ye yönlendiriyordu, ikisi de yok.
+Var olan liste ekranlarına bağlandı.
+
+Arama Türkçe normalize kopyalar üzerinden: "sisli" yazınca "Şişli" bulunur.
+
+### Son fiyat hafızası — işi asıl kolaylaştıran şey
+
+Toptan süngercide fiyat müşteriye göre değişir ve pazarlık telefonda,
+ayaküstü yapılır. "Bu müşteriye en son kaça satmıştım?" için eski fişe
+bakmak zaman kaybı.
+
+Fiyat alanının altında **son satış fiyatı ve tarihi** çıkar; dokununca
+alana yazar.
+
+**Otomatik doldurulmaz.** Zam yapılması gereken yerde eski fiyatı sessizce
+tekrarlamak, kullanıcının parasına mal olur. İpucu hatırlatır, karar vermez.
+
+Test, başka müşterinin fiyatının sızmadığını da doğruluyor.
+
+### Kendi kuralımın beni durdurduğu yer
+
+Arama sonucundaki bakiyeyi repository içinde biçimlendirmiştim
+(`toStringAsFixed`). `no_double_test` bunu yakaladı: yuvarlama ve
+biçimlendirme tek yerde olmalı, veri katmanı para formatlamaz.
+
+Doğrusu yapıldı: `SearchHit` tutarı `Money` olarak taşır, biçimlendirme
+arayüzde. Kural zayıflatılmadı — Faz 1'de fire başlığında da aynı şey
+olmuştu ve orada da kod düzeltilmişti.
+
 ## K-02 · Performans ölçümü (BRIEF §9 Faz 5)
 
 "50.000 satış satırıyla ana sayfa ve raporların makul sürede açıldığını ölç."

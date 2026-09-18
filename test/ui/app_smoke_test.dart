@@ -86,8 +86,26 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: MenuScreen()));
     await tester.pump();
 
-    // Menü uzun; alttaki girişler için kaydırmak gerekir.
+    // Menü ekrana sığmıyor. Baştan sona bir kez kaydırıp görünen bütün
+    // etiketleri topluyoruz: böylece test menüdeki **sıraya** bağlı kalmaz —
+    // yeni bir giriş eklendiğinde kırılan bu testti.
+    final seen = <String>{};
+    void collect() {
+      for (final w in tester.widgetList<Text>(find.byType(Text))) {
+        final data = w.data;
+        if (data != null) seen.add(data);
+      }
+    }
+
+    collect();
+    for (var i = 0; i < 20; i++) {
+      await tester.drag(find.byType(ListView), const Offset(0, -200));
+      await tester.pump();
+      collect();
+    }
+
     for (final label in const [
+      'Ürünler',
       'Tedarikçiler',
       'Teklifler',
       'Kesim Emirleri',
@@ -100,12 +118,7 @@ void main() {
       'Yedekler',
       'Ayarlar',
     ]) {
-      await tester.scrollUntilVisible(
-        find.text(label),
-        150,
-        scrollable: find.byType(Scrollable).first,
-      );
-      expect(find.text(label), findsOneWidget, reason: '$label menüde yok');
+      expect(seen, contains(label), reason: '$label menüde yok');
     }
   });
 

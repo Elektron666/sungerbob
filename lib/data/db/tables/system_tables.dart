@@ -1,7 +1,5 @@
 import 'package:drift/drift.dart';
 
-import '../enums.dart';
-
 /// Sistem, kimlik ve log tabloları (ERD §2).
 
 @TableIndex(name: 'idx_users_username', columns: {#username}, unique: true)
@@ -87,7 +85,7 @@ class DocumentSequences extends Table {
 
   @override
   List<String> get customConstraints => [
-    "CHECK (doc_type IN (${DocPrefix.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (doc_type IN ('STS','ALS','THS','TKL','IAD','KSM','ODM','SYM','FIR','VRM','GDR'))",
     'CHECK (last_number >= 0)',
   ];
 }
@@ -150,9 +148,9 @@ class BackupLog extends Table {
 
   @override
   List<String> get customConstraints => [
-    "CHECK (kind IN (${BackupKind.all.map((e) => "'$e'").join(',')}))",
-    "CHECK (trigger IN (${BackupTrigger.all.map((e) => "'$e'").join(',')}))",
-    "CHECK (destination IN (${BackupDestination.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (kind IN ('BACKUP','RESTORE'))",
+    "CHECK (trigger IN ('MANUAL','AUTO_DAILY','AUTO_STARTUP','PRE_RISK','PRE_MIGRATION'))",
+    "CHECK (destination IN ('LOCAL','DRIVE','SHARE'))",
     "CHECK (result IN ('OK','FAIL'))",
   ];
 }

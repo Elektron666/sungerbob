@@ -19,7 +19,7 @@ class Locations extends Table {
 
   @override
   List<String> get customConstraints => [
-    "CHECK (code IN (${LocationCode.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (code IN ('ANA_DEPO','KESIMDE'))",
   ];
 }
 
@@ -33,6 +33,13 @@ class Products extends Table {
 
   /// SPEC §13 katsayısı, ×10.000 (1,00 → 10000).
   IntColumn get priceCoefficient => integer().map(const RateConverter())();
+
+  /// Satış ve stok birimi. Sünger `M3`; ince malzeme (çivi, yapıştırıcı,
+  /// zikzak yay) ADET/KG/KUTU/LITRE/METRE (D-22).
+  ///
+  /// Birim ürün kartında sabittir: geçmiş hareketlerin birimi değişirse
+  /// maliyet anlamını yitirir.
+  TextColumn get unit => text().withDefault(const Constant(ProductUnit.m3))();
 
   TextColumn get dns => text().nullable()();
   TextColumn get foamType => text().nullable()();
@@ -58,6 +65,7 @@ class Products extends Table {
 
   @override
   List<String> get customConstraints => [
+    "CHECK (unit IN ('M3','ADET','KG','KUTU','LITRE','METRE'))",
     'CHECK (price_coefficient > 0)',
     'CHECK (critical_stock_pieces >= 0)',
   ];
@@ -91,8 +99,12 @@ class ProductVariants extends Table {
 
   @override
   List<String> get customConstraints => [
-    "CHECK (kind IN (${VariantKind.all.map((e) => "'$e'").join(',')}))",
-    'CHECK (width > 0 AND height > 0 AND thickness > 0)',
+    "CHECK (kind IN ('PLAKA','BLOK'))",
+    // Ya üçü de dolu (sünger) ya da üçü de sıfır (ince malzeme: çivi,
+    // yapıştırıcı — ölçüsü yoktur). Yarısı dolu bir ölçü hatadır ve
+    // hâlâ engellenir (D-22).
+    'CHECK ((width > 0 AND height > 0 AND thickness > 0) '
+        'OR (width = 0 AND height = 0 AND thickness = 0))',
     'CHECK (unit_volume > 0)',
   ];
 }
@@ -157,7 +169,7 @@ class Suppliers extends Table {
 
   @override
   List<String> get customConstraints => [
-    "CHECK (type IN (${SupplierType.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (type IN ('FABRIKA','KESIMHANE','NAKLIYE','DIGER'))",
   ];
 }
 
@@ -182,7 +194,7 @@ class PriceLists extends Table {
 
   @override
   List<String> get customConstraints => [
-    "CHECK (rounding_rule IN (${RoundingRule.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (rounding_rule IN ('NONE','NEAREST_1','NEAREST_5','NEAREST_10'))",
     "CHECK (status IN ('DRAFT','ACTIVE','ARCHIVED'))",
     'CHECK (base_price_m3 > 0)',
     'CHECK (version_no > 0)',
@@ -248,7 +260,7 @@ class CashAccounts extends Table {
 
   @override
   List<String> get customConstraints => [
-    "CHECK (type IN (${CashAccountType.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (type IN ('KASA','BANKA','POS'))",
   ];
 }
 

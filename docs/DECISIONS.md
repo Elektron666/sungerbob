@@ -626,6 +626,95 @@ Doğrusu yapıldı: `SearchHit` tutarı `Money` olarak taşır, biçimlendirme
 arayüzde. Kural zayıflatılmadı — Faz 1'de fire başlığında da aynı şey
 olmuştu ve orada da kod düzeltilmişti.
 
+## K-06 · Faz 7 — ince malzeme (çivi, yapıştırıcı, zikzak yay)
+
+Kullanıcının sorusu netti: *"İnce malzeme ile alakalı bir şey var mı? Müşteri
+kendi ürün ekleyebilir mi? Çivi, yapıştırıcı vs gibi?"*
+
+Cevap ikisine de **hayır**dı. Uygulama 12 sünger çeşidiyle kuruluyordu ve
+ürün kartı açacak ekran yoktu; dahası şema **her ürünün sünger olduğunu**
+varsayıyordu: `product_variants` tablosundaki `CHECK (width > 0 AND
+height > 0 AND thickness > 0)` ölçüsüz bir malı doğrudan reddediyordu.
+Toptan süngercide çivi, yapıştırıcı ve zikzak yay sünger kadar sık satılır.
+
+### D-22 · Ürün birimi: miktar aynı kolonda, birim ürün kartında — **Karar**
+
+`products.unit` eklendi (`M3`, `ADET`, `KG`, `KUTU`, `LITRE`, `METRE`).
+
+**Maliyet motoruna dokunulmadı.** İnce malzemenin miktarı da süngerin m³'ünü
+tutan kolonda durur — sadece anlamı "ürünün kendi birimi"dir; `unit_cost_m3`
+de "birim başına maliyet" olur. Çarpma işlemi birebir aynı olduğu için FIFO,
+ağırlıklı ortalama, masraf dağıtımı ve sabitlenmiş satış maliyeti değişmeden
+çalışır. Ayrı bir "miktar" kolonu açmak, maliyet motorunu ikiye bölmek
+demekti; bedeli fayda değil risktir.
+
+Bunun bedeli iki yerde ödenir ve ikisi de kapatıldı:
+
+1. **m³ toplamları filtrelenir.** Ana sayfadaki "toplam stok m³" artık
+   `p.unit = 'M3'` koşuluyla hesaplanır — 50 kg tutkalı 11 m³ süngere
+   eklemek rakamı anlamsız kılardı. Testi: `TUTKAL m³ TOPLAMINA KARIŞMAZ`.
+2. **Ekranlar birimi sorar.** Ölçü alanları yalnızca m³ üründe görünür;
+   miktar, birim fiyat ve özet etiketleri ürünün kendi birimini yazar
+   (`50 kg`, `TL/kg`). Stok matrisi ölçüsüz üründe "0×0 / 0 cm" başlıklarıyla
+   anlamsız olacağı için tek satırlık miktar kartına dönüşür.
+
+Varyant ölçü kısıtı **gevşetilmedi**, doğru kuralı ifade edecek biçimde
+değiştirildi: *ya üçü de dolu (sünger) ya da üçü de sıfır (ince malzeme).*
+Yarısı dolu bir ölçü hâlâ hatadır ve veritabanı tarafından reddedilir.
+
+**Bilinen sınır:** miktar tamsayıdır (50 kg, 12 kutu). Yarım kilo tutkal
+girilemez; kesirli miktar, parti modelinde adet ile miktarı birbirinden
+ayırmayı gerektirir. İşletme malı teneke/kutu/çuval alıp sattığı sürece
+gerekmiyor — gerekirse ayrı bir faz işidir.
+
+### D-23 · Şema kısıtları literal SQL, enum uyumu testle korunur — **Karar**
+
+`CHECK (type IN (...))` metinleri Dart enum listesinden **interpolasyonla**
+üretiliyordu. Bu okunaklıydı ama `drift_dev schema dump` anlık görüntüye
+**yalnızca literal metinleri** yazıyor — const interpolasyon bile düşüyor.
+Sonuç: `drift_schemas/` dosyaları 22 tablonun enum kısıtlarını hiç
+görmüyordu, yani migration doğrulaması bu kısıtlar konusunda kördü. Sorun
+v2'de ortaya çıktı: yeniden kurulan tablo, anlık görüntüdeki "eksik" tabloyla
+uyuşmuyordu.
+
+Kısıtlar literal SQL'e çevrildi. Üretilen şemanın **bayt bayt aynı kaldığı**
+dönüşüm öncesi/sonrası `sqlite_master` karşılaştırmasıyla doğrulandı.
+`drift_schema_v1.json`, v1 kodundan (74e72ac) aynı dönüşümle yeniden
+üretildi; eski dosyadan tek farkı, daha önce düşen kısıtların eklenmiş
+olmasıdır — yani anlık görüntü artık gerçekte sahada duran v1 şemasını
+anlatıyor.
+
+Literal metnin riski, enum'a değer eklenip SQL'in unutulmasıdır.
+`test/data/schema_constraints_test.dart` her CHECK'i Dart listesiyle
+karşılaştırır; ayrışma test zamanında, kullanıcı kaydete bastığı anda değil,
+yakalanır.
+
+### D-24 · `products` yükseltmede yeniden kurulur — **Karar**
+
+`ALTER TABLE ADD COLUMN` tablo kısıtı ekleyemez. Sütunu ekleyip geçseydik,
+v1'den yükselen telefonda `unit` denetimsiz kalırdı: taze kurulumda
+veritabanının reddettiği bir değer, yükseltilmiş cihazda sessizce yazılırdı.
+Bu yüzden `products` ve `product_variants` `TableMigration` ile yeniden
+kuruluyor.
+
+Migration testi artık üç şeyi doğruluyor: veri kaybolmuyor, **yükseltilen
+tabloların `CREATE TABLE` metni taze kurulumunkiyle birebir aynı**, ve
+yükseltilmiş veritabanı ölçüsüz varyantı kabul edip geçersiz birimi
+reddediyor.
+
+### Ürün ekranı
+
+`Menü → Depo → Ürünler`. Sünger çeşitleri ve ince malzeme ayrı başlıklarda;
+ince malzeme boşken ne işe yaradığını anlatan bir cümle durur (boş ekran,
+mock veri değil). Birim seçilince form kendini toplar: m³'te fiyat katsayısı
+sorulur, diğerlerinde ölçü ve katsayı hiç görünmez.
+
+Ekranın çalıştığını `test/ui/core_loop_test.dart` içindeki
+**"ince malzeme: yapıştırıcı kartı aç, kiloyla stoğa gir"** testi uçtan uca
+sürüyor: boş veritabanı → ürün kartı → tedarikçi → 50 kg alış → stok 50 kg,
+ana sayfadaki m³ toplamı sıfır. SK-21'in dersi burada da geçerli: iş
+mantığının testten geçmesi ekranın kullanılabilir olduğunu göstermez.
+
 ## K-02 · Performans ölçümü (BRIEF §9 Faz 5)
 
 "50.000 satış satırıyla ana sayfa ve raporların makul sürede açıldığını ölç."

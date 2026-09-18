@@ -2,6 +2,7 @@ import 'package:decimal/decimal.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 
+import '../../data/db/enums.dart';
 import '../../domain/core/money.dart';
 import '../../domain/core/quantity.dart';
 import '../../domain/core/scales.dart';
@@ -51,6 +52,17 @@ abstract final class TrFormat {
 
   static String unitPrice(UnitPrice value) =>
       '${_money.format(value.perM3.toDouble())} TL/m³';
+
+  /// Ürünün kendi biriminde miktar: sünger "2,8 m³", tutkal "50 kg".
+  ///
+  /// İnce malzemenin miktarı da m³ kolonunda durur (D-22); ekranda m³
+  /// yazmak kullanıcıyı yanıltırdı.
+  static String quantity(Volume value, String unit) =>
+      '${_trimZeros(value.m3, Scales.volume)} ${ProductUnit.label(unit)}';
+
+  /// Ürünün kendi biriminde birim fiyat: "1.200,00 TL/m³", "45,00 TL/kg".
+  static String unitPriceFor(UnitPrice value, String unit) =>
+      '${_money.format(value.perM3.toDouble())} ${ProductUnit.priceLabel(unit)}';
 
   static String platePrice(UnitPrice value) =>
       '${_money.format(value.perM3.toDouble())} TL/plaka';

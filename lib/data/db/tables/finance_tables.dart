@@ -35,7 +35,7 @@ class CustomerLedger extends Table {
 
   @override
   List<String> get customConstraints => [
-    "CHECK (doc_type IN (${LedgerDocType.customerAll.map((e) => "'$e'").join(',')}))",
+    "CHECK (doc_type IN ('SALE','SALE_RETURN','COLLECTION','INSTRUMENT_IN','INSTRUMENT_BOUNCED','OPENING','ADJUSTMENT','REVERSAL'))",
   ];
 }
 
@@ -63,7 +63,7 @@ class SupplierLedger extends Table {
 
   @override
   List<String> get customConstraints => [
-    "CHECK (doc_type IN (${LedgerDocType.supplierAll.map((e) => "'$e'").join(',')}))",
+    "CHECK (doc_type IN ('PURCHASE','PURCHASE_RETURN','PAYMENT','INSTRUMENT_OUT','INSTRUMENT_ENDORSED','CUTTING_FEE','OPENING','ADJUSTMENT','REVERSAL'))",
   ];
 }
 
@@ -91,8 +91,8 @@ class Collections extends Table {
 
   @override
   List<String> get customConstraints => [
-    "CHECK (method IN (${PaymentMethod.all.map((e) => "'$e'").join(',')}))",
-    "CHECK (status IN (${DocStatus.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (method IN ('CASH','TRANSFER','CARD','CHECK','NOTE'))",
+    "CHECK (status IN ('ACTIVE','CANCELLED'))",
     'CHECK (amount > 0)',
   ];
 }
@@ -121,7 +121,7 @@ class SupplierPayments extends Table {
 
   @override
   List<String> get customConstraints => [
-    "CHECK (method IN (${PaymentMethod.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (method IN ('CASH','TRANSFER','CARD','CHECK','NOTE'))",
     'CHECK (amount > 0)',
   ];
 }
@@ -198,7 +198,7 @@ class AccountMovements extends Table {
   @override
   List<String> get customConstraints => [
     "CHECK (direction IN ('IN','OUT'))",
-    "CHECK (type IN (${AccountMovementType.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (type IN ('COLLECTION','PAYMENT','TRANSFER_IN','TRANSFER_OUT','EXPENSE','OPENING','INSTRUMENT_COLLECTED','INSTRUMENT_PAID','REVERSAL'))",
     'CHECK (amount > 0)',
   ];
 }
@@ -286,9 +286,9 @@ class Instruments extends Table {
 
   @override
   List<String> get customConstraints => [
-    "CHECK (kind IN (${InstrumentKind.all.map((e) => "'$e'").join(',')}))",
-    "CHECK (direction IN (${InstrumentDirection.all.map((e) => "'$e'").join(',')}))",
-    "CHECK (current_status IN (${InstrumentStatus.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (kind IN ('CHECK','NOTE'))",
+    "CHECK (direction IN ('IN','OUT'))",
+    "CHECK (current_status IN ('PORTFOLIO','AT_BANK','COLLECTED','ENDORSED','BOUNCED','RETURNED','ISSUED','PAID','TAKEN_BACK'))",
     'CHECK (amount > 0)',
   ];
 }
@@ -318,6 +318,6 @@ class InstrumentEvents extends Table {
 
   @override
   List<String> get customConstraints => [
-    "CHECK (to_status IN (${InstrumentStatus.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (to_status IN ('PORTFOLIO','AT_BANK','COLLECTED','ENDORSED','BOUNCED','RETURNED','ISSUED','PAID','TAKEN_BACK'))",
   ];
 }

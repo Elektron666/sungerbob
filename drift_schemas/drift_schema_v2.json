@@ -1055,6 +1055,16 @@
             }
           },
           {
+            "name": "unit",
+            "getter_name": "unit",
+            "moor_type": "string",
+            "nullable": false,
+            "customConstraints": null,
+            "default_dart": "const CustomExpression('\\'M3\\'')",
+            "default_client_dart": null,
+            "dsl_features": []
+          },
+          {
             "name": "dns",
             "getter_name": "dns",
             "moor_type": "string",
@@ -1178,6 +1188,7 @@
         "is_virtual": false,
         "without_rowid": false,
         "constraints": [
+          "CHECK (unit IN ('M3','ADET','KG','KUTU','LITRE','METRE'))",
           "CHECK (price_coefficient > 0)",
           "CHECK (critical_stock_pieces >= 0)"
         ],
@@ -1337,7 +1348,7 @@
         "without_rowid": false,
         "constraints": [
           "CHECK (kind IN ('PLAKA','BLOK'))",
-          "CHECK (width > 0 AND height > 0 AND thickness > 0)",
+          "CHECK ((width > 0 AND height > 0 AND thickness > 0) OR (width = 0 AND height = 0 AND thickness = 0))",
           "CHECK (unit_volume > 0)"
         ],
         "explicit_pk": [
@@ -10374,7 +10385,7 @@
       "sql": [
         {
           "dialect": "sqlite",
-          "sql": "CREATE TABLE IF NOT EXISTS \"products\" (\"id\" TEXT NOT NULL, \"code\" TEXT NOT NULL UNIQUE, \"name\" TEXT NOT NULL, \"name_normalized\" TEXT NOT NULL, \"price_coefficient\" INTEGER NOT NULL, \"dns\" TEXT NULL, \"foam_type\" TEXT NULL, \"default_width\" INTEGER NULL, \"default_height\" INTEGER NULL, \"standard_thicknesses\" TEXT NULL, \"default_sale_price_m3\" INTEGER NULL, \"critical_stock_pieces\" INTEGER NOT NULL DEFAULT 0, \"min_stock_volume\" INTEGER NULL, \"is_active\" INTEGER NOT NULL DEFAULT 1 CHECK (\"is_active\" IN (0, 1)), \"note\" TEXT NULL, PRIMARY KEY (\"id\"), CHECK (price_coefficient > 0), CHECK (critical_stock_pieces >= 0));"
+          "sql": "CREATE TABLE IF NOT EXISTS \"products\" (\"id\" TEXT NOT NULL, \"code\" TEXT NOT NULL UNIQUE, \"name\" TEXT NOT NULL, \"name_normalized\" TEXT NOT NULL, \"price_coefficient\" INTEGER NOT NULL, \"unit\" TEXT NOT NULL DEFAULT 'M3', \"dns\" TEXT NULL, \"foam_type\" TEXT NULL, \"default_width\" INTEGER NULL, \"default_height\" INTEGER NULL, \"standard_thicknesses\" TEXT NULL, \"default_sale_price_m3\" INTEGER NULL, \"critical_stock_pieces\" INTEGER NOT NULL DEFAULT 0, \"min_stock_volume\" INTEGER NULL, \"is_active\" INTEGER NOT NULL DEFAULT 1 CHECK (\"is_active\" IN (0, 1)), \"note\" TEXT NULL, PRIMARY KEY (\"id\"), CHECK (unit IN ('M3','ADET','KG','KUTU','LITRE','METRE')), CHECK (price_coefficient > 0), CHECK (critical_stock_pieces >= 0));"
         }
       ]
     },
@@ -10383,7 +10394,7 @@
       "sql": [
         {
           "dialect": "sqlite",
-          "sql": "CREATE TABLE IF NOT EXISTS \"product_variants\" (\"id\" TEXT NOT NULL, \"product_id\" TEXT NOT NULL REFERENCES products (id), \"width\" INTEGER NOT NULL, \"height\" INTEGER NOT NULL, \"thickness\" INTEGER NOT NULL, \"kind\" TEXT NOT NULL, \"unit_volume\" INTEGER NOT NULL, \"sku\" TEXT NULL, \"critical_stock_pieces\" INTEGER NOT NULL DEFAULT 0, \"is_active\" INTEGER NOT NULL DEFAULT 1 CHECK (\"is_active\" IN (0, 1)), PRIMARY KEY (\"id\"), CHECK (kind IN ('PLAKA','BLOK')), CHECK (width > 0 AND height > 0 AND thickness > 0), CHECK (unit_volume > 0));"
+          "sql": "CREATE TABLE IF NOT EXISTS \"product_variants\" (\"id\" TEXT NOT NULL, \"product_id\" TEXT NOT NULL REFERENCES products (id), \"width\" INTEGER NOT NULL, \"height\" INTEGER NOT NULL, \"thickness\" INTEGER NOT NULL, \"kind\" TEXT NOT NULL, \"unit_volume\" INTEGER NOT NULL, \"sku\" TEXT NULL, \"critical_stock_pieces\" INTEGER NOT NULL DEFAULT 0, \"is_active\" INTEGER NOT NULL DEFAULT 1 CHECK (\"is_active\" IN (0, 1)), PRIMARY KEY (\"id\"), CHECK (kind IN ('PLAKA','BLOK')), CHECK ((width > 0 AND height > 0 AND thickness > 0) OR (width = 0 AND height = 0 AND thickness = 0)), CHECK (unit_volume > 0));"
         }
       ]
     },

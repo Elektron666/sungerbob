@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' hide Column;
 import 'package:flutter/material.dart' as m show Column;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../data/db/enums.dart';
 import '../../../data/repo/sale_repository.dart';
 import '../../../data/repo/unit_of_work.dart';
 import '../../../domain/costing/costing_engine.dart';
@@ -33,8 +34,14 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
 
   CustomerRow? _customer;
   String? _productId;
+
+  /// Seçili ürünün birimi. Sünger m³ ile döner, ince malzeme kendi
+  /// birimiyle (D-22); ekrandaki her etiket buna bakar.
+  String _unit = ProductUnit.m3;
   StockCell? _variant;
   int _pieces = 1;
+
+  bool get _isFoam => ProductUnit.hasDimensions(_unit);
   PriceMode _priceMode = PriceMode.excl;
   final _priceController = TextEditingController();
   bool _saving = false;
@@ -188,8 +195,9 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
           const SizedBox(height: 24),
           _ProductChips(
             selectedId: _productId,
-            onSelected: (id) => setState(() {
+            onSelected: (id, unit) => setState(() {
               _productId = id;
+              _unit = unit;
               _variant = null;
             }),
           ),
@@ -197,6 +205,7 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
             const SizedBox(height: 16),
             _VariantPicker(
               productId: _productId!,
+              unit: _unit,
               selected: _variant,
               onSelected: (v) => setState(() {
                 _variant = v;
@@ -207,6 +216,7 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
           if (_variant != null) ...[
             const SizedBox(height: 24),
             _PieceStepper(
+              label: _isFoam ? 'Adet' : 'Miktar (${ProductUnit.label(_unit)})',
               value: _pieces,
               max: _variant!.pieces,
               onChanged: (v) => setState(() => _pieces = v),
@@ -217,8 +227,8 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
-              decoration: const InputDecoration(
-                labelText: 'TL/m³',
+              decoration: InputDecoration(
+                labelText: ProductUnit.priceLabel(_unit),
                 helperText: 'Virgül veya nokta kullanabilirsiniz',
               ),
               onChanged: (_) => setState(() {}),
@@ -231,12 +241,18 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
               _LastPriceHint(
                 customerId: customer.id,
                 productId: _productId!,
+                unit: _unit,
                 onUse: (price) => setState(
                   () => _priceController.text = TrFormat.unitPrice(price),
                 ),
               ),
             const SizedBox(height: 24),
-            _SummaryCard(volume: _volume, line: line, hideCost: hideCost),
+            _SummaryCard(
+              volume: _volume,
+              unit: _unit,
+              line: line,
+              hideCost: hideCost,
+            ),
           ],
           if (_error != null) ...[
             const SizedBox(height: 16),
@@ -341,7 +357,10 @@ class _CustomerPicker extends ConsumerWidget {
 
 class _ProductChips extends ConsumerWidget {
   final String? selectedId;
-  final ValueChanged<String> onSelected;
+
+  /// Ürün kimliği ile birlikte birimini de verir — ekranın geri kalanı
+  /// etiketleri buna göre yazar.
+  final void Function(String id, String unit) onSelected;
 
   const _ProductChips({required this.selectedId, required this.onSelected});
 
@@ -358,9 +377,13 @@ class _ProductChips extends ConsumerWidget {
         children: [
           for (final product in list)
             ChoiceChip(
-              label: Text(product.name),
+              label: Text(
+                product.unit == ProductUnit.m3
+                    ? product.name
+                    : '${product.name} · ${ProductUnit.label(product.unit)}',
+              ),
               selected: product.id == selectedId,
-              onSelected: (_) => onSelected(product.id),
+              onSelected: (_) => onSelected(product.id, product.unit),
             ),
         ],
       ),
@@ -370,11 +393,13 @@ class _ProductChips extends ConsumerWidget {
 
 class _VariantPicker extends ConsumerWidget {
   final String productId;
+  final String unit;
   final StockCell? selected;
   final ValueChanged<StockCell> onSelected;
 
   const _VariantPicker({
     required this.productId,
+    required this.unit,
     required this.selected,
     required this.onSelected,
   });
@@ -409,11 +434,19 @@ class _VariantPicker extends ConsumerWidget {
               for (final cell in cells)
                 RadioListTile<String>(
                   value: cell.variantId,
+                  // İnce malzemenin ölçüsü yoktur; "0×0×0" yazmak yerine
+                  // stoktaki miktarı başlığa alıyoruz (D-22).
                   title: Text(
-                    '${cell.sizeLabel}×${TrFormat.volumeBare(Volume(cell.thickness.stored * 10000))}',
+                    ProductUnit.hasDimensions(unit)
+                        ? '${cell.sizeLabel}×'
+                              '${TrFormat.volumeBare(Volume(cell.thickness.stored * 10000))}'
+                        : 'Stok: ${TrFormat.quantity(cell.volume, unit)}',
                   ),
                   subtitle: Text(
-                    '${TrFormat.pieces(cell.pieces)} · ${TrFormat.volume(cell.volume)}',
+                    ProductUnit.hasDimensions(unit)
+                        ? '${TrFormat.pieces(cell.pieces)} · '
+                              '${TrFormat.volume(cell.volume)}'
+                        : TrFormat.quantity(cell.volume, unit),
                   ),
                 ),
             ],
@@ -425,11 +458,13 @@ class _VariantPicker extends ConsumerWidget {
 }
 
 class _PieceStepper extends StatelessWidget {
+  final String label;
   final int value;
   final int max;
   final ValueChanged<int> onChanged;
 
   const _PieceStepper({
+    required this.label,
     required this.value,
     required this.max,
     required this.onChanged,
@@ -439,7 +474,7 @@ class _PieceStepper extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text('Adet', style: context.labelStyle),
+        Text(label, style: context.labelStyle),
         const Spacer(),
         IconButton.filledTonal(
           onPressed: value > 1 ? () => onChanged(value - 1) : null,
@@ -466,11 +501,13 @@ class _PieceStepper extends StatelessWidget {
 
 class _SummaryCard extends StatelessWidget {
   final Volume volume;
+  final String unit;
   final VatLine? line;
   final bool hideCost;
 
   const _SummaryCard({
     required this.volume,
+    required this.unit,
     required this.line,
     required this.hideCost,
   });
@@ -482,7 +519,11 @@ class _SummaryCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: m.Column(
           children: [
-            _row(context, 'Hacim', TrFormat.volume(volume)),
+            _row(
+              context,
+              ProductUnit.hasDimensions(unit) ? 'Hacim' : 'Miktar',
+              TrFormat.quantity(volume, unit),
+            ),
             if (line != null) ...[
               _row(context, 'KDV hariç', TrFormat.moneyWithCurrency(line!.net)),
               _row(context, 'KDV', TrFormat.moneyWithCurrency(line!.vat)),
@@ -526,11 +567,13 @@ class _SummaryCard extends StatelessWidget {
 class _LastPriceHint extends ConsumerWidget {
   final String customerId;
   final String productId;
+  final String unit;
   final ValueChanged<UnitPrice> onUse;
 
   const _LastPriceHint({
     required this.customerId,
     required this.productId,
+    required this.unit,
     required this.onUse,
   });
 
@@ -549,7 +592,8 @@ class _LastPriceHint extends ConsumerWidget {
                 onPressed: () => onUse(value.unitPrice),
                 icon: const Icon(Icons.history, size: 16),
                 label: Text(
-                  'Son satış: ${TrFormat.unitPrice(value.unitPrice)} TL/m³ · '
+                  'Son satış: '
+                  '${TrFormat.unitPriceFor(value.unitPrice, unit)} · '
                   '${TrFormat.date(value.date)}',
                 ),
               ),

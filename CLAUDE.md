@@ -124,7 +124,9 @@ Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
 | **Faz 4 — Analiz ve raporlar** | ✅ müşteri/ürün analizi, kârlılık, CSV |
 | **Faz 5 — Yayına alma** | ✅ kılavuzlar, imzalama, performans ölçümü |
 
-**344 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
+**364 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
+Şema sürümü **2** (ürün birimi); `drift_schemas/` altında v1 ve v2 anlık
+görüntüsü, `test/data/generated_migrations/` altında üretilmiş yardımcı var.
 
 Faz 1'de hazır olanlar:
 
@@ -194,6 +196,21 @@ Faz 6'da eklenenler (K-05 — paranın hareketi):
   yalnızca izin verilen durum geçişleri
 - `ui/screens/search/search_screen.dart` — ölü `/search` bağlantısı kapatıldı
 - `data/repo/price_memory.dart` — "bu müşteriye en son kaça sattın" ipucu
+
+Faz 7'de eklenenler (K-06 — ince malzeme):
+
+- `products.unit` — `M3` / `ADET` / `KG` / `KUTU` / `LITRE` / `METRE` (D-22).
+  Miktar süngerin m³ kolonunda durur, yalnızca anlamı değişir; **maliyet
+  motoruna dokunulmadı.** m³ toplamları `unit = 'M3'` ile filtrelenir.
+- `data/repo/product_repository.dart` + `ui/screens/master/products_screen.dart`
+  — ürün kartı açma; ölçüsüz üründe tek varyant kendiliğinden kurulur
+- Şema v2: `products` ve `product_variants` migration'da yeniden kurulur —
+  `ADD COLUMN` tablo kısıtı ekleyemez (D-24)
+- Tablo `CHECK` metinleri literal SQL; enum uyumunu
+  `test/data/schema_constraints_test.dart` koruyor (D-23)
+- Alış, satış, stok, fire, sayım ekranları birim farkındalığına açıldı:
+  ölçü alanları yalnızca süngerde görünür, etiketler ürünün kendi birimini
+  yazar ("Miktar (kg)", "TL/kg")
 
 **Kalan işler** (iş mantığı hazır, ekranı yok):
 

@@ -38,7 +38,7 @@ class Purchases extends Table {
 
   @override
   List<String> get customConstraints => [
-    "CHECK (status IN (${DocStatus.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (status IN ('ACTIVE','CANCELLED'))",
   ];
 }
 
@@ -101,7 +101,7 @@ class PurchaseExpenses extends Table {
   @override
   List<String> get customConstraints => [
     "CHECK (kind IN ('NAKLIYE','HAMALIYE','DIGER'))",
-    "CHECK (allocation_key IN (${AllocationKey.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (allocation_key IN ('VOLUME','AMOUNT'))",
     'CHECK (amount >= 0)',
   ];
 }
@@ -195,7 +195,7 @@ class SalesQuotes extends Table {
 
   @override
   List<String> get customConstraints => [
-    "CHECK (status IN (${QuoteStatus.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (status IN ('DRAFT','SENT','ACCEPTED','REJECTED','EXPIRED','CONVERTED'))",
   ];
 }
 
@@ -258,7 +258,7 @@ class Sales extends Table {
 
   @override
   List<String> get customConstraints => [
-    "CHECK (status IN (${DocStatus.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (status IN ('ACTIVE','CANCELLED'))",
   ];
 }
 

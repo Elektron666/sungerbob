@@ -5,6 +5,10 @@ import 'package:sungerbob/data/db/app_database.dart';
 import 'package:sungerbob/data/repo/stock_queries.dart';
 import 'package:sungerbob/ui/format/tr_format.dart';
 import 'package:sungerbob/ui/providers/app_providers.dart';
+import 'package:sungerbob/data/db/enums.dart';
+import 'package:sungerbob/data/repo/dashboard_queries.dart';
+import 'package:sungerbob/domain/core/quantity.dart';
+import 'package:sungerbob/ui/screens/master/products_screen.dart';
 import 'package:sungerbob/ui/screens/purchase/purchase_screen.dart';
 
 import '../data/test_db.dart';
@@ -129,5 +133,86 @@ void main() {
     // Eksik olan adıyla söylenmeli.
     // İpucu metni ve hata kartı: ikisi de aynı cümleyi söyler.
     expect(find.text('Tedarikçi seçin'), findsWidgets);
+  });
+
+  testWidgets('ince malzeme: yapıştırıcı kartı aç, kiloyla stoğa gir', (
+    tester,
+  ) async {
+    // Kullanıcının sorusu buydu: "Çivi, yapıştırıcı ekleyebilir miyim?"
+    // Cevabın ekranda çalıştığını burada doğruluyoruz — ölçü sorulmadan,
+    // kendi birimiyle.
+    await pump(tester, const ProductsScreen());
+
+    await tester.tap(find.text('Yeni ürün'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Ürün adı'),
+      'Sünger Yapıştırıcı',
+    );
+    await tester.tap(find.widgetWithText(ChoiceChip, 'kg'));
+    await tester.pumpAndSettle();
+
+    // Ölçüsü yok: sünger katsayısı alanı da sorulmamalı.
+    expect(find.widgetWithText(TextField, 'Fiyat katsayısı'), findsNothing);
+
+    await tester.tap(find.text('Ürünü kaydet'));
+    await tester.pumpAndSettle();
+
+    final product = await (db.select(
+      db.products,
+    )..where((p) => p.name.equals('Sünger Yapıştırıcı'))).getSingle();
+    expect(product.unit, ProductUnit.kilogram);
+
+    // Ölçüsüz tek varyant hazır olmalı; kullanıcıya en/boy/kalınlık sorulmaz.
+    final variant = await (db.select(
+      db.productVariants,
+    )..where((v) => v.productId.equals(product.id))).getSingle();
+    expect(variant.width.stored, 0);
+    expect(variant.height.stored, 0);
+    expect(variant.thickness.stored, 0);
+
+    // Şimdi 50 kg alalım.
+    await pump(tester, const PurchaseScreen());
+    await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Yeni tedarikçi ekle').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'Kimya AŞ');
+    await tester.pump();
+    await tester.tap(find.text('Tedarikçi kartını aç'));
+    await tester.pumpAndSettle();
+
+    final productPicker = find.byType(DropdownButtonFormField<String>).last;
+    await tester.scrollUntilVisible(
+      productPicker,
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(productPicker);
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Sünger Yapıştırıcı').last);
+    await tester.pumpAndSettle();
+
+    // Ölçü alanları kaybolmalı, miktar kendi birimiyle sorulmalı.
+    expect(find.widgetWithText(TextField, 'En (cm)'), findsNothing);
+    await fill(tester, 'Miktar (kg)', '50');
+    await fill(tester, 'TL/kg', '120');
+
+    final save = find.widgetWithText(FilledButton, 'Kaydet');
+    await tester.scrollUntilVisible(
+      save,
+      140,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+
+    final stock = await db.variantStock(variant.id);
+    expect(stock.pieces, 50, reason: '50 kg stoğa düşmedi');
+
+    // Ve en önemlisi: 50 kg tutkal, süngerin m³ toplamına karışmamalı.
+    final snapshot = await db.dashboardSnapshot();
+    expect(snapshot.totalStockVolume, Volume.zero);
   });
 }

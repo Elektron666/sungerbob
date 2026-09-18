@@ -75,11 +75,22 @@ extension DashboardQueries on AppDatabase {
 
   Future<Volume> _totalStockVolume(String locationCode) async {
     final locId = await locationId(locationCode);
+    // **Yalnızca m³ ürünler.** İnce malzemenin miktarı da aynı kolonda
+    // durur (kendi biriminde); 50 kg tutkalı 11 m³ süngere eklemek toplamı
+    // anlamsız kılardı (D-22).
     final row = await customSelect(
-      'SELECT COALESCE(SUM(remaining_volume), 0) AS v '
-      'FROM inventory_batches WHERE location_id = ?',
-      variables: [Variable.withString(locId)],
-      readsFrom: {inventoryBatches},
+      '''
+      SELECT COALESCE(SUM(b.remaining_volume), 0) AS v
+      FROM inventory_batches b
+      JOIN product_variants v ON v.id = b.variant_id
+      JOIN products p ON p.id = v.product_id
+      WHERE b.location_id = ? AND p.unit = ?
+      ''',
+      variables: [
+        Variable.withString(locId),
+        Variable.withString(ProductUnit.m3),
+      ],
+      readsFrom: {inventoryBatches, productVariants, products},
     ).getSingle();
     return Volume.fromStored(row.read<int>('v'));
   }

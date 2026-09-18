@@ -8,6 +8,41 @@ abstract final class LocationCode {
   static const all = [mainWarehouse, cutting];
 }
 
+/// Ürünün satış ve stok birimi.
+///
+/// Sünger m³ ile döner; **ince malzeme** (çivi, yapıştırıcı, zikzak yay,
+/// tela) adet, kilo, kutu, litre veya metre ile. Birim ürün kartında
+/// sabittir ve ilk stok hareketinden sonra değiştirilemez — geçmiş
+/// hareketlerin birimi değişirse maliyet anlamını yitirir.
+abstract final class ProductUnit {
+  /// Metreküp — sünger. Varsayılan.
+  static const m3 = 'M3';
+  static const piece = 'ADET';
+  static const kilogram = 'KG';
+  static const box = 'KUTU';
+  static const litre = 'LITRE';
+  static const metre = 'METRE';
+
+  static const all = [m3, piece, kilogram, box, litre, metre];
+
+  /// Ölçü (en/boy/kalınlık) yalnızca m³ ürünlerde sorulur.
+  static bool hasDimensions(String unit) => unit == m3;
+
+  /// Ekranlarda gösterilen kısa ad.
+  static String label(String unit) => switch (unit) {
+    m3 => 'm³',
+    piece => 'adet',
+    kilogram => 'kg',
+    box => 'kutu',
+    litre => 'lt',
+    metre => 'm',
+    _ => unit.toLowerCase(),
+  };
+
+  /// "TL/m³", "TL/adet" gibi birim fiyat etiketi.
+  static String priceLabel(String unit) => 'TL/${label(unit)}';
+}
+
 abstract final class VariantKind {
   static const plate = 'PLAKA';
   static const block = 'BLOK';

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/db/app_database.dart';
+import '../../../data/db/enums.dart';
+import '../../../data/repo/product_repository.dart';
 import '../../../data/repo/purchase_repository.dart';
 import '../../../data/repo/unit_of_work.dart';
 import '../../../data/repo/variant_helper.dart';
@@ -32,6 +34,10 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
   final _thicknessController = TextEditingController(text: '10');
 
   String? _supplierId;
+
+  /// Seçili ürünün birimi. İnce malzemede ölçü sorulmaz (D-22).
+  String _unit = ProductUnit.m3;
+  bool get _isFoam => _unit == ProductUnit.m3;
   String? _productId;
   bool _saving = false;
   String? _error;
@@ -51,14 +57,19 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
     super.dispose();
   }
 
+  /// Miktar. Süngerde ölçüden hesaplanan m³; ince malzemede girilen
+  /// miktarın kendisi (1 birim = 1).
   Volume? get _volume {
+    final pieces = TrFormat.parsePieces(_piecesController.text);
+    if (pieces == null || pieces <= 0) return null;
+
+    if (!_isFoam) return Volume.parse('$pieces');
+
     final w = TrFormat.parseDimension(_widthController.text);
     final h = TrFormat.parseDimension(_heightController.text);
     final t = TrFormat.parseDimension(_thicknessController.text);
-    final pieces = TrFormat.parsePieces(_piecesController.text);
-    if (w == null || h == null || t == null || pieces == null || pieces <= 0) {
-      return null;
-    }
+    if (w == null || h == null || t == null) return null;
+
     return Volume.fromDimensions(
       width: w,
       height: h,
@@ -79,9 +90,11 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
     final missing = switch (null) {
       _ when supplierId == null => 'Tedarikçi seçin',
       _ when productId == null => 'Sünger çeşidi seçin',
-      _ when volume == null => 'En, boy, kalınlık ve adet girin',
+      _ when volume == null =>
+        _isFoam ? 'En, boy, kalınlık ve adet girin' : 'Miktar girin',
       _ when pieces == null || pieces <= 0 => 'Adet girin',
-      _ when price == null => 'Birim fiyat (TL/m³) girin',
+      _ when price == null =>
+        'Birim fiyat (${ProductUnit.priceLabel(_unit)}) girin',
       _ => null,
     };
     if (missing != null ||
@@ -142,13 +155,20 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
   }
 
   /// Ölçü daha önce görülmediyse varyantı oluşturur.
-  Future<String> _ensureVariant(AppDatabase db, String productId) =>
-      db.ensureVariant(
-        productId: productId,
-        width: TrFormat.parseDimension(_widthController.text)!,
-        height: TrFormat.parseDimension(_heightController.text)!,
-        thickness: TrFormat.parseDimension(_thicknessController.text)!,
-      );
+  ///
+  /// İnce malzemenin ölçüsü yoktur; varyantı ürün kartıyla birlikte
+  /// açılmıştır, o kullanılır.
+  Future<String> _ensureVariant(AppDatabase db, String productId) async {
+    if (!_isFoam) {
+      return (await ProductRepository(db).singleVariantOf(productId)).id;
+    }
+    return db.ensureVariant(
+      productId: productId,
+      width: TrFormat.parseDimension(_widthController.text)!,
+      height: TrFormat.parseDimension(_heightController.text)!,
+      thickness: TrFormat.parseDimension(_thicknessController.text)!,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -169,24 +189,40 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
           const SizedBox(height: 16),
           _ProductPicker(
             selectedId: _productId,
-            onSelected: (id) => setState(() => _productId = id),
+            onSelected: (id, unit) => setState(() {
+              _productId = id;
+              _unit = unit;
+            }),
           ),
           const SizedBox(height: 24),
+          // Ölçü yalnızca süngerde sorulur; çivinin eni boyu olmaz.
+          if (_isFoam) ...[
+            Row(
+              children: [
+                Expanded(child: _numField(_widthController, 'En (cm)')),
+                const SizedBox(width: 8),
+                Expanded(child: _numField(_heightController, 'Boy (cm)')),
+                const SizedBox(width: 8),
+                Expanded(child: _numField(_thicknessController, 'Kalınlık')),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
           Row(
             children: [
-              Expanded(child: _numField(_widthController, 'En (cm)')),
+              Expanded(
+                child: _numField(
+                  _piecesController,
+                  _isFoam ? 'Adet' : 'Miktar (${ProductUnit.label(_unit)})',
+                ),
+              ),
               const SizedBox(width: 8),
-              Expanded(child: _numField(_heightController, 'Boy (cm)')),
-              const SizedBox(width: 8),
-              Expanded(child: _numField(_thicknessController, 'Kalınlık')),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(child: _numField(_piecesController, 'Adet')),
-              const SizedBox(width: 8),
-              Expanded(child: _numField(_priceController, 'TL/m³')),
+              Expanded(
+                child: _numField(
+                  _priceController,
+                  ProductUnit.priceLabel(_unit),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -271,7 +307,10 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
 
 class _ProductPicker extends ConsumerWidget {
   final String? selectedId;
-  final ValueChanged<String> onSelected;
+
+  /// Ürünle birlikte **birimi** de bildirir: ekran ölçü soracak mı,
+  /// miktarı hangi birimde isteyecek, buna göre karar verir.
+  final void Function(String id, String unit) onSelected;
 
   const _ProductPicker({required this.selectedId, required this.onSelected});
 
@@ -291,10 +330,18 @@ class _ProductPicker extends ConsumerWidget {
           for (final p in list)
             DropdownMenuItem(
               value: p.id,
-              child: Text(p.name, overflow: TextOverflow.ellipsis),
+              child: Text(
+                p.unit == ProductUnit.m3
+                    ? p.name
+                    : '${p.name} · ${ProductUnit.label(p.unit)}',
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
         ],
-        onChanged: (id) => id == null ? null : onSelected(id),
+        onChanged: (id) {
+          if (id == null) return;
+          onSelected(id, list.firstWhere((p) => p.id == id).unit);
+        },
       ),
     );
   }

@@ -55,7 +55,7 @@ class AppDatabase extends _$AppDatabase {
   /// Şema sürümü. Her değişiklikte artırılır ve migration testi yazılır
   /// (ARCHITECTURE §11).
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -65,8 +65,29 @@ class AppDatabase extends _$AppDatabase {
       await seedInitialData(this);
     },
     onUpgrade: (m, from, to) async {
-      // Sürüm 1 ilk sürüm; buraya sonraki adımlar eklenecek.
       // Her migration öncesi otomatik yedek alınır (BRIEF §4.3).
+
+      // v2: ürünlere birim (`unit`) eklendi — ince malzeme desteği (D-22).
+      // Mevcut ürünlerin tamamı sünger olduğu için varsayılan M3'tür;
+      // sütun DEFAULT ile eklendiği için eski satırlar kendiliğinden doğru
+      // değeri alır.
+      if (from < 2) {
+        // `ALTER TABLE ADD COLUMN` tablo kısıtı ekleyemez; sütunu ekleyip
+        // geçsek yükseltilen telefonda `unit` denetimsiz kalırdı. Bu yüzden
+        // tablo yeniden kuruluyor — `newColumns` sayesinde eski satırlar
+        // sütunun DEFAULT'unu (M3) alır.
+        await m.alterTable(
+          TableMigration(products, newColumns: [products.unit]),
+        );
+
+        // Varyant ölçü kısıtı "her varyant süngerdir" varsayımını
+        // kodluyordu. İnce malzemenin ölçüsü yoktur; kısıt gevşetilmedi,
+        // doğru kuralı ifade edecek biçimde değiştirildi: ya üçü de dolu
+        // ya da üçü de sıfır. CHECK yalnızca CREATE TABLE ile kurulduğu
+        // için tablo yeniden oluşturulur.
+        await m.alterTable(TableMigration(productVariants));
+      }
+
       await _reinstallTriggers();
     },
     beforeOpen: (details) async {

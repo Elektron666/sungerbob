@@ -56,17 +56,19 @@ class _WasteScreenState extends ConsumerState<WasteScreen> {
     return showDialog<int>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(variant.label),
+        title: Text(variant.title),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Stokta ${TrFormat.pieces(variant.pieces)}'),
+            Text('Stokta ${variant.amount(variant.pieces)}'),
             const SizedBox(height: 16),
             TextField(
               controller: controller,
               autofocus: true,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Fire adedi'),
+              decoration: InputDecoration(
+                labelText: 'Fire miktarı (${variant.amountLabel})',
+              ),
             ),
           ],
         ),
@@ -173,11 +175,8 @@ class _WasteScreenState extends ConsumerState<WasteScreen> {
                     itemBuilder: (context, i) {
                       final line = _lines[i];
                       return ListTile(
-                        title: Text(
-                          '${line.variant.productName} · '
-                          '${line.variant.label}',
-                        ),
-                        subtitle: Text(TrFormat.pieces(line.pieces)),
+                        title: Text(line.variant.title),
+                        subtitle: Text(line.variant.amount(line.pieces)),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete_outline),
                           onPressed: () => setState(() => _lines.removeAt(i)),

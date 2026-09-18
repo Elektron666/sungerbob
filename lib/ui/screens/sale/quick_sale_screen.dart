@@ -246,6 +246,15 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
                   () => _priceController.text = TrFormat.unitPrice(price),
                 ),
               ),
+            // Liste fiyatı "bugünkü fiyatım ne", son satış "bu müşteriye ne
+            // demiştim" sorusunu yanıtlar. İkisi de yalnızca ipucudur.
+            _ListPriceHint(
+              productId: _productId!,
+              unit: _unit,
+              onUse: (price) => setState(
+                () => _priceController.text = TrFormat.unitPrice(price),
+              ),
+            ),
             const SizedBox(height: 24),
             _SummaryCard(
               volume: _volume,
@@ -610,6 +619,47 @@ class _LastPriceHint extends ConsumerWidget {
     );
   }
 }
+
+/// "Liste fiyatı: 3.500,0000 TL/m³" — dokununca fiyatı doldurur.
+class _ListPriceHint extends ConsumerWidget {
+  final String productId;
+  final String unit;
+  final ValueChanged<UnitPrice> onUse;
+
+  const _ListPriceHint({
+    required this.productId,
+    required this.unit,
+    required this.onUse,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hint = ref.watch(listPriceProvider(productId));
+
+    return hint.maybeWhen(
+      data: (value) => value == null
+          ? const SizedBox.shrink()
+          : Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => onUse(value),
+                icon: const Icon(Icons.sell_outlined, size: 16),
+                label: Text(
+                  'Liste fiyatı: ${TrFormat.unitPriceFor(value, unit)}',
+                ),
+              ),
+            ),
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+final listPriceProvider = FutureProvider.autoDispose.family<UnitPrice?, String>(
+  (ref, productId) async {
+    final db = await ref.watch(databaseProvider.future);
+    return PriceMemory(db).activeListPrice(productId);
+  },
+);
 
 final lastSalePriceProvider = FutureProvider.autoDispose
     .family<PriceHint?, ({String customerId, String productId})>((

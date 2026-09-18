@@ -52,6 +52,30 @@ final class PriceMemory {
     reads: {db.purchaseItems, db.purchases, db.productVariants},
   );
 
+  /// Yürürlükteki fiyat listesindeki m³ fiyatı.
+  ///
+  /// Son satış fiyatı "bu müşteriye ne demiştim", liste fiyatı ise "bugünkü
+  /// fiyatım ne" sorusunu yanıtlar. İkisi farklı olduğunda pazarlığın nerede
+  /// bittiği görünür.
+  Future<UnitPrice?> activeListPrice(String productId) async {
+    final row = await db
+        .customSelect(
+          '''
+      SELECT i.effective_price_m3 AS price
+      FROM price_list_items i
+      JOIN price_lists l ON l.id = i.price_list_id
+      WHERE l.status = 'ACTIVE' AND i.product_id = ?
+      ORDER BY l.version_no DESC
+      LIMIT 1
+      ''',
+          variables: [Variable.withString(productId)],
+          readsFrom: {db.priceListItems, db.priceLists},
+        )
+        .getSingleOrNull();
+    if (row == null) return null;
+    return UnitPrice.fromStored(row.read<int>('price'));
+  }
+
   Future<PriceHint?> _last({
     required String sql,
     required List<String> args,

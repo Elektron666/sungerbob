@@ -10,6 +10,7 @@ import 'screens/finance/instruments_screen.dart';
 import 'screens/finance/payment_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/master/parties_screen.dart';
+import 'screens/master/price_lists_screen.dart';
 import 'screens/master/products_screen.dart';
 import 'screens/opening/opening_screen.dart';
 import 'screens/ops/count_screen.dart';
@@ -71,6 +72,7 @@ GoRouter buildRouter() => GoRouter(
     ),
     GoRoute(path: '/suppliers', builder: (_, _) => const SuppliersScreen()),
     GoRoute(path: '/products', builder: (_, _) => const ProductsScreen()),
+    GoRoute(path: '/price-lists', builder: (_, _) => const PriceListsScreen()),
     GoRoute(path: '/quotes', builder: (_, _) => const QuotesScreen()),
     GoRoute(path: '/cutting', builder: (_, _) => const CuttingScreen()),
     GoRoute(

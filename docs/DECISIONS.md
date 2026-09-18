@@ -794,6 +794,38 @@ alta duruyordu ve `ListTile`'ın 56 piksellik yüksekliğine sığmıyordu —
 satırında. Faz 8'deki 14 piksellik taşma gibi, bu da yalnızca ekran testi
 yazıldığı için bulundu.
 
+## K-09 · Faz 10 — fiyat listesi: zam yapmak
+
+Son ekransız iş mantığı buydu. Baz TL/m³ × ürün katsayısı hesabı,
+yuvarlama kuralı ve eski versiyonu arşivleme Faz 1'den beri hazırdı ama
+kullanıcı fiyat listesi **oluşturamıyordu** — yani hiç kullanılmamıştı. Bu
+aynı zamanda ana sayfadaki "stok satış değeri" kartını da ölü bırakıyordu:
+o kart yürürlükteki listeye bakar, liste hiç yoktu.
+
+### D-27 · Önizleme onaydan önce zorunlu — **Karar (BRIEF §5)**
+
+Kaydet düğmesi, önizleme görülmeden açılmıyor. Zam tek bir sayı girilerek
+yapılır ama **listedeki her ürünün fiyatını aynı anda** değiştirir;
+kullanıcının "hangi çeşit kaça çıkıyor" sorusunu onaylamadan önce görmesi
+gerekir. Önizleme eski fiyatı, yeni fiyatı ve değişim yüzdesini yan yana
+koyar; düşen fiyat kırmızı yazılır — zam beklenirken düşen bir fiyat
+gözden kaçmamalı.
+
+Önizleme her tuş vuruşunda değil, "Önizle" denince hesaplanır. 12 ürünü her
+karakterde yeniden hesaplamak, kullanıcıya hiçbir şey kazandırmadan ekranı
+titretirdi.
+
+### D-28 · Satış ekranında iki ayrı fiyat ipucu — **Karar**
+
+Fiyat alanının altında artık iki satır olabilir:
+
+- **Son satış** — "bu müşteriye ne demiştim"
+- **Liste fiyatı** — "bugünkü fiyatım ne"
+
+İkisi de yalnızca ipucudur, dokununca doldurur; kendiliğinden doldurmaz
+(K-05'teki gerekçe aynen geçerli). İkisi farklı olduğunda pazarlığın nerede
+bittiği görünür hâle gelir — toptan süngercide asıl bilgi budur.
+
 ## K-02 · Performans ölçümü (BRIEF §9 Faz 5)
 
 "50.000 satış satırıyla ana sayfa ve raporların makul sürede açıldığını ölç."

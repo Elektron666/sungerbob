@@ -107,6 +107,11 @@ class MenuScreen extends StatelessWidget {
       title: 'Depo',
       items: [
         (label: 'Ürünler', route: '/products', icon: Icons.category),
+        (
+          label: 'Fiyat Listeleri',
+          route: '/price-lists',
+          icon: Icons.price_change,
+        ),
         (label: 'Kesim Emirleri', route: '/cutting', icon: Icons.content_cut),
         (label: 'Sayım', route: '/count', icon: Icons.fact_check),
         (label: 'Fire', route: '/waste', icon: Icons.delete_sweep),

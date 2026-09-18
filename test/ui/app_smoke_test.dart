@@ -106,6 +106,7 @@ void main() {
 
     for (final label in const [
       'Ürünler',
+      'Fiyat Listeleri',
       'Tedarikçiler',
       'Teklifler',
       'Kesim Emirleri',

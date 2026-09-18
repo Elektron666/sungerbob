@@ -124,7 +124,7 @@ Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
 | **Faz 4 — Analiz ve raporlar** | ✅ müşteri/ürün analizi, kârlılık, CSV |
 | **Faz 5 — Yayına alma** | ✅ kılavuzlar, imzalama, performans ölçümü |
 
-**368 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
+**370 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
 Şema sürümü **2** (ürün birimi); `drift_schemas/` altında v1 ve v2 anlık
 görüntüsü, `test/data/generated_migrations/` altında üretilmiş yardımcı var.
 
@@ -227,7 +227,15 @@ Faz 9'da eklenenler (K-08 — teklif yazma):
   serbest, teklif stoğa dokunmaz (D-26)
 - `ui/widgets/product_picker.dart` — alış ve teklifin ortak ürün seçicisi
 
-**Kalan işler** (iş mantığı hazır, ekranı yok):
+Faz 10'da eklenenler (K-09 — fiyat listesi):
 
-- Fiyat Listeleri
+- `ui/screens/master/price_lists_screen.dart` — baz TL/m³ + yuvarlama →
+  **önizleme** → yürürlüğe alma. Önizleme görülmeden kaydedilemez (D-27);
+  eski versiyon silinmez, arşivlenir.
+- `PriceMemory.activeListPrice` + satış ekranında **liste fiyatı** ipucu;
+  son satış fiyatının yanında durur, ikisi de dokununca doldurur (D-28)
+
+**Kalan işler:**
+
 - Google Drive API istemcisi (SK-12 — OAuth istemci kimliği bekleniyor)
+- Ekransız iş mantığı **kalmadı**.

@@ -86,16 +86,27 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: MenuScreen()));
     await tester.pump();
 
-    expect(find.text('Teklifler'), findsOneWidget);
-    expect(find.text('Kesim Emirleri'), findsOneWidget);
-    expect(find.text('Sayım'), findsOneWidget);
-    expect(find.text('Fire'), findsOneWidget);
-    expect(find.text('Raporlar'), findsOneWidget);
-    expect(find.text('Açılış İşlemleri'), findsOneWidget);
-    expect(find.text('Yedek Al'), findsOneWidget);
-    expect(find.text('Yedekten Yükle'), findsOneWidget);
-    expect(find.text('Yedekler'), findsOneWidget);
-    expect(find.text('Ayarlar'), findsOneWidget);
+    // Menü uzun; alttaki girişler için kaydırmak gerekir.
+    for (final label in const [
+      'Tedarikçiler',
+      'Teklifler',
+      'Kesim Emirleri',
+      'Sayım',
+      'Fire',
+      'Raporlar',
+      'Açılış İşlemleri',
+      'Yedek Al',
+      'Yedekten Yükle',
+      'Yedekler',
+      'Ayarlar',
+    ]) {
+      await tester.scrollUntilVisible(
+        find.text(label),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text(label), findsOneWidget, reason: '$label menüde yok');
+    }
   });
 
   test('yönlendirici kurulabiliyor ve rotalar tanımlı', () {

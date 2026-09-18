@@ -5,6 +5,7 @@ import 'screens/backup/restore_screen.dart';
 import 'screens/finance/collection_screen.dart';
 import 'screens/finance/customers_screen.dart';
 import 'screens/home/home_screen.dart';
+import 'screens/master/parties_screen.dart';
 import 'screens/opening/opening_screen.dart';
 import 'screens/ops/count_screen.dart';
 import 'screens/ops/cutting_screen.dart';
@@ -50,6 +51,7 @@ GoRouter buildRouter() => GoRouter(
     GoRoute(path: '/settings/drive', builder: (_, _) => const DriveScreen()),
     GoRoute(path: '/reports', builder: (_, _) => const ReportsScreen()),
     GoRoute(path: '/opening', builder: (_, _) => const OpeningScreen()),
+    GoRoute(path: '/suppliers', builder: (_, _) => const SuppliersScreen()),
     GoRoute(path: '/quotes', builder: (_, _) => const QuotesScreen()),
     GoRoute(path: '/cutting', builder: (_, _) => const CuttingScreen()),
     GoRoute(

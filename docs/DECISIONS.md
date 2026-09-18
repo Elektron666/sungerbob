@@ -454,6 +454,51 @@ append-only olduğu için temizlenmeleri ters hareket gerektirirdi. Test, demo
 girişten sonra `sales`, `purchases`, `customer_ledger`, `stock_movements` ve
 `inventory_batches` tablolarının boş olduğunu doğruluyor.
 
+### SK-21 · Cari kartı açacak ekran yoktu — uygulama hiçbir iş yapamıyordu
+
+**Kullanıcı bildirimi:** "Stok girişinde tedarikçi seçin kısmında hiçbir şey
+yapılmıyor."
+
+**Kök neden, tek satırda:** seed yalnızca ürün ve kasa/banka hesabı
+oluşturuyordu. **Tedarikçi ve müşteri kartı yoktu ve uygulamada bunları
+açacak hiçbir ekran yoktu.** Alış tedarikçi, satış müşteri ister; ikisi de
+boş olduğu için:
+
+| Ekran | Durum |
+|---|---|
+| Stok girişi | tedarikçi listesi boş → kaydedilemiyor |
+| Hızlı satış | müşteri listesi boş → satış yapılamıyor |
+| Tahsilat | müşteri listesi boş |
+| Kesime gönder | kesimhane listesi boş |
+
+Alış ekranı boş listede **"Önce bir tedarikçi ekleyin"** yazan ölü bir kart
+gösteriyordu; eklemenin yolu yoktu. Fazlar "tamam" sayılmıştı çünkü iş
+kuralları ve testleri hazırdı — ama **kullanıcı hiçbirine erişemiyordu.**
+
+**Ders:** iş mantığının testten geçmesi, ekranın kullanılabilir olduğunu
+göstermez. Bir akış ancak **sıfırdan, boş veritabanıyla** baştan sona
+sürülebiliyorsa tamamdır.
+
+**Eklenenler:**
+
+- `data/repo/party_repository.dart` — müşteri ve tedarikçi kartı açma.
+  Kod (`code`) kullanıcıya sorulmaz, unvandan türetilir
+  (`Öz Sünger A.Ş.` → `OZSUNGERAS`); çakışırsa sonuna sayı eklenir. Elle kod
+  girdirmek hem yavaş hem çakışmaya açıktır. Türkçe arama için normalize
+  kopya da yazılır.
+- `ui/screens/master/party_form.dart` — tek zorunlu alan **unvan**. Geri
+  kalanı sonradan girilebilir; ilk kaydı yaparken kullanıcıyı uzun formda
+  bekletmek işi durdurur. Kaydet düğmesi kalıcı alt barda, doğrulama hatası
+  alanın kendisinde.
+- `ui/widgets/party_picker.dart` — seçici **boşken bile "Yeni ... ekle"**
+  gösterir. Kullanıcı hiçbir noktada çıkmaza düşmez. Alış, satış, tahsilat
+  ve kesim ekranlarının dördü de buna bağlandı.
+- `ui/screens/master/parties_screen.dart` — tedarikçi listesi, Menü'den.
+  Müşteri ekranına da kart açma düğmesi eklendi.
+
+Testler artık **boş veritabanından başlayıp** kart açmayı ve stok girişi
+ekranındaki açılır listeden kart açıp seçmeyi doğruluyor.
+
 ## K-02 · Performans ölçümü (BRIEF §9 Faz 5)
 
 "50.000 satış satırıyla ana sayfa ve raporların makul sürede açıldığını ölç."

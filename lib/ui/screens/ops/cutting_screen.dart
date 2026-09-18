@@ -15,9 +15,9 @@ import '../../format/tr_format.dart';
 import '../../providers/app_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/party_picker.dart';
 import '../../widgets/variant_picker.dart';
 import '../home/home_screen.dart' show dashboardProvider;
-import '../purchase/purchase_screen.dart' show suppliersProvider;
 import '../stock/stock_screen.dart' show productsProvider;
 
 /// Kesim emirleri (BRIEF §5 · FLOWS §9).
@@ -286,7 +286,6 @@ class _SendToCuttingScreenState extends ConsumerState<SendToCuttingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final suppliers = ref.watch(suppliersProvider);
     final batches = ref.watch(cuttableBatchesProvider);
 
     return Scaffold(
@@ -295,31 +294,9 @@ class _SendToCuttingScreenState extends ConsumerState<SendToCuttingScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: suppliers.when(
-              loading: () => const LinearProgressIndicator(),
-              error: (e, _) => ErrorState(error: e),
-              data: (list) {
-                final cutters = list
-                    .where((s) => s.type == SupplierType.cutter)
-                    .toList();
-                if (cutters.isEmpty) {
-                  return const EmptyState(
-                    icon: Icons.factory_outlined,
-                    title: 'Kesimhane tanımlı değil',
-                    description:
-                        'Önce tipi "Kesimhane" olan bir tedarikçi ekleyin.',
-                  );
-                }
-                return DropdownButtonFormField<String>(
-                  initialValue: _cutterId,
-                  decoration: const InputDecoration(labelText: 'Kesimhane'),
-                  items: [
-                    for (final s in cutters)
-                      DropdownMenuItem(value: s.id, child: Text(s.title)),
-                  ],
-                  onChanged: (v) => setState(() => _cutterId = v),
-                );
-              },
+            child: CutterPicker(
+              value: _cutterId,
+              onChanged: (v) => setState(() => _cutterId = v),
             ),
           ),
           Expanded(

@@ -90,6 +90,7 @@ class MenuScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const items = [
+      (label: 'Tedarikçiler', route: '/suppliers', icon: Icons.local_shipping),
       (label: 'Teklifler', route: '/quotes', icon: Icons.request_quote),
       (label: 'Kesim Emirleri', route: '/cutting', icon: Icons.content_cut),
       (label: 'Sayım', route: '/count', icon: Icons.fact_check),

@@ -9,6 +9,7 @@ import '../../../domain/core/quantity.dart';
 import '../../../domain/service/vat.dart';
 import '../../format/tr_format.dart';
 import '../../providers/app_providers.dart';
+import '../../widgets/party_picker.dart';
 import '../../theme/app_theme.dart';
 import '../home/home_screen.dart';
 import '../stock/stock_screen.dart';
@@ -148,9 +149,11 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _SupplierPicker(
-            selectedId: _supplierId,
-            onSelected: (id) => setState(() => _supplierId = id),
+          PartyPicker(
+            supplier: true,
+            label: 'Tedarikçi',
+            value: _supplierId,
+            onChanged: (id) => setState(() => _supplierId = id),
           ),
           const SizedBox(height: 16),
           _ProductPicker(
@@ -245,38 +248,6 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
   );
 }
 
-class _SupplierPicker extends ConsumerWidget {
-  final String? selectedId;
-  final ValueChanged<String> onSelected;
-
-  const _SupplierPicker({required this.selectedId, required this.onSelected});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final suppliers = ref.watch(suppliersProvider);
-    return suppliers.when(
-      loading: () => const LinearProgressIndicator(),
-      error: (e, _) => Text('$e'),
-      data: (list) => list.isEmpty
-          ? const Card(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Text('Önce bir tedarikçi ekleyin.'),
-              ),
-            )
-          : DropdownButtonFormField<String>(
-              initialValue: selectedId,
-              decoration: const InputDecoration(labelText: 'Tedarikçi'),
-              items: [
-                for (final s in list)
-                  DropdownMenuItem(value: s.id, child: Text(s.title)),
-              ],
-              onChanged: (id) => id == null ? null : onSelected(id),
-            ),
-    );
-  }
-}
-
 class _ProductPicker extends ConsumerWidget {
   final String? selectedId;
   final ValueChanged<String> onSelected;
@@ -301,10 +272,3 @@ class _ProductPicker extends ConsumerWidget {
     );
   }
 }
-
-final suppliersProvider = FutureProvider.autoDispose<List<Supplier>>((
-  ref,
-) async {
-  final db = await ref.watch(databaseProvider.future);
-  return (db.select(db.suppliers)..where((s) => s.isActive.equals(true))).get();
-});

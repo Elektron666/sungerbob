@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -126,6 +127,30 @@ final autoBackupPolicyProvider = FutureProvider(
     settings: await ref.watch(settingsRepositoryProvider.future),
   ),
 );
+
+// -------------------------------------------------------------- cari kartlar
+
+/// Etkin tedarikçiler. Alış ve kesim ekranları buradan besleniyor.
+final suppliersProvider = FutureProvider.autoDispose<List<Supplier>>((
+  ref,
+) async {
+  final db = await ref.watch(databaseProvider.future);
+  return (db.select(db.suppliers)
+        ..where((s) => s.isActive.equals(true))
+        ..orderBy([(s) => OrderingTerm.asc(s.title)]))
+      .get();
+});
+
+/// Etkin müşteriler. Satış ve tahsilat ekranları buradan besleniyor.
+final customersProvider = FutureProvider.autoDispose<List<Customer>>((
+  ref,
+) async {
+  final db = await ref.watch(databaseProvider.future);
+  return (db.select(db.customers)
+        ..where((c) => c.isActive.equals(true))
+        ..orderBy([(c) => OrderingTerm.asc(c.title)]))
+      .get();
+});
 
 // ----------------------------------------------------------------- kurulum
 

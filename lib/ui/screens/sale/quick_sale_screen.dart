@@ -9,6 +9,7 @@ import '../../../domain/core/quantity.dart';
 import '../../../domain/service/vat.dart';
 import '../../format/tr_format.dart';
 import '../../providers/app_providers.dart';
+import '../master/party_form.dart';
 import '../../theme/app_theme.dart';
 import '../finance/customers_screen.dart';
 import '../home/home_screen.dart';
@@ -259,6 +260,8 @@ class _CustomerPicker extends ConsumerWidget {
 
   const _CustomerPicker({required this.selected, required this.onSelected});
 
+  static const _newCustomer = '__yeni_musteri__';
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final customers = ref.watch(customerBalancesProvider);
@@ -267,8 +270,17 @@ class _CustomerPicker extends ConsumerWidget {
       loading: () => const LinearProgressIndicator(),
       error: (e, _) => Text('$e'),
       data: (rows) => DropdownButtonFormField<String>(
-        initialValue: selected?.id,
-        decoration: const InputDecoration(labelText: 'Müşteri'),
+        initialValue: rows.any((r) => r.id == selected?.id)
+            ? selected?.id
+            : null,
+        isExpanded: true,
+        decoration: InputDecoration(
+          labelText: 'Müşteri',
+          helperText: rows.isEmpty
+              ? 'Henüz müşteri yok — listeden ekleyin'
+              : null,
+        ),
+        hint: const Text('Müşteri seçin'),
         items: [
           for (final row in rows)
             DropdownMenuItem(
@@ -278,9 +290,29 @@ class _CustomerPicker extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+          // Liste boşken satış yapılamıyordu; kart açmanın yolu buradan.
+          const DropdownMenuItem(
+            value: _newCustomer,
+            child: Row(
+              children: [
+                Icon(Icons.add, size: 18),
+                SizedBox(width: 8),
+                Text('Yeni müşteri ekle'),
+              ],
+            ),
+          ),
         ],
-        onChanged: (id) {
+        onChanged: (id) async {
           if (id == null) return;
+          if (id == _newCustomer) {
+            final created = await openPartyForm(context, supplier: false);
+            if (created == null) return;
+            ref.invalidate(customerBalancesProvider);
+            final refreshed = await ref.read(customerBalancesProvider.future);
+            final row = refreshed.where((r) => r.id == created).firstOrNull;
+            if (row != null) onSelected(row);
+            return;
+          }
           onSelected(rows.firstWhere((r) => r.id == id));
         },
       ),

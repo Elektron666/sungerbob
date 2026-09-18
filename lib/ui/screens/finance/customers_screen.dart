@@ -10,6 +10,7 @@ import '../../../data/repo/stock_queries.dart';
 import '../../../domain/core/money.dart';
 import '../../format/tr_format.dart';
 import '../../providers/app_providers.dart';
+import '../master/party_form.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 
@@ -30,6 +31,14 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Cari')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          await openPartyForm(context, supplier: false);
+          ref.invalidate(customerBalancesProvider);
+        },
+        icon: const Icon(Icons.person_add_alt),
+        label: const Text('Yeni müşteri'),
+      ),
       body: m.Column(
         children: [
           Padding(

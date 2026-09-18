@@ -9,6 +9,7 @@ import '../../format/tr_format.dart';
 import '../../providers/app_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../documents/pdf_share.dart';
 import '../sale/sale_return_screen.dart';
 
 /// Satışlar ve Alışlar (BRIEF §7 menüsü).
@@ -396,10 +397,32 @@ class DocumentDetailSheet extends ConsumerWidget {
                 // satış olduğu gibi durur (D-12).
                 if (sales && !doc.isCancelled) ...[
                   const SizedBox(height: 20),
-                  OutlinedButton.icon(
-                    onPressed: () => _openReturn(context, ref),
-                    icon: const Icon(Icons.assignment_return),
-                    label: const Text('İade al'),
+                  // Fişi müşteriye göndermek günlük iş; PDF Faz 3'te
+                  // yazılmıştı ama hiçbir ekrandan çağrılmıyordu.
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _sharePdf(context, ref),
+                          icon: const Icon(Icons.share_outlined),
+                          label: const Text(
+                            'Fişi paylaş',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _openReturn(context, ref),
+                          icon: const Icon(Icons.assignment_return),
+                          label: const Text(
+                            'İade al',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ],
@@ -407,6 +430,17 @@ class DocumentDetailSheet extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _sharePdf(BuildContext context, WidgetRef ref) async {
+    final db = await ref.read(databaseProvider.future);
+    final bytes = await buildSaleReceipt(db, doc.id);
+    if (!context.mounted) return;
+    await sharePdf(
+      context,
+      fileName: pdfFileName('SatisFisi', doc.docNo),
+      bytes: bytes,
     );
   }
 

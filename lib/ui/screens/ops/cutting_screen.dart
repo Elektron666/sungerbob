@@ -9,6 +9,7 @@ import '../../../data/repo/cutting_repository.dart';
 import '../../../data/repo/stock_queries.dart';
 import '../../../data/repo/unit_of_work.dart';
 import '../../../data/repo/variant_helper.dart';
+import '../../documents/pdf_share.dart';
 import '../../../domain/core/money.dart';
 import '../../../domain/core/quantity.dart';
 import '../../format/tr_format.dart';
@@ -71,8 +72,19 @@ class CuttingScreen extends ConsumerWidget {
                       ' · ${TrFormat.volume(order.sourceVolumeTotal)}',
                       style: context.labelStyle,
                     ),
-                    trailing: open
-                        ? TextButton(
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Kesimhaneye gidecek ölçü listesi. Kâğıda basılır
+                        // ya da WhatsApp'tan gönderilir; fiyat içermez.
+                        IconButton(
+                          tooltip: 'Kesim emrini paylaş',
+                          icon: const Icon(Icons.share_outlined),
+                          onPressed: () =>
+                              _sharePdf(context, ref, order.id, order.docNo),
+                        ),
+                        if (open)
+                          TextButton(
                             onPressed: () => Navigator.of(context).push(
                               MaterialPageRoute<void>(
                                 builder: (_) =>
@@ -80,12 +92,29 @@ class CuttingScreen extends ConsumerWidget {
                               ),
                             ),
                             child: const Text('Dönüş al'),
-                          )
-                        : null,
+                          ),
+                      ],
+                    ),
                   );
                 },
               ),
       ),
+    );
+  }
+
+  Future<void> _sharePdf(
+    BuildContext context,
+    WidgetRef ref,
+    String orderId,
+    String docNo,
+  ) async {
+    final db = await ref.read(databaseProvider.future);
+    final bytes = await buildCuttingOrderPdf(db, orderId);
+    if (!context.mounted) return;
+    await sharePdf(
+      context,
+      fileName: pdfFileName('KesimEmri', docNo),
+      bytes: bytes,
     );
   }
 

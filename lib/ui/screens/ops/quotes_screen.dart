@@ -11,6 +11,7 @@ import '../../providers/app_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../home/home_screen.dart' show dashboardProvider;
+import '../../documents/pdf_share.dart';
 import 'quote_form_screen.dart';
 
 /// Teklifler (SPEC §10 · FLOWS §5).
@@ -83,23 +84,66 @@ class QuotesScreen extends ConsumerWidget {
                           style: context.labelStyle,
                         ),
                       ),
-                      if (convertible)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: OutlinedButton.icon(
-                              onPressed: () => _convert(context, ref, q.id),
-                              icon: const Icon(Icons.point_of_sale, size: 18),
-                              label: const Text('Satışa çevir'),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                        child: Row(
+                          children: [
+                            // Teklifin işi müşteriye gitmek; PDF'i
+                            // paylaşamayan bir teklif ekranı yarımdır.
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => _sharePdf(context, ref, q.id),
+                                icon: const Icon(
+                                  Icons.share_outlined,
+                                  size: 18,
+                                ),
+                                label: const Text(
+                                  'PDF paylaş',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                             ),
-                          ),
+                            if (convertible) ...[
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: FilledButton.icon(
+                                  onPressed: () => _convert(context, ref, q.id),
+                                  icon: const Icon(
+                                    Icons.point_of_sale,
+                                    size: 18,
+                                  ),
+                                  label: const Text(
+                                    'Satışa çevir',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
+                      ),
                     ],
                   );
                 },
               ),
       ),
+    );
+  }
+
+  Future<void> _sharePdf(
+    BuildContext context,
+    WidgetRef ref,
+    String quoteId,
+  ) async {
+    final db = await ref.read(databaseProvider.future);
+    final quote = await db.select(db.salesQuotes).get();
+    final docNo = quote.firstWhere((q) => q.id == quoteId).docNo;
+    final bytes = await buildQuotePdf(db, quoteId);
+    if (!context.mounted) return;
+    await sharePdf(
+      context,
+      fileName: pdfFileName('Teklif', docNo),
+      bytes: bytes,
     );
   }
 

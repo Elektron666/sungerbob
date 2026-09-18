@@ -876,6 +876,46 @@ cihazda doğrulanmış değildi; testte görüldü. Yapılan düzeltmeler (etike
 esnemesi, rakamın kırpılmaması) her iki durumda da doğru düzeltmedir, ama
 hata tanımı bu kadar kesin anlatılmamalıydı.
 
+## K-11 · Faz 12 — belgeler nihayet paylaşılabiliyor
+
+Faz 11'in bekçileri ölü bağlantıyı ve taşmayı yakalıyordu. Elle yapılan
+gözden geçirme bir tanesini daha buldu: **`PdfDocuments` hiçbir ekrandan
+çağrılmıyordu.** Dört belge (satış fişi, teklif, kesim emri, cari ekstre)
+Faz 3'te yazılmış, testleri de vardı — ama kullanıcı hiçbirine
+ulaşamıyordu. BRIEF §5'in "WhatsApp'a doğrudan paylaşılır" sözü boşta
+duruyordu.
+
+**Paylaşılamayan bir belge, olmayan bir belgedir.** Bu, SK-21'in ve
+K-04'ün aynı dersi: iş mantığının testten geçmesi, kullanıcının o işi
+yapabildiğini göstermez. Bekçi testleri rotayı ve taşmayı yakalıyor ama
+"yazılmış ama hiç çağrılmamış kod"u yakalamıyor — bu tur onu elle aradım.
+
+### Nereye bağlandı
+
+| Belge | Nereden |
+|---|---|
+| Satış fişi | Satışlar → belge → **Fişi paylaş** |
+| Fiyat teklifi | Teklifler → **PDF paylaş** |
+| Kesim emri | Kesim Emirleri → paylaş simgesi |
+| Cari ekstre | Cari Ekstre ekranı → başlıktaki paylaş simgesi |
+
+`lib/ui/documents/pdf_share.dart` tek yerde toplandı: firma bilgisi
+Ayarlar'dan okunur (logo dosyası silinmişse belge logosuz üretilir),
+kalemler veritabanından çekilir, ölçüsüz malzemede ölçü yazılmaz (D-22).
+
+### D-31 · Kesim emri fiyat içermez — **Karar (zaten öyleydi, korundu)**
+
+Kesimhanenin görmesi gereken yalnızca ölçü ve adettir. Alış fiyatını
+kesimhaneye göstermek işletmenin aleyhinedir; belge bu yüzden fiyatsız
+üretiliyor ve öyle kalıyor.
+
+### Test
+
+`test/ui/pdf_share_test.dart` belgeleri **veritabanındaki gerçek kayıttan**
+üretiyor ve çıktının `%PDF-` ile başladığını doğruluyor; ayrıca paylaş
+düğmelerinin ekranda durduğunu kontrol ediyor. Paylaşım sayfasının kendisi
+platform işi olduğu için çağrılmıyor.
+
 ## K-02 · Performans ölçümü (BRIEF §9 Faz 5)
 
 "50.000 satış satırıyla ana sayfa ve raporların makul sürede açıldığını ölç."

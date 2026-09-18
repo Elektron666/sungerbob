@@ -9,6 +9,7 @@ import '../../../data/db/enums.dart';
 import '../../../data/repo/stock_queries.dart';
 import '../../../domain/core/money.dart';
 import '../../format/tr_format.dart';
+import '../../documents/pdf_share.dart';
 import '../../providers/app_providers.dart';
 import '../master/party_form.dart';
 import '../../theme/app_theme.dart';
@@ -200,7 +201,18 @@ class CustomerLedgerScreen extends ConsumerWidget {
     final data = ref.watch(customerLedgerProvider(customerId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Cari Ekstre')),
+      appBar: AppBar(
+        title: const Text('Cari Ekstre'),
+        actions: [
+          // Ekstreyi müşteriye göndermek tahsilatın ilk adımı; "sana şu
+          // kadar borcun var" demenin en kibar yolu belgedir.
+          IconButton(
+            tooltip: 'Ekstreyi paylaş',
+            icon: const Icon(Icons.share_outlined),
+            onPressed: () => _shareStatement(context, ref),
+          ),
+        ],
+      ),
       body: data.when(
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(error: e),
@@ -278,6 +290,19 @@ class CustomerLedgerScreen extends ConsumerWidget {
     LedgerDocType.reversal => 'İptal',
     _ => docType,
   };
+}
+
+extension on CustomerLedgerScreen {
+  Future<void> _shareStatement(BuildContext context, WidgetRef ref) async {
+    final db = await ref.read(databaseProvider.future);
+    final bytes = await buildCustomerStatement(db, customerId);
+    if (!context.mounted) return;
+    await sharePdf(
+      context,
+      fileName: pdfFileName('CariEkstre', customerId),
+      bytes: bytes,
+    );
+  }
 }
 
 final class CustomerLedgerView {

@@ -124,7 +124,7 @@ Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
 | **Faz 4 — Analiz ve raporlar** | ✅ müşteri/ürün analizi, kârlılık, CSV |
 | **Faz 5 — Yayına alma** | ✅ kılavuzlar, imzalama, performans ölçümü |
 
-**399 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
+**401 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
 Şema sürümü **2** (ürün birimi); `drift_schemas/` altında v1 ve v2 anlık
 görüntüsü, `test/data/generated_migrations/` altında üretilmiş yardımcı var.
 
@@ -243,6 +243,15 @@ Faz 11'de eklenenler (K-10 — bekçiler):
 - `test/ui/screens_smoke_test.dart` — 28 ekranı boş veritabanıyla 360×640 ve
   411×891'de çizer (D-30). Test yazı tipi cihazdakinden geniş olduğu için
   **temkinli** bir sınırdır; büyük yazı tipi ayarına da güvence verir.
+
+Faz 12'de eklenenler (K-11 — belge paylaşımı):
+
+- `ui/documents/pdf_share.dart` — dört PDF belgesi nihayet arayüze bağlandı:
+  satış fişi (Satışlar → belge), teklif (Teklifler), kesim emri (Kesim
+  Emirleri), cari ekstre (Cari Ekstre başlığı). Hepsi WhatsApp'a
+  paylaşılabiliyor (BRIEF §5).
+- Firma bilgisi Ayarlar'dan okunur; logo dosyası silinmişse belge logosuz
+  üretilir. Kesim emri fiyat içermez (D-31).
 
 **Kalan işler:**
 

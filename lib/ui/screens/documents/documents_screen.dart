@@ -19,12 +19,16 @@ class DocumentsScreen extends StatelessWidget {
   /// true: satışlar, false: alışlar.
   final bool sales;
 
-  const DocumentsScreen({super.key, required this.sales});
+  /// Açılışta detayı gösterilecek belge. Vade bildirimine dokunan kullanıcı
+  /// listede belgeyi aramak zorunda kalmasın diye var.
+  final String? openDocId;
+
+  const DocumentsScreen({super.key, required this.sales, this.openDocId});
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(sales ? 'Satışlar' : 'Alışlar')),
-    body: _DocumentList(sales: sales),
+    body: _DocumentList(sales: sales, openDocId: openDocId),
   );
 }
 
@@ -104,12 +108,41 @@ final documentsProvider = FutureProvider.autoDispose
       ];
     });
 
-class _DocumentList extends ConsumerWidget {
+class _DocumentList extends ConsumerStatefulWidget {
   final bool sales;
-  const _DocumentList({required this.sales});
+  final String? openDocId;
+  const _DocumentList({required this.sales, this.openDocId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_DocumentList> createState() => _DocumentListState();
+}
+
+class _DocumentListState extends ConsumerState<_DocumentList> {
+  /// Bildirimden gelen belge yalnızca bir kez açılır; kullanıcı kapattıktan
+  /// sonra liste her yeniden çizildiğinde tekrar açılmamalı.
+  bool _opened = false;
+
+  bool get sales => widget.sales;
+
+  void _openRequested(List<DocumentRow> list) {
+    final id = widget.openDocId;
+    if (_opened || id == null) return;
+    final doc = list.where((d) => d.id == id).firstOrNull;
+    if (doc == null) return;
+
+    _opened = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (_) => DocumentDetailSheet(sales: sales, doc: doc),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final docs = ref.watch(documentsProvider(sales));
     final scheme = Theme.of(context).colorScheme;
 
@@ -119,60 +152,65 @@ class _DocumentList extends ConsumerWidget {
         error: e,
         onRetry: () => ref.invalidate(documentsProvider(sales)),
       ),
-      data: (list) => list.isEmpty
-          ? EmptyState(
-              icon: sales ? Icons.receipt_long : Icons.local_shipping_outlined,
-              title: sales ? 'Henüz satış yok' : 'Henüz alış yok',
-              description: sales
-                  ? 'İlk satışını girdiğinde burada listelenir.'
-                  : 'Stok girişi yaptığında burada listelenir.',
-            )
-          : RefreshIndicator(
-              onRefresh: () async => ref.invalidate(documentsProvider(sales)),
-              child: ListView.separated(
-                itemCount: list.length,
-                separatorBuilder: (_, _) => const Divider(height: 1),
-                itemBuilder: (context, i) {
-                  final doc = list[i];
-                  return ListTile(
-                    title: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            doc.partyTitle,
-                            overflow: TextOverflow.ellipsis,
-                            style: doc.isCancelled
-                                ? TextStyle(
-                                    decoration: TextDecoration.lineThrough,
-                                    color: scheme.onSurfaceVariant,
-                                  )
-                                : null,
+      data: (list) {
+        _openRequested(list);
+        return list.isEmpty
+            ? EmptyState(
+                icon: sales
+                    ? Icons.receipt_long
+                    : Icons.local_shipping_outlined,
+                title: sales ? 'Henüz satış yok' : 'Henüz alış yok',
+                description: sales
+                    ? 'İlk satışını girdiğinde burada listelenir.'
+                    : 'Stok girişi yaptığında burada listelenir.',
+              )
+            : RefreshIndicator(
+                onRefresh: () async => ref.invalidate(documentsProvider(sales)),
+                child: ListView.separated(
+                  itemCount: list.length,
+                  separatorBuilder: (_, _) => const Divider(height: 1),
+                  itemBuilder: (context, i) {
+                    final doc = list[i];
+                    return ListTile(
+                      title: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              doc.partyTitle,
+                              overflow: TextOverflow.ellipsis,
+                              style: doc.isCancelled
+                                  ? TextStyle(
+                                      decoration: TextDecoration.lineThrough,
+                                      color: scheme.onSurfaceVariant,
+                                    )
+                                  : null,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          TrFormat.moneyWithCurrency(doc.grandTotal),
-                          style: context.numberStyle,
-                        ),
-                      ],
-                    ),
-                    subtitle: Text(
-                      '${doc.docNo} · ${TrFormat.date(doc.date)}'
-                      '${doc.dueDate == null ? '' : ' · vade ${TrFormat.date(doc.dueDate)}'}'
-                      '${doc.isCancelled ? ' · İPTAL' : ''}'
-                      '${doc.hasReturn ? ' · ${TrFormat.moneyWithCurrency(doc.returned)} iade' : ''}',
-                      style: context.labelStyle,
-                    ),
-                    onTap: () => showModalBottomSheet<void>(
-                      context: context,
-                      isScrollControlled: true,
-                      builder: (_) =>
-                          DocumentDetailSheet(sales: sales, doc: doc),
-                    ),
-                  );
-                },
-              ),
-            ),
+                          const SizedBox(width: 12),
+                          Text(
+                            TrFormat.moneyWithCurrency(doc.grandTotal),
+                            style: context.numberStyle,
+                          ),
+                        ],
+                      ),
+                      subtitle: Text(
+                        '${doc.docNo} · ${TrFormat.date(doc.date)}'
+                        '${doc.dueDate == null ? '' : ' · vade ${TrFormat.date(doc.dueDate)}'}'
+                        '${doc.isCancelled ? ' · İPTAL' : ''}'
+                        '${doc.hasReturn ? ' · ${TrFormat.moneyWithCurrency(doc.returned)} iade' : ''}',
+                        style: context.labelStyle,
+                      ),
+                      onTap: () => showModalBottomSheet<void>(
+                        context: context,
+                        isScrollControlled: true,
+                        builder: (_) =>
+                            DocumentDetailSheet(sales: sales, doc: doc),
+                      ),
+                    );
+                  },
+                ),
+              );
+      },
     );
   }
 }

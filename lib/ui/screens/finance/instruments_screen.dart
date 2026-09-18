@@ -24,12 +24,25 @@ import 'payment_screen.dart' show cashAccountBalancesProvider;
 /// çek bankaya verilebilir veya ciro edilebilir ama doğrudan "tahsil edildi"
 /// yapılamaz. Ekran yalnızca izin verilen geçişleri gösterir.
 class InstrumentsScreen extends ConsumerWidget {
-  const InstrumentsScreen({super.key});
+  /// Vade bildiriminden gelindiğinde açılacak sekmeyi belirler: verilen bir
+  /// evrak için "Verilen" sekmesi açılır. Evrakı listede aramak, bildirimin
+  /// amacını boşa çıkarırdı.
+  final String? focusInstrumentId;
+
+  const InstrumentsScreen({super.key, this.focusInstrumentId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final focused = focusInstrumentId == null
+        ? null
+        : ref.watch(instrumentByIdProvider(focusInstrumentId!)).value;
+
     return DefaultTabController(
       length: 2,
+      initialIndex:
+          focused != null && focused.direction == InstrumentDirection.outgoing
+          ? 1
+          : 0,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Çek & Senet'),
@@ -50,6 +63,14 @@ class InstrumentsScreen extends ConsumerWidget {
     );
   }
 }
+
+final instrumentByIdProvider = FutureProvider.autoDispose
+    .family<Instrument?, String>((ref, id) async {
+      final db = await ref.watch(databaseProvider.future);
+      return (db.select(
+        db.instruments,
+      )..where((i) => i.id.equals(id))).getSingleOrNull();
+    });
 
 final instrumentsProvider = FutureProvider.autoDispose
     .family<List<Instrument>, String>((ref, direction) async {

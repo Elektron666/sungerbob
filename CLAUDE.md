@@ -124,7 +124,7 @@ Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
 | **Faz 4 — Analiz ve raporlar** | ✅ müşteri/ürün analizi, kârlılık, CSV |
 | **Faz 5 — Yayına alma** | ✅ kılavuzlar, imzalama, performans ölçümü |
 
-**370 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
+**399 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
 Şema sürümü **2** (ürün birimi); `drift_schemas/` altında v1 ve v2 anlık
 görüntüsü, `test/data/generated_migrations/` altında üretilmiş yardımcı var.
 
@@ -234,6 +234,15 @@ Faz 10'da eklenenler (K-09 — fiyat listesi):
   eski versiyon silinmez, arşivlenir.
 - `PriceMemory.activeListPrice` + satış ekranında **liste fiyatı** ipucu;
   son satış fiyatının yanında durur, ikisi de dokununca doldurur (D-28)
+
+Faz 11'de eklenenler (K-10 — bekçiler):
+
+- `test/ui/routes_test.dart` — kaynağı tarayıp gidilen her rotanın tanımlı
+  olduğunu doğrular (D-29). İlk koşuşta vade bildirimlerinin iki ölü
+  rotasını buldu; ikisi de tanımlanıp işe yarar hâle getirildi.
+- `test/ui/screens_smoke_test.dart` — 28 ekranı boş veritabanıyla 360×640 ve
+  411×891'de çizer (D-30). Test yazı tipi cihazdakinden geniş olduğu için
+  **temkinli** bir sınırdır; büyük yazı tipi ayarına da güvence verir.
 
 **Kalan işler:**
 

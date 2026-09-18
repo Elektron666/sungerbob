@@ -196,17 +196,30 @@ class _WasteScreenState extends ConsumerState<WasteScreen> {
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(16),
+              // İki düğme dar telefonda yan yana sığmıyordu. Artık kalan
+              // alanı paylaşıyorlar; metin sığmazsa kırpılır, düğme
+              // ekrandan taşmaz.
               child: Row(
                 children: [
-                  OutlinedButton.icon(
-                    onPressed: _saving ? null : _addLine,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Satır ekle'),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _saving ? null : _addLine,
+                      icon: const Icon(Icons.add),
+                      label: const Text(
+                        'Satır ekle',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
-                  const Spacer(),
-                  FilledButton(
-                    onPressed: (_saving || _lines.isEmpty) ? null : _save,
-                    child: const Text('Fireyi kaydet'),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: (_saving || _lines.isEmpty) ? null : _save,
+                      child: const Text(
+                        'Fireyi kaydet',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
                 ],
               ),

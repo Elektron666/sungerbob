@@ -479,15 +479,20 @@ class _MoneyRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 6),
+    // Etiket esner ve gerekirse kırpılır; rakam asla kırpılmaz. Uzun
+    // etiketler ve büyük yazı tipi ayarında satır taşıyordu.
     child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: emphasis
-              ? Theme.of(context).textTheme.titleSmall
-              : context.labelStyle,
+        Expanded(
+          child: Text(
+            label,
+            overflow: TextOverflow.ellipsis,
+            style: emphasis
+                ? Theme.of(context).textTheme.titleSmall
+                : context.labelStyle,
+          ),
         ),
+        const SizedBox(width: 12),
         SensitiveValue(
           hidden: hidden,
           value: TrFormat.moneyWithCurrency(value),
@@ -510,9 +515,15 @@ class _TextRow extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
     child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: context.labelStyle),
+        Expanded(
+          child: Text(
+            label,
+            overflow: TextOverflow.ellipsis,
+            style: context.labelStyle,
+          ),
+        ),
+        const SizedBox(width: 12),
         Text(value, style: context.numberStyle),
       ],
     ),

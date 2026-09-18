@@ -109,15 +109,18 @@ final class DueDateNotifier {
       final notifyAt = _dayBefore(due);
       if (notifyAt.isBefore(reference)) continue;
 
+      final saleId = row.read<String>('id');
       result.add(
         PendingNotification(
-          id: 'sale-${row.read<String>('id')}',
+          id: 'sale-$saleId',
           title: 'Yarın vadesi dolan alacak',
           body:
               '${row.read<String>('title')} · '
               '${_money(Money.fromStored(row.read<int>('remaining')))} TL',
           scheduledAt: notifyAt,
-          route: '/sales/${row.read<String>('id')}',
+          // Bildirime dokunan kullanıcı doğrudan o belgeyi görür; listede
+          // aramak zorunda kalmaz.
+          route: '/sales/$saleId',
         ),
       );
     }

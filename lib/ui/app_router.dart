@@ -50,6 +50,13 @@ GoRouter buildRouter() => GoRouter(
     GoRoute(path: '/payment/new', builder: (_, _) => const PaymentScreen()),
     GoRoute(path: '/accounts', builder: (_, _) => const AccountsScreen()),
     GoRoute(path: '/instruments', builder: (_, _) => const InstrumentsScreen()),
+    // Vade bildirimine dokunulunca gelinen rota. Tanımlı olmadığı için
+    // bildirim "sayfa bulunamadı" veriyordu (routes_test).
+    GoRoute(
+      path: '/instruments/:id',
+      builder: (_, state) =>
+          InstrumentsScreen(focusInstrumentId: state.pathParameters['id']),
+    ),
     GoRoute(
       path: '/collection/new',
       builder: (_, _) => const CollectionScreen(),
@@ -65,6 +72,11 @@ GoRouter buildRouter() => GoRouter(
     GoRoute(
       path: '/sales',
       builder: (_, _) => const DocumentsScreen(sales: true),
+    ),
+    GoRoute(
+      path: '/sales/:id',
+      builder: (_, state) =>
+          DocumentsScreen(sales: true, openDocId: state.pathParameters['id']),
     ),
     GoRoute(
       path: '/purchases',

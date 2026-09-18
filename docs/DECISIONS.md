@@ -826,6 +826,56 @@ Fiyat alanının altında artık iki satır olabilir:
 (K-05'teki gerekçe aynen geçerli). İkisi farklı olduğunda pazarlığın nerede
 bittiği görünür hâle gelir — toptan süngercide asıl bilgi budur.
 
+## K-10 · Faz 11 — bekçiler: ölü bağlantı ve taşma
+
+Bu tur yeni özellik değil, **aynı hatayı bir daha yapmayı imkânsız kılmak**
+üzerineydi. İki hata sınıfı tekrar tekrar çıkıyordu ve ikisi de tesadüfen
+bulunuyordu.
+
+### D-29 · Ölü bağlantı testi kaynağı tarar — **Karar**
+
+Ana sayfadaki büyüteç bir zamanlar `/search`'e gidiyordu ama rota tanımlı
+değildi: düğme hiçbir şey yapmıyordu. Arama sonuçları da olmayan iki rotaya
+bağlıydı. Elle tutulan bir rota listesi bunu yakalayamaz — yeni düğme
+eklerken listeye eklemeyi unutursun.
+
+`test/ui/routes_test.dart` artık `lib/` içindeki bütün
+`context.push('/…')`, `context.go('/…')` ve menü tablolarındaki
+`route: '/…'` metinlerini tarayıp hepsinin yönlendiricide karşılığı
+olduğunu doğruluyor.
+
+**İlk koşuşta iki gerçek ölü bağlantı buldu:** vade bildirimleri
+`/instruments/:id` ve `/sales/:id` rotalarına gidiyordu, ikisi de tanımsızdı.
+Yani "yarın tahsil edilecek evrak" bildirimine dokunan kullanıcı
+"sayfa bulunamadı" ekranına düşüyordu. Rotalar tanımlandı ve gerçekten işe
+yarayacak biçimde bağlandı: satış bildirimi doğrudan o belgenin detayını
+açar, evrak bildirimi doğru sekmeyi (Alınan/Verilen) seçer.
+
+### D-30 · Her ekran iki telefon boyutunda çizilir — **Karar**
+
+`test/ui/screens_smoke_test.dart` 28 ekranı boş veritabanıyla 360×640 ve
+411×891 boyutlarında çiziyor. Flutter taşmayı test sırasında hata saydığı
+için ekranı çizmek tek başına yeterli bekçi. Boş veritabanı aynı zamanda
+"ekranlar boş durumla açılır" kuralını da sınıyor.
+
+İlk koşuşta Fire ekranındaki alt düğme satırı (110 px) ve rapor
+ekranındaki tutar satırları (60 px) taştı; ikisi de esnek hâle getirildi.
+
+**Dürüstlük notu — bu ölçüler cihazdaki ölçüler değil.** `flutter test`
+gerçek yazı tipini yüklemez; her karakter em boyutunda bir kare olarak
+çizilir, yani metinler cihazdakinden kabaca iki kat geniş görünür. Dolayısıyla:
+
+- Testte taşmayan bir ekran cihazda **kesinlikle** taşmaz.
+- Testte taşan bir ekran cihazda taşıyor olmayabilir.
+
+Bu bekçi bilerek **temkinli** tarafta duruyor: yazı tipi ayarını büyütmüş
+bir kullanıcının (bu uygulamanın kullanıcısı için hiç uzak ihtimal değil)
+gördüğü genişliklere yakın bir sınır koyuyor. Aynı sebeple K-07 ve K-08'de
+"dar telefonda taşıyordu" diye anlatılan 14 ve 16 piksellik taşmalar da
+cihazda doğrulanmış değildi; testte görüldü. Yapılan düzeltmeler (etiketin
+esnemesi, rakamın kırpılmaması) her iki durumda da doğru düzeltmedir, ama
+hata tanımı bu kadar kesin anlatılmamalıydı.
+
 ## K-02 · Performans ölçümü (BRIEF §9 Faz 5)
 
 "50.000 satış satırıyla ana sayfa ve raporların makul sürede açıldığını ölç."

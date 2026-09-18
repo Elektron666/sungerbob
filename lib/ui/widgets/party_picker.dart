@@ -76,10 +76,16 @@ class PartyPicker extends ConsumerWidget {
             DropdownMenuItem(
               value: _newValue,
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.add, size: 18),
                   const SizedBox(width: 8),
-                  Text(supplier ? 'Yeni tedarikçi ekle' : 'Yeni müşteri ekle'),
+                  Flexible(
+                    child: Text(
+                      supplier ? 'Yeni tedarikçi ekle' : 'Yeni müşteri ekle',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
             ),

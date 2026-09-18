@@ -294,10 +294,16 @@ class _CustomerPicker extends ConsumerWidget {
           const DropdownMenuItem(
             value: _newCustomer,
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.add, size: 18),
                 SizedBox(width: 8),
-                Text('Yeni müşteri ekle'),
+                Flexible(
+                  child: Text(
+                    'Yeni müşteri ekle',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),

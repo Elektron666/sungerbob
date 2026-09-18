@@ -124,7 +124,7 @@ Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
 | **Faz 4 — Analiz ve raporlar** | ✅ müşteri/ürün analizi, kârlılık, CSV |
 | **Faz 5 — Yayına alma** | ✅ kılavuzlar, imzalama, performans ölçümü |
 
-**322 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
+**330 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
 
 Faz 1'de hazır olanlar:
 
@@ -185,6 +185,9 @@ Faz 5 sonrası eklenenler:
 - `data/backup/backup_password_store.dart` — yedek şifresi güvenli depoda
 - `data/repo/settings_repository.dart` — PIN karması, maliyet yöntemi kilidi
 
-**Kalan işler:** Google Drive API istemcisi (SK-12 — kullanıcıdan OAuth
-istemci kimliği bekleniyor), teklif oluşturma formu (liste ve satışa çevirme
-hazır; yeni teklif şimdilik hızlı satış ekranından geçiyor).
+**Kalan işler** (iş mantığı ve testleri hazır, ekranı yok — K-04):
+
+- Ödeme (tedarikçiye), Çek & Senet, Kasa & Banka, Fiyat Listeleri, İade
+- Satış iptali (repository'de de yok; iade doğru iş kuralı)
+- Teklif oluşturma formu (liste ve satışa çevirme hazır)
+- Google Drive API istemcisi (SK-12 — OAuth istemci kimliği bekleniyor)

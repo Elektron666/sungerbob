@@ -499,6 +499,66 @@ sürülebiliyorsa tamamdır.
 Testler artık **boş veritabanından başlayıp** kart açmayı ve stok girişi
 ekranındaki açılır listeden kart açıp seçmeyi doğruluyor.
 
+## K-04 · Ürün gözden geçirmesi: neyin eksik olduğu
+
+Kullanıcı "çok karmaşık ve düzensiz" dedi ve haklıydı. Hataları tek tek
+kovalamayı bırakıp uygulamanın tamamına bakınca asıl tablo çıktı: **sekiz
+repository'nin iş mantığı ve testleri hazırdı ama hiç ekranı yoktu.**
+
+| Eksik | Kullanıcı için anlamı |
+|---|---|
+| **Satışlar listesi** | Satış kaydediliyor, bir daha görülemiyor |
+| **Alışlar listesi** | Aynısı |
+| Ödeme (tedarikçiye) | Mal alınıyor ama borç ödenemiyor |
+| Çek & Senet | Toptan süngercilikte olmazsa olmaz |
+| Kasa & Banka | Paranın nerede olduğu görünmüyor |
+| Fiyat listeleri | — |
+| İade | — |
+| Satış iptali | Yanlış kayıt düzeltilemiyor |
+
+**"Dün kime ne sattım?" sorusunun cevabı olmayan bir defter, defter
+değildir.** Bu turda ilk ikisi kapatıldı.
+
+### Yapılanlar
+
+**Satışlar ve Alışlar** (`ui/screens/documents/`) — tek ekran deseni ikisine
+de hizmet eder: liste + kalem detayı + toplamlar. İptal edilmiş belge üstü
+çizili görünür. Satış ve alış başlıkları tek sorguda cari adıyla birleşik
+çekilir; liste 200 satırla sınırlı, en yeni üstte.
+
+**Menü gruplandı** — 13 düz satır "karmaşık ve düzensiz" hissinin doğrudan
+kaynağıydı. Başlıklar işin ritmine göre: Kayıtlar · Depo · Cari · Yedekleme ·
+Kurulum.
+
+**İlk adımlar kartı** (`ui/widgets/first_steps.dart`) — ilk açılışta her
+ekran boş bir durum gösteriyor ve kullanıcı nereden başlayacağını
+bilmiyordu. Kart dört adımı işin doğal sırasıyla verir: tedarikçi → stok →
+müşteri → satış. Her adım ilgili ekrana götürür, tamamlananlar üstü çizilir,
+**hepsi bitince kart tamamen kaybolur.** Kalıcı bir öğretici değil, yalnızca
+başlangıç iskelesi.
+
+### Yol boyunca çıkan üç gerçek hata
+
+1. **Alış ekranında 66 piksel taşma** (411 px genişlikte). Özet satırında
+   uzun etiket ve uzun tutar yan yana sığmıyordu. Etiket artık esner ve
+   kısalır, rakam esnemez — kısaltılacaksa etiket kısaltılır.
+2. **"Tedarikçi, ürün, ölçü, adet ve fiyat gerekli"** — hepsini tek torbaya
+   koyan bir mesaj, hangisinin eksik olduğunu bulduramıyordu. Artık eksik
+   olan adıyla söylenir ("Sünger çeşidi seçin").
+3. **Açılır menüdeki "Yeni ... ekle" satırı taşıyordu**; ikon + metin dar
+   menüde sığmıyordu.
+
+### Çekirdek döngü testi
+
+`test/ui/core_loop_test.dart` — **boş veritabanından** başlar, hiçbir veri
+hazırlamaz, hiçbir repository'yi doğrudan çağırmaz: yalnızca ekranlara
+dokunur. Tedarikçi kartını açılır listeden açar, ölçü ve fiyatı girer,
+kaydeder ve 2,8 m³'ün gerçekten stoğa düştüğünü doğrular.
+
+Bu testin var olma sebebi SK-21'in dersi: **iş mantığının testten geçmesi,
+ekranın kullanılabilir olduğunu göstermez.** Bir akış ancak sıfırdan, boş
+veritabanıyla baştan sona sürülebiliyorsa tamamdır.
+
 ## K-02 · Performans ölçümü (BRIEF §9 Faz 5)
 
 "50.000 satış satırıyla ana sayfa ve raporların makul sürede açıldığını ölç."

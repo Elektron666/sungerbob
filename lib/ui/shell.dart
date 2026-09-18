@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'widgets/common.dart';
+
 /// Alt navigasyon: Ana Sayfa · Stok · (+) · Cari · Menü (BRIEF §7).
 class AppShell extends StatelessWidget {
   final Widget child;
@@ -84,36 +86,79 @@ class AppShell extends StatelessWidget {
 }
 
 /// Menü (BRIEF §7).
+///
+/// Düz bir liste yerine **gruplanmış**: 13 satırı alt alta görmek kullanıcıya
+/// "karmaşık ve düzensiz" hissi veriyordu. Başlıklar işin ritmine göre:
+/// önce her gün bakılanlar, sonra ara sıra, en sonda kurulum.
 class MenuScreen extends StatelessWidget {
   const MenuScreen({super.key});
 
+  static const _groups = [
+    (
+      title: 'Kayıtlar',
+      items: [
+        (label: 'Satışlar', route: '/sales', icon: Icons.receipt_long),
+        (label: 'Alışlar', route: '/purchases', icon: Icons.inventory_2),
+        (label: 'Teklifler', route: '/quotes', icon: Icons.request_quote),
+      ],
+    ),
+    (
+      title: 'Depo',
+      items: [
+        (label: 'Kesim Emirleri', route: '/cutting', icon: Icons.content_cut),
+        (label: 'Sayım', route: '/count', icon: Icons.fact_check),
+        (label: 'Fire', route: '/waste', icon: Icons.delete_sweep),
+      ],
+    ),
+    (
+      title: 'Cari',
+      items: [
+        (
+          label: 'Tedarikçiler',
+          route: '/suppliers',
+          icon: Icons.local_shipping,
+        ),
+        (label: 'Raporlar', route: '/reports', icon: Icons.insights),
+      ],
+    ),
+    (
+      title: 'Yedekleme',
+      items: [
+        (label: 'Yedek Al', route: '/backup', icon: Icons.backup),
+        (label: 'Yedekten Yükle', route: '/restore', icon: Icons.restore),
+        (label: 'Yedekler', route: '/backups', icon: Icons.folder),
+      ],
+    ),
+    (
+      title: 'Kurulum',
+      items: [
+        (
+          label: 'Açılış İşlemleri',
+          route: '/opening',
+          icon: Icons.flag_outlined,
+        ),
+        (label: 'Ayarlar', route: '/settings', icon: Icons.settings),
+      ],
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    const items = [
-      (label: 'Tedarikçiler', route: '/suppliers', icon: Icons.local_shipping),
-      (label: 'Teklifler', route: '/quotes', icon: Icons.request_quote),
-      (label: 'Kesim Emirleri', route: '/cutting', icon: Icons.content_cut),
-      (label: 'Sayım', route: '/count', icon: Icons.fact_check),
-      (label: 'Fire', route: '/waste', icon: Icons.delete_sweep),
-      (label: 'Raporlar', route: '/reports', icon: Icons.insights),
-      (label: 'Açılış İşlemleri', route: '/opening', icon: Icons.flag_outlined),
-      (label: 'Yedek Al', route: '/backup', icon: Icons.backup),
-      (label: 'Yedekten Yükle', route: '/restore', icon: Icons.restore),
-      (label: 'Yedekler', route: '/backups', icon: Icons.folder),
-      (label: 'Ayarlar', route: '/settings', icon: Icons.settings),
-    ];
-
     return Scaffold(
       appBar: AppBar(title: const Text('Menü')),
       body: ListView(
+        padding: const EdgeInsets.only(bottom: 32),
         children: [
-          for (final item in items)
-            ListTile(
-              leading: Icon(item.icon),
-              title: Text(item.label),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.push(item.route),
-            ),
+          for (final group in _groups) ...[
+            SectionHeader(title: group.title),
+            for (final item in group.items)
+              ListTile(
+                leading: Icon(item.icon),
+                title: Text(item.label),
+                trailing: const Icon(Icons.chevron_right, size: 18),
+                onTap: () => context.push(item.route),
+              ),
+          ],
         ],
       ),
     );

@@ -7,6 +7,7 @@ import '../../format/tr_format.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../widgets/common.dart';
+import '../../widgets/first_steps.dart';
 import '../../widgets/signature.dart';
 import '../lock/pin_lock_screen.dart';
 import 'backup_status_band.dart';
@@ -55,6 +56,7 @@ class HomeScreen extends ConsumerWidget {
               padding: EdgeInsets.fromLTRB(16, 20, 16, 4),
               child: DailyQuoteCard(),
             ),
+            const FirstStepsCard(),
             const _QuickActions(),
             switch (snapshot) {
               AsyncData(:final value) => _DashboardCards(

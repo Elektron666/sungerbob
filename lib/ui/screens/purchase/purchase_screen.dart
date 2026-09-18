@@ -74,12 +74,23 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
     final price = TrFormat.parseUnitPrice(_priceController.text);
     final pieces = TrFormat.parsePieces(_piecesController.text);
 
-    if (supplierId == null ||
+    // Eksik olanı **adıyla** söyle. "Şunlar gerekli" diye hepsini sıralamak
+    // kullanıcıya hangisinin eksik olduğunu bulduramıyor.
+    final missing = switch (null) {
+      _ when supplierId == null => 'Tedarikçi seçin',
+      _ when productId == null => 'Sünger çeşidi seçin',
+      _ when volume == null => 'En, boy, kalınlık ve adet girin',
+      _ when pieces == null || pieces <= 0 => 'Adet girin',
+      _ when price == null => 'Birim fiyat (TL/m³) girin',
+      _ => null,
+    };
+    if (missing != null ||
+        supplierId == null ||
         productId == null ||
         volume == null ||
         price == null ||
         pieces == null) {
-      setState(() => _error = 'Tedarikçi, ürün, ölçü, adet ve fiyat gerekli.');
+      setState(() => _error = missing ?? 'Eksik alan var');
       return;
     }
 
@@ -236,12 +247,22 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
     onChanged: (_) => setState(() {}),
   );
 
+  /// Etiket + rakam satırı.
+  ///
+  /// Etiket esner, rakam esnemez: dar telefonda uzun bir tutar satırı
+  /// taşırıyordu. Kısaltılacaksa etiket kısaltılır, rakam değil.
   Widget _row(BuildContext context, String label, String value) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
     child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: context.labelStyle),
+        Expanded(
+          child: Text(
+            label,
+            style: context.labelStyle,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 12),
         Text(value, style: context.numberStyle),
       ],
     ),
@@ -262,10 +283,16 @@ class _ProductPicker extends ConsumerWidget {
       error: (e, _) => Text('$e'),
       data: (list) => DropdownButtonFormField<String>(
         initialValue: selectedId,
+        // Uzun ürün adları dar telefonda satırı taşırıyordu.
+        isExpanded: true,
         decoration: const InputDecoration(labelText: 'Sünger çeşidi'),
+        hint: const Text('Çeşit seçin'),
         items: [
           for (final p in list)
-            DropdownMenuItem(value: p.id, child: Text(p.name)),
+            DropdownMenuItem(
+              value: p.id,
+              child: Text(p.name, overflow: TextOverflow.ellipsis),
+            ),
         ],
         onChanged: (id) => id == null ? null : onSelected(id),
       ),

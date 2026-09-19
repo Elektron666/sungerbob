@@ -512,7 +512,7 @@ Faz 13'ün taraması, `lib/data` içinde yazılmış ama arayüzden hiç
 | `AnalyticsQueries.customerAnalysis` | rapor | "Hangi müşteri ne kadar aldı, ne kadar kâr bıraktı" raporu yok |
 | `PriceMemory.lastPurchasePrice` | alış | Satışta olan "son fiyat" ipucu alışta yok |
 
-Sıra bende değil: hangisinin önce geleceğine kullanıcı karar vermeli.
+**Durum: kapandı (Faz 14, K-13).** Beşi de arayüze bağlandı.
 
 ## K-04 · Ürün gözden geçirmesi: neyin eksik olduğu
 
@@ -975,6 +975,69 @@ altına "KDV hariç" yazıldı.
 Aynı taramanın gösterdiği, ekranı olmayan diğer iş kuralları — teklif durumu
 (gönderildi/kabul/ret), sonradan gelen nakliye faturası, tahsilat iptali,
 müşteri analizi — **SK-22** olarak kaydedildi; hata değil, eksik.
+
+## K-13 · Faz 14 — SK-22'nin kapatılması
+
+Faz 13'ün taraması beş iş kuralının ekransız kaldığını göstermişti. Sırayı
+"günlük işi en çok kolaylaştıran önce" diye kurdum; beşi de kapandı.
+
+### Alışta son fiyat ipucu
+
+Satış ekranındaki "bu müşteriye en son kaça sattın" ipucunun alış
+karşılığı. Doldurmaz, hatırlatır: fabrika zam yapmışsa eski fiyatı sessizce
+tekrarlamak **yanlış maliyet** yazdırırdı — satıştaki gerekçenin aynısı,
+sonucu daha ağır.
+
+### D-33 · Teklif durumu: kural iki yerde birden — **Karar**
+
+Durum menüsü yalnızca izin verilen geçişi gösterir (taslak → gönderildi →
+kabul/ret), ama kural **repository'de de** denetlenir ve
+`InvalidQuoteTransitionException` atar. Ekranın izin verilmeyeni
+göstermemesi, iş kuralının kendisi değildir; ikinci bir ekran ya da bir
+otomasyon aynı metodu çağırdığında kural yine tutmalı.
+
+`CONVERTED` elle işaretlenemez: satışa çevirme stok ve cari hareketi üreten
+ayrı bir iş işlemidir, durum atlanarak elde edilemez. `EXPIRED` de elle
+konmaz — geçerlilik tarihi geçince sistem koyar.
+
+### D-34 · Tahsilat iptali sebebi zorunlu — **Karar**
+
+Sebep, ters kaydın açıklamasına yazılır ve ekstrede görünür. "Neden iptal
+edilmiş?" sorusunun cevabı defterin kendisinde durmalı; ayrı bir yere not
+almak zorunda kalan kullanıcı, o notu almaz.
+
+İptal edilmiş tahsilatta seçenek **hiç sunulmuyor** — hatayı yaptırıp sonra
+"zaten iptal edilmiş" demek yerine.
+
+### Sonradan gelen masraf
+
+Fabrikadan mal gelir, nakliye faturası bir hafta sonra gelir. O anda
+partinin bir kısmı satılmış olabilir; ekran ne olacağını açıkça yazıyor:
+stokta kalana düşen pay maliyeti artırır, satılmış kısma düşen pay dönem
+maliyet farkı olur, **geçmiş satışın kârı değişmez**.
+
+Testi rakama bakıyor: 2,8 m³'lük partiye 280 TL nakliye eklenince gerçek
+maliyet 2.500 → 2.600 TL/m³ çıkıyor, çıplak maliyet 2.500'de kalıyor
+(fabrikaya ödenen para o kadardı).
+
+Yol boyunca: masraf türleri (`'NAKLIYE'`) elle yazılmış metinlerdi.
+`PurchaseExpenseKind` enum'una alındı ve D-23'ün bekçisine eklendi.
+
+### Müşteri analizi
+
+`Raporlar → Müşteriler`. Ciro, brüt kâr, aldığı hacim, tahsilat, güncel
+borç, en çok aldığı çeşit, son satış ve **ortalama ödeme süresi**. Sonuncusu
+toptancının asıl sorusudur: vade kaç gün değil, parasını gerçekte kaç günde
+alıyor.
+
+Hiç hareketi olmayan cari listeye alınmıyor — boş satır rapor değildir.
+
+### `_TextRow` düzeltmesi
+
+Rapor satırlarında etiket esniyordu ama değer esnemiyordu; değer bir ürün
+adı ya da "henüz kapanmış belge yok" gibi bir cümle olabildiği için satır
+taşıyordu. Artık iki taraf da esniyor. **Para satırında rakam hâlâ
+kırpılmıyor** — orada kırpılan bilgi yanlış okunur.
 
 ## K-02 · Performans ölçümü (BRIEF §9 Faz 5)
 

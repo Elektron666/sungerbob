@@ -124,7 +124,7 @@ Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
 | **Faz 4 — Analiz ve raporlar** | ✅ müşteri/ürün analizi, kârlılık, CSV |
 | **Faz 5 — Yayına alma** | ✅ kılavuzlar, imzalama, performans ölçümü |
 
-**403 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
+**411 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
 Şema sürümü **2** (ürün birimi); `drift_schemas/` altında v1 ve v2 anlık
 görüntüsü, `test/data/generated_migrations/` altında üretilmiş yardımcı var.
 
@@ -262,9 +262,21 @@ Faz 13'te eklenenler (K-12 — ayarlar uygulanıyor):
   (eskiden yalnızca gösteriliyordu).
 - Alış ve teklif fiyat alanının altında "KDV hariç" yazıyor.
 
+Faz 14'te eklenenler (K-13 — SK-22 kapatıldı):
+
+- Alışta **son alış fiyatı** ipucu (satıştakinin karşılığı)
+- Teklif durumu: `Teklifler` listesindeki menüden gönderildi/kabul/ret.
+  Geçiş kuralı hem ekranda hem repository'de (D-33); `CONVERTED` elle
+  işaretlenemez.
+- Tahsilat iptali: `Cari Ekstre` → tahsilat satırı → iptal. Sebep zorunlu
+  (D-34), ters kayıt oluşur, kasa hareketi de tersine döner.
+- Sonradan gelen masraf: `Alışlar → belge → Masraf ekle`. Stokta kalana
+  düşen pay maliyeti artırır, satılmışa düşen pay dönem maliyet farkı olur.
+  `PurchaseExpenseKind` enum'u ve şema bekçisi eklendi.
+- `Raporlar → Müşteriler` — ciro, brüt kâr, borç, en çok aldığı çeşit ve
+  **ortalama ödeme süresi**; CSV olarak paylaşılabiliyor.
+
 **Kalan işler:**
 
 - Google Drive API istemcisi (SK-12 — OAuth istemci kimliği bekleniyor)
-- **SK-22** — ekranı olmayan beş iş kuralı: teklif durumu, sonradan gelen
-  nakliye faturası, tahsilat iptali, müşteri analizi, alışta son fiyat ipucu.
-  Hangisinin önce geleceğine kullanıcı karar vermeli.
+- Ekranı olmayan iş kuralı **kalmadı**.

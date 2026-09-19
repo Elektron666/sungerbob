@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../domain/core/quantity.dart';
 import '../../domain/service/vat.dart';
+import '../../data/auth/biometric_auth.dart';
 import '../../data/backup/auto_backup.dart';
 import '../../data/backup/backup_password_store.dart';
 import '../../data/backup/backup_service.dart';
@@ -243,4 +244,20 @@ final documentDefaultsProvider = FutureProvider<DocumentDefaults>((ref) async {
         ? PriceMode.incl
         : PriceMode.excl,
   );
+});
+
+/// Parmak izi / yüz doğrulaması. Testte sahte bir uygulamayla değiştirilir.
+final biometricAuthProvider = Provider<BiometricAuth>(
+  (ref) => LocalBiometricAuth(),
+);
+
+/// Kilit ekranında parmak izi düğmesi gösterilsin mi?
+///
+/// İki koşul birden: kullanıcı ayarlardan açmış olmalı **ve** cihazda
+/// kullanılabilir biyometri bulunmalı. Cihazdaki parmak izi silinmişse
+/// düğme kendiliğinden kaybolur; kullanıcı PIN'le girer.
+final biometricReadyProvider = FutureProvider<bool>((ref) async {
+  final settings = await ref.watch(settingsRepositoryProvider.future);
+  if (!await settings.isBiometricEnabled()) return false;
+  return ref.watch(biometricAuthProvider).isAvailable();
 });

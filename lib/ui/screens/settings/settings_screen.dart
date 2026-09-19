@@ -86,10 +86,18 @@ class SettingsScreen extends ConsumerWidget {
               subtitle: const Text('Drive, e-posta veya bilgisayara aktarım'),
               onTap: () => context.push('/settings/drive'),
             ),
+            const SectionHeader(title: 'Güvenlik'),
+            const _BiometricTile(),
             ListTile(
               leading: const Icon(Icons.warning_amber),
               title: const Text('Cihaz dışı yedek uyarı eşiği'),
               subtitle: Text('${map['backup_offsite_warn_days'] ?? '3'} gün'),
+              trailing: const Icon(Icons.chevron_right, size: 18),
+              onTap: () => _pickWarnDays(
+                context,
+                ref,
+                int.tryParse(map['backup_offsite_warn_days'] ?? '3') ?? 3,
+              ),
             ),
             const SectionHeader(title: 'Bildirimler'),
             const _NotificationStatusTile(),
@@ -232,6 +240,38 @@ class SettingsScreen extends ConsumerWidget {
     ref.invalidate(documentDefaultsProvider);
   }
 
+  /// Cihaz dışı yedek uyarısının kaç gün sonra çıkacağı.
+  Future<void> _pickWarnDays(
+    BuildContext context,
+    WidgetRef ref,
+    int current,
+  ) async {
+    final picked = await showDialog<int>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Uyarı eşiği'),
+        children: [
+          RadioGroup<int>(
+            groupValue: current,
+            onChanged: (v) => Navigator.of(context).pop(v),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final days in const [1, 3, 7, 14])
+                  RadioListTile<int>(value: days, title: Text('$days gün')),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    if (picked == null) return;
+
+    final settings = await ref.read(settingsRepositoryProvider.future);
+    await settings.setOffsiteWarnDays(picked);
+    ref.invalidate(settingsMapProvider);
+  }
+
   Future<void> _runIntegrityCheck(BuildContext context, WidgetRef ref) async {
     final messenger = ScaffoldMessenger.of(context);
     final service = await ref.read(integrityServiceProvider.future);
@@ -307,5 +347,56 @@ class _NotificationStatusTile extends ConsumerWidget {
         onTap: () => ref.invalidate(startupTasksProvider),
       ),
     );
+  }
+}
+
+/// Parmak izi ile açma anahtarı (BRIEF §5).
+///
+/// Açmadan önce parmak **gerçekten okutulur**: okunmayan bir biyometriyle
+/// ayarı açık bırakmak, kullanıcıya çalışmayan bir söz vermektir.
+class _BiometricTile extends ConsumerWidget {
+  const _BiometricTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsMapProvider).value ?? const {};
+    final enabled = settings['biometric_enabled'] == 'true';
+
+    return FutureBuilder<bool>(
+      future: ref.watch(biometricAuthProvider).isAvailable(),
+      builder: (context, snapshot) {
+        final available = snapshot.data ?? false;
+        return SwitchListTile(
+          secondary: const Icon(Icons.fingerprint),
+          title: const Text('Parmak izi ile aç'),
+          subtitle: Text(
+            available
+                ? 'PIN her zaman çalışmaya devam eder'
+                : 'Bu cihazda kayıtlı parmak izi bulunamadı',
+          ),
+          value: enabled && available,
+          onChanged: available ? (value) => _toggle(context, ref, value) : null,
+        );
+      },
+    );
+  }
+
+  Future<void> _toggle(BuildContext context, WidgetRef ref, bool value) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final settings = await ref.read(settingsRepositoryProvider.future);
+
+    if (value) {
+      final ok = await ref.read(biometricAuthProvider).authenticate();
+      if (!ok) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Parmak izi doğrulanamadı')),
+        );
+        return;
+      }
+    }
+
+    await settings.setBiometricEnabled(value);
+    ref.invalidate(settingsMapProvider);
+    ref.invalidate(biometricReadyProvider);
   }
 }

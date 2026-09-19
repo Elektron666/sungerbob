@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart' as sql;
 
 import '../db/app_database.dart';
+import '../repo/settings_repository.dart';
 import '../db/connection.dart';
 import '../db/database_key.dart';
 import '../db/enums.dart';
@@ -486,10 +487,11 @@ final class BackupService {
   }
 
   /// Ana sayfada kırmızı uyarı bandı gösterilmeli mi?
+  ///
+  /// Eşik `SettingsRepository`'den okunur: ayarın anahtarını iki yerde
+  /// yazmak, ikisinin ayrışmasının başlangıcıdır.
   Future<bool> shouldWarnAboutOffsiteBackup({DateTime? now}) async {
-    final threshold =
-        int.tryParse(await _settingValue('backup_offsite_warn_days') ?? '3') ??
-        3;
+    final threshold = await SettingsRepository(db).offsiteWarnDays();
     final days = await daysSinceOffsiteBackup(now: now);
     return days == null || days >= threshold;
   }

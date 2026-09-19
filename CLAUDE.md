@@ -124,7 +124,7 @@ Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
 | **Faz 4 — Analiz ve raporlar** | ✅ müşteri/ürün analizi, kârlılık, CSV |
 | **Faz 5 — Yayına alma** | ✅ kılavuzlar, imzalama, performans ölçümü |
 
-**411 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
+**417 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
 Şema sürümü **2** (ürün birimi); `drift_schemas/` altında v1 ve v2 anlık
 görüntüsü, `test/data/generated_migrations/` altında üretilmiş yardımcı var.
 
@@ -276,7 +276,19 @@ Faz 14'te eklenenler (K-13 — SK-22 kapatıldı):
 - `Raporlar → Müşteriler` — ciro, brüt kâr, borç, en çok aldığı çeşit ve
   **ortalama ödeme süresi**; CSV olarak paylaşılabiliyor.
 
+Faz 15'te eklenenler (K-14 — üçüncü bekçi ve parmak izi):
+
+- `test/data/unused_api_test.dart` — `lib/data/repo` ve `documents`
+  içindeki her genel metodun bir çağıranı olduğunu doğrular (D-35).
+  İstisnalar gerekçeleriyle `allowed` haritasında; liste "bilinen
+  eksikler"in kendiliğinden güncellenen kaydı.
+- `data/auth/biometric_auth.dart` + kilit ekranı — **parmak izi ile açma**
+  (BRIEF §5). PIN her zaman çalışır, başarısız okuma yanlış PIN sayılmaz,
+  ayar açılırken parmak gerçekten okutulur (D-36).
+- Ayarlar'da cihaz dışı yedek uyarı eşiği değiştirilebiliyor; eşiğin iki
+  yerden okunması birleştirildi.
+
 **Kalan işler:**
 
 - Google Drive API istemcisi (SK-12 — OAuth istemci kimliği bekleniyor)
-- Ekranı olmayan iş kuralı **kalmadı**.
+- Ekranı olmayan iş kuralı **kalmadı** (bekçi bunu artık kendi kolluyor).

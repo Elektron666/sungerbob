@@ -1039,6 +1039,59 @@ adı ya da "henüz kapanmış belge yok" gibi bir cümle olabildiği için satı
 taşıyordu. Artık iki taraf da esniyor. **Para satırında rakam hâlâ
 kırpılmıyor** — orada kırpılan bilgi yanlış okunur.
 
+## K-14 · Faz 15 — üçüncü bekçi ve parmak izi
+
+Bu gecenin en pahalı iki hatasını (PDF'lerin hiç çağrılmaması, KDV oranının
+koda gömülü olması) **elle tarayarak** buldum. Elle tarama ölçeklenmez.
+
+### D-35 · "Hiç çağrılmayan iş kuralı" testi — **Karar**
+
+`test/data/unused_api_test.dart`, `lib/data/repo` ve `lib/data/documents`
+içindeki her genel metodun `lib/` içinde **kendi dosyası dışından** bir
+çağıranı olduğunu doğrular.
+
+Ölçüt bilerek gevşek: yalnızca `lib/data` içinden çağrılan bir metot
+(`writeAudit`, `nextDocumentNumber`) altyapıdır, sorun değil. Aranan,
+**hiçbir yerden** çağrılmayandır — iki gerçek hatanın ikisi de öyleydi.
+
+İstisnalar `allowed` haritasında ve her birinin **gerekçesi yazılı**.
+Gerekçe yazılamıyorsa orada eksik bir ekran vardır; liste böylece
+"bilinen eksikler"in kendiliğinden güncellenen kaydı oluyor.
+
+Bu, Faz 11'in iki bekçisinin (ölü rota, taşma) üçüncüsü. Üçü birlikte şu
+soruyu kapatıyor: *yazdım, test ettim, ama kullanıcı ona ulaşabiliyor mu?*
+
+### D-36 · Parmak izi kilit açmayı **kolaylaştırır**, kilidi değiştirmez
+
+İlk koşuşta bekçinin bulduğu: `local_auth` bağımlılık listesindeydi,
+`isBiometricEnabled` ayarı yazılıydı, BRIEF §5 "local_auth + PIN" diyordu
+— ama hiçbir yerden çağrılmıyordu. Kilit yalnızca PIN'di ve paket boşuna
+taşınıyordu.
+
+Kurallar:
+
+- **PIN her zaman açık kalır.** Parmak okunmazsa, cihazdaki kayıt
+  silinirse ya da donanım bozulursa kullanıcı defterine erişemez duruma
+  düşmemeli. Parmak izi bir kolaylıktır, ikinci bir kilit değil.
+- **Başarısız okuma yanlış PIN sayılmaz** — deneme sayacını artırmaz.
+  Parmağını okutamamak, şifreyi bilmemek değildir.
+- **Ayarı açarken parmak gerçekten okutulur.** Okunmayan bir biyometriyle
+  ayarı açık bırakmak, kullanıcıya çalışmayan bir söz vermektir.
+- Cihazda kullanılabilir biyometri yoksa düğme **hiç görünmez**.
+- `biometricOnly: true` — cihazın kendi PIN'i sorulmaz; uygulamanın PIN'i
+  ayrı, ikisi karışırsa kullanıcı hangi dört haneyi gireceğini bilemez.
+
+Gerçek biyometri testte çalıştırılamadığı için doğrulayıcı bir arayüzün
+(`BiometricAuth`) arkasına alındı; testler karar mantığını sınıyor.
+
+### Ayarlar: cihaz dışı yedek uyarı eşiği
+
+Salt okunurdu, artık değiştirilebiliyor (1/3/7/14 gün). Bunu yaparken
+eşiğin **iki ayrı yerden** okunduğu ortaya çıktı: `SettingsRepository`
+üzerinden ve `BackupService` içinde ham sorguyla. İkincisi birinciyi
+kullanacak biçimde birleştirildi — ayarın anahtarını iki yerde yazmak,
+ikisinin ayrışmasının başlangıcıdır.
+
 ## K-02 · Performans ölçümü (BRIEF §9 Faz 5)
 
 "50.000 satış satırıyla ana sayfa ve raporların makul sürede açıldığını ölç."

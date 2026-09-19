@@ -51,13 +51,20 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
   Rate _vatRate = Rate.percent('20');
   bool _defaultsApplied = false;
 
+  /// Kullanıcı fiyat modunu bu belgede kendi eliyle değiştirdi mi?
+  ///
+  /// Ayar veritabanından **asenkron** gelir; ilk çizimde henüz yoktur.
+  /// Kullanıcı o arada moda dokunduysa, ayar geldiğinde seçimini geri almak
+  /// olmaz — girdiği rakamın anlamını habersiz değiştirirdi.
+  bool _priceModeTouched = false;
+
   /// Ayar okunduğunda bir kez uygulanır; sonrasında kullanıcının bu belgede
   /// yaptığı değişiklik korunur.
   void _applyDefaults(DocumentDefaults? defaults) {
     if (defaults == null || _defaultsApplied) return;
     _defaultsApplied = true;
     _vatRate = defaults.vatRate;
-    _priceMode = defaults.priceMode;
+    if (!_priceModeTouched) _priceMode = defaults.priceMode;
   }
 
   final _priceController = TextEditingController();
@@ -198,7 +205,10 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
                 ButtonSegment(value: PriceMode.incl, label: Text('Dahil')),
               ],
               selected: {_priceMode},
-              onSelectionChanged: (s) => setState(() => _priceMode = s.first),
+              onSelectionChanged: (s) => setState(() {
+                _priceMode = s.first;
+                _priceModeTouched = true;
+              }),
             ),
           ),
         ],

@@ -7,6 +7,9 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
     <!-- Yeniden başlatmadan sonra zamanlanmış bildirimler yeniden kurulur. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- Parmak izi ile kilit açma (BRIEF §5). İzin verilmezse uygulama
+         PIN'le çalışmaya devam eder; parmak izi düğmesi görünmez. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <application
         android:label="sungerbob"
         android:name="${applicationName}"

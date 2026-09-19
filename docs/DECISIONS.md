@@ -1084,6 +1084,18 @@ Kurallar:
 Gerçek biyometri testte çalıştırılamadığı için doğrulayıcı bir arayüzün
 (`BiometricAuth`) arkasına alındı; testler karar mantığını sınıyor.
 
+**Android tarafında iki şey eksikti ve hiçbir test bunu göremezdi:**
+
+- `MainActivity : FlutterActivity` idi. `local_auth` parmak izi ekranını
+  androidx `BiometricPrompt` ile açar ve bu bir `FragmentActivity` ister;
+  düz `FlutterActivity` ile çağrı cihazda `no_fragment_activity` hatasıyla
+  düşerdi. `FlutterFragmentActivity` yapıldı.
+- Manifest'te `USE_BIOMETRIC` izni yoktu.
+
+İkisi de yalnızca gerçek cihazda ortaya çıkacak hatalardı. Birim testi
+Dart tarafını doğruluyor ama platform yapılandırmasını göremiyor — bu
+sınırı bilerek not ediyorum.
+
 ### Ayarlar: cihaz dışı yedek uyarı eşiği
 
 Salt okunurdu, artık değiştirilebiliyor (1/3/7/14 gün). Bunu yaparken

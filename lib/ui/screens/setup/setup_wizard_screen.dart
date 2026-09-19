@@ -465,12 +465,25 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
         ),
       ),
       // Parmak izi seçeneği tuş takımının alanını yemesin diye tek satır.
-      SwitchListTile(
-        value: _draft.biometric,
-        onChanged: (v) => setState(() => _draft.biometric = v),
-        title: const Text('Parmak izi ile aç'),
-        dense: true,
-        contentPadding: EdgeInsets.zero,
+      // Cihazda kayıtlı parmak izi yoksa anahtar açılmaz: çalışmayacak bir
+      // seçeneği açtırmak kullanıcıya boş söz vermektir (D-36).
+      FutureBuilder<bool>(
+        future: ref.watch(biometricAuthProvider).isAvailable(),
+        builder: (context, snapshot) {
+          final available = snapshot.data ?? false;
+          return SwitchListTile(
+            value: _draft.biometric && available,
+            onChanged: available
+                ? (v) => setState(() => _draft.biometric = v)
+                : null,
+            title: const Text('Parmak izi ile aç'),
+            subtitle: available
+                ? null
+                : const Text('Bu cihazda kayıtlı parmak izi yok'),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+          );
+        },
       ),
     ],
   );

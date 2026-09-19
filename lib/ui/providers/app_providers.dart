@@ -1,10 +1,14 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../../domain/core/quantity.dart';
+import '../../domain/service/vat.dart';
+import '../../data/auth/biometric_auth.dart';
 import '../../data/backup/auto_backup.dart';
 import '../../data/backup/backup_password_store.dart';
 import '../../data/backup/backup_service.dart';
@@ -127,6 +131,30 @@ final autoBackupPolicyProvider = FutureProvider(
   ),
 );
 
+// -------------------------------------------------------------- cari kartlar
+
+/// Etkin tedarikçiler. Alış ve kesim ekranları buradan besleniyor.
+final suppliersProvider = FutureProvider.autoDispose<List<Supplier>>((
+  ref,
+) async {
+  final db = await ref.watch(databaseProvider.future);
+  return (db.select(db.suppliers)
+        ..where((s) => s.isActive.equals(true))
+        ..orderBy([(s) => OrderingTerm.asc(s.title)]))
+      .get();
+});
+
+/// Etkin müşteriler. Satış ve tahsilat ekranları buradan besleniyor.
+final customersProvider = FutureProvider.autoDispose<List<Customer>>((
+  ref,
+) async {
+  final db = await ref.watch(databaseProvider.future);
+  return (db.select(db.customers)
+        ..where((c) => c.isActive.equals(true))
+        ..orderBy([(c) => OrderingTerm.asc(c.title)]))
+      .get();
+});
+
 // ----------------------------------------------------------------- kurulum
 
 /// Kurulum sihirbazı tamamlandı mı? Uygulama açılışında ilk sorulan şey.
@@ -195,3 +223,41 @@ class AppLockNotifier extends Notifier<AppGate> {
     if (state == AppGate.ready) state = AppGate.locked;
   }
 }
+
+/// Belge girişinde kullanılan varsayılanlar (Ayarlar → İşletme).
+///
+/// Ekranlar KDV oranını koda gömülü %20 olarak tutuyordu: kullanıcı
+/// Ayarlar'da %10 seçse bile her satış %20 hesaplıyordu. Para hesabının
+/// ayarı görmezden gelmesi kabul edilemez (D-32).
+final class DocumentDefaults {
+  final Rate vatRate;
+  final PriceMode priceMode;
+
+  const DocumentDefaults({required this.vatRate, required this.priceMode});
+}
+
+final documentDefaultsProvider = FutureProvider<DocumentDefaults>((ref) async {
+  final settings = await ref.watch(settingsRepositoryProvider.future);
+  return DocumentDefaults(
+    vatRate: await settings.defaultVatRate(),
+    priceMode: await settings.defaultPriceMode() == 'INCL'
+        ? PriceMode.incl
+        : PriceMode.excl,
+  );
+});
+
+/// Parmak izi / yüz doğrulaması. Testte sahte bir uygulamayla değiştirilir.
+final biometricAuthProvider = Provider<BiometricAuth>(
+  (ref) => LocalBiometricAuth(),
+);
+
+/// Kilit ekranında parmak izi düğmesi gösterilsin mi?
+///
+/// İki koşul birden: kullanıcı ayarlardan açmış olmalı **ve** cihazda
+/// kullanılabilir biyometri bulunmalı. Cihazdaki parmak izi silinmişse
+/// düğme kendiliğinden kaybolur; kullanıcı PIN'le girer.
+final biometricReadyProvider = FutureProvider<bool>((ref) async {
+  final settings = await ref.watch(settingsRepositoryProvider.future);
+  if (!await settings.isBiometricEnabled()) return false;
+  return ref.watch(biometricAuthProvider).isAvailable();
+});

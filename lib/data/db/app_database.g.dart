@@ -4741,6 +4741,16 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
         type: DriftSqlType.int,
         requiredDuringInsert: true,
       ).withConverter<Rate>($ProductsTable.$converterpriceCoefficient);
+  static const VerificationMeta _unitMeta = const VerificationMeta('unit');
+  @override
+  late final GeneratedColumn<String> unit = GeneratedColumn<String>(
+    'unit',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(ProductUnit.m3),
+  );
   static const VerificationMeta _dnsMeta = const VerificationMeta('dns');
   @override
   late final GeneratedColumn<String> dns = GeneratedColumn<String>(
@@ -4850,6 +4860,7 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     name,
     nameNormalized,
     priceCoefficient,
+    unit,
     dns,
     foamType,
     defaultWidth,
@@ -4904,6 +4915,12 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
       );
     } else if (isInserting) {
       context.missing(_nameNormalizedMeta);
+    }
+    if (data.containsKey('unit')) {
+      context.handle(
+        _unitMeta,
+        unit.isAcceptableOrUnknown(data['unit']!, _unitMeta),
+      );
     }
     if (data.containsKey('dns')) {
       context.handle(
@@ -4978,6 +4995,10 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
           data['${effectivePrefix}price_coefficient'],
         )!,
       ),
+      unit: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}unit'],
+      )!,
       dns: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}dns'],
@@ -5062,6 +5083,13 @@ class Product extends DataClass implements Insertable<Product> {
 
   /// SPEC §13 katsayısı, ×10.000 (1,00 → 10000).
   final Rate priceCoefficient;
+
+  /// Satış ve stok birimi. Sünger `M3`; ince malzeme (çivi, yapıştırıcı,
+  /// zikzak yay) ADET/KG/KUTU/LITRE/METRE (D-22).
+  ///
+  /// Birim ürün kartında sabittir: geçmiş hareketlerin birimi değişirse
+  /// maliyet anlamını yitirir.
+  final String unit;
   final String? dns;
   final String? foamType;
   final Dimension? defaultWidth;
@@ -5080,6 +5108,7 @@ class Product extends DataClass implements Insertable<Product> {
     required this.name,
     required this.nameNormalized,
     required this.priceCoefficient,
+    required this.unit,
     this.dns,
     this.foamType,
     this.defaultWidth,
@@ -5103,6 +5132,7 @@ class Product extends DataClass implements Insertable<Product> {
         $ProductsTable.$converterpriceCoefficient.toSql(priceCoefficient),
       );
     }
+    map['unit'] = Variable<String>(unit);
     if (!nullToAbsent || dns != null) {
       map['dns'] = Variable<String>(dns);
     }
@@ -5147,6 +5177,7 @@ class Product extends DataClass implements Insertable<Product> {
       name: Value(name),
       nameNormalized: Value(nameNormalized),
       priceCoefficient: Value(priceCoefficient),
+      unit: Value(unit),
       dns: dns == null && nullToAbsent ? const Value.absent() : Value(dns),
       foamType: foamType == null && nullToAbsent
           ? const Value.absent()
@@ -5183,6 +5214,7 @@ class Product extends DataClass implements Insertable<Product> {
       name: serializer.fromJson<String>(json['name']),
       nameNormalized: serializer.fromJson<String>(json['nameNormalized']),
       priceCoefficient: serializer.fromJson<Rate>(json['priceCoefficient']),
+      unit: serializer.fromJson<String>(json['unit']),
       dns: serializer.fromJson<String?>(json['dns']),
       foamType: serializer.fromJson<String?>(json['foamType']),
       defaultWidth: serializer.fromJson<Dimension?>(json['defaultWidth']),
@@ -5210,6 +5242,7 @@ class Product extends DataClass implements Insertable<Product> {
       'name': serializer.toJson<String>(name),
       'nameNormalized': serializer.toJson<String>(nameNormalized),
       'priceCoefficient': serializer.toJson<Rate>(priceCoefficient),
+      'unit': serializer.toJson<String>(unit),
       'dns': serializer.toJson<String?>(dns),
       'foamType': serializer.toJson<String?>(foamType),
       'defaultWidth': serializer.toJson<Dimension?>(defaultWidth),
@@ -5229,6 +5262,7 @@ class Product extends DataClass implements Insertable<Product> {
     String? name,
     String? nameNormalized,
     Rate? priceCoefficient,
+    String? unit,
     Value<String?> dns = const Value.absent(),
     Value<String?> foamType = const Value.absent(),
     Value<Dimension?> defaultWidth = const Value.absent(),
@@ -5245,6 +5279,7 @@ class Product extends DataClass implements Insertable<Product> {
     name: name ?? this.name,
     nameNormalized: nameNormalized ?? this.nameNormalized,
     priceCoefficient: priceCoefficient ?? this.priceCoefficient,
+    unit: unit ?? this.unit,
     dns: dns.present ? dns.value : this.dns,
     foamType: foamType.present ? foamType.value : this.foamType,
     defaultWidth: defaultWidth.present ? defaultWidth.value : this.defaultWidth,
@@ -5275,6 +5310,7 @@ class Product extends DataClass implements Insertable<Product> {
       priceCoefficient: data.priceCoefficient.present
           ? data.priceCoefficient.value
           : this.priceCoefficient,
+      unit: data.unit.present ? data.unit.value : this.unit,
       dns: data.dns.present ? data.dns.value : this.dns,
       foamType: data.foamType.present ? data.foamType.value : this.foamType,
       defaultWidth: data.defaultWidth.present
@@ -5308,6 +5344,7 @@ class Product extends DataClass implements Insertable<Product> {
           ..write('name: $name, ')
           ..write('nameNormalized: $nameNormalized, ')
           ..write('priceCoefficient: $priceCoefficient, ')
+          ..write('unit: $unit, ')
           ..write('dns: $dns, ')
           ..write('foamType: $foamType, ')
           ..write('defaultWidth: $defaultWidth, ')
@@ -5329,6 +5366,7 @@ class Product extends DataClass implements Insertable<Product> {
     name,
     nameNormalized,
     priceCoefficient,
+    unit,
     dns,
     foamType,
     defaultWidth,
@@ -5349,6 +5387,7 @@ class Product extends DataClass implements Insertable<Product> {
           other.name == this.name &&
           other.nameNormalized == this.nameNormalized &&
           other.priceCoefficient == this.priceCoefficient &&
+          other.unit == this.unit &&
           other.dns == this.dns &&
           other.foamType == this.foamType &&
           other.defaultWidth == this.defaultWidth &&
@@ -5367,6 +5406,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
   final Value<String> name;
   final Value<String> nameNormalized;
   final Value<Rate> priceCoefficient;
+  final Value<String> unit;
   final Value<String?> dns;
   final Value<String?> foamType;
   final Value<Dimension?> defaultWidth;
@@ -5384,6 +5424,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     this.name = const Value.absent(),
     this.nameNormalized = const Value.absent(),
     this.priceCoefficient = const Value.absent(),
+    this.unit = const Value.absent(),
     this.dns = const Value.absent(),
     this.foamType = const Value.absent(),
     this.defaultWidth = const Value.absent(),
@@ -5402,6 +5443,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     required String name,
     required String nameNormalized,
     required Rate priceCoefficient,
+    this.unit = const Value.absent(),
     this.dns = const Value.absent(),
     this.foamType = const Value.absent(),
     this.defaultWidth = const Value.absent(),
@@ -5424,6 +5466,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Expression<String>? name,
     Expression<String>? nameNormalized,
     Expression<int>? priceCoefficient,
+    Expression<String>? unit,
     Expression<String>? dns,
     Expression<String>? foamType,
     Expression<int>? defaultWidth,
@@ -5442,6 +5485,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       if (name != null) 'name': name,
       if (nameNormalized != null) 'name_normalized': nameNormalized,
       if (priceCoefficient != null) 'price_coefficient': priceCoefficient,
+      if (unit != null) 'unit': unit,
       if (dns != null) 'dns': dns,
       if (foamType != null) 'foam_type': foamType,
       if (defaultWidth != null) 'default_width': defaultWidth,
@@ -5465,6 +5509,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Value<String>? name,
     Value<String>? nameNormalized,
     Value<Rate>? priceCoefficient,
+    Value<String>? unit,
     Value<String?>? dns,
     Value<String?>? foamType,
     Value<Dimension?>? defaultWidth,
@@ -5483,6 +5528,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       name: name ?? this.name,
       nameNormalized: nameNormalized ?? this.nameNormalized,
       priceCoefficient: priceCoefficient ?? this.priceCoefficient,
+      unit: unit ?? this.unit,
       dns: dns ?? this.dns,
       foamType: foamType ?? this.foamType,
       defaultWidth: defaultWidth ?? this.defaultWidth,
@@ -5516,6 +5562,9 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       map['price_coefficient'] = Variable<int>(
         $ProductsTable.$converterpriceCoefficient.toSql(priceCoefficient.value),
       );
+    }
+    if (unit.present) {
+      map['unit'] = Variable<String>(unit.value);
     }
     if (dns.present) {
       map['dns'] = Variable<String>(dns.value);
@@ -5571,6 +5620,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
           ..write('name: $name, ')
           ..write('nameNormalized: $nameNormalized, ')
           ..write('priceCoefficient: $priceCoefficient, ')
+          ..write('unit: $unit, ')
           ..write('dns: $dns, ')
           ..write('foamType: $foamType, ')
           ..write('defaultWidth: $defaultWidth, ')
@@ -40711,6 +40761,7 @@ typedef $$ProductsTableCreateCompanionBuilder = ProductsCompanion Function({
   required String name,
   required String nameNormalized,
   required Rate priceCoefficient,
+  Value<String> unit,
   Value<String?> dns,
   Value<String?> foamType,
   Value<Dimension?> defaultWidth,
@@ -40729,6 +40780,7 @@ typedef $$ProductsTableUpdateCompanionBuilder = ProductsCompanion Function({
   Value<String> name,
   Value<String> nameNormalized,
   Value<Rate> priceCoefficient,
+  Value<String> unit,
   Value<String?> dns,
   Value<String?> foamType,
   Value<Dimension?> defaultWidth,
@@ -40844,6 +40896,11 @@ class $$ProductsTableFilterComposer
         column: $table.priceCoefficient,
         builder: (column) => ColumnWithTypeConverterFilters(column),
       );
+
+  ColumnFilters<String> get unit => $composableBuilder(
+    column: $table.unit,
+    builder: (column) => ColumnFilters(column),
+  );
 
   ColumnFilters<String> get dns => $composableBuilder(
     column: $table.dns,
@@ -41011,6 +41068,11 @@ class $$ProductsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get unit => $composableBuilder(
+    column: $table.unit,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get dns => $composableBuilder(
     column: $table.dns,
     builder: (column) => ColumnOrderings(column),
@@ -41090,6 +41152,9 @@ class $$ProductsTableAnnotationComposer
         column: $table.priceCoefficient,
         builder: (column) => column,
       );
+
+  GeneratedColumn<String> get unit =>
+      $composableBuilder(column: $table.unit, builder: (column) => column);
 
   GeneratedColumn<String> get dns =>
       $composableBuilder(column: $table.dns, builder: (column) => column);
@@ -41252,6 +41317,7 @@ class $$ProductsTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String> nameNormalized = const Value.absent(),
                 Value<Rate> priceCoefficient = const Value.absent(),
+                Value<String> unit = const Value.absent(),
                 Value<String?> dns = const Value.absent(),
                 Value<String?> foamType = const Value.absent(),
                 Value<Dimension?> defaultWidth = const Value.absent(),
@@ -41269,6 +41335,7 @@ class $$ProductsTableTableManager
                 name: name,
                 nameNormalized: nameNormalized,
                 priceCoefficient: priceCoefficient,
+                unit: unit,
                 dns: dns,
                 foamType: foamType,
                 defaultWidth: defaultWidth,
@@ -41288,6 +41355,7 @@ class $$ProductsTableTableManager
                 required String name,
                 required String nameNormalized,
                 required Rate priceCoefficient,
+                Value<String> unit = const Value.absent(),
                 Value<String?> dns = const Value.absent(),
                 Value<String?> foamType = const Value.absent(),
                 Value<Dimension?> defaultWidth = const Value.absent(),
@@ -41305,6 +41373,7 @@ class $$ProductsTableTableManager
                 name: name,
                 nameNormalized: nameNormalized,
                 priceCoefficient: priceCoefficient,
+                unit: unit,
                 dns: dns,
                 foamType: foamType,
                 defaultWidth: defaultWidth,

@@ -4,8 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../data/repo/dashboard_queries.dart';
 import '../../format/tr_format.dart';
+import '../../theme/app_theme.dart';
 import '../../providers/app_providers.dart';
 import '../../widgets/common.dart';
+import '../../widgets/first_steps.dart';
+import '../../widgets/signature.dart';
 import '../lock/pin_lock_screen.dart';
 import 'backup_status_band.dart';
 
@@ -43,6 +46,17 @@ class HomeScreen extends ConsumerWidget {
           padding: const EdgeInsets.only(bottom: 32),
           children: [
             const BackupStatusBand(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+              child: GreetingHeader(
+                userName: ref.watch(userNameProvider).value,
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 20, 16, 4),
+              child: DailyQuoteCard(),
+            ),
+            const FirstStepsCard(),
             const _QuickActions(),
             switch (snapshot) {
               AsyncData(:final value) => _DashboardCards(
@@ -58,6 +72,7 @@ class HomeScreen extends ConsumerWidget {
               ),
               _ => const SizedBox(height: 240, child: LoadingState()),
             },
+            const DesignSignature(),
           ],
         ),
       ),
@@ -93,31 +108,123 @@ class _QuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // SPEC §22'nin büyük hızlı işlem butonları.
+    //
+    // İlk üçü **iş yaratan** eylemler: dolu ceviz zemin, öne çıkarlar.
+    // Son ikisi sorgulama: yalnızca çerçeve. Renk değil, ağırlık farkı.
     const actions = [
-      (label: '+ SATIŞ', route: '/sale/new', icon: Icons.point_of_sale),
-      (label: '+ STOK GİRİŞİ', route: '/purchase/new', icon: Icons.inventory),
-      (label: '+ TAHSİLAT', route: '/collection/new', icon: Icons.payments),
-      (label: 'STOK SORGULA', route: '/stock', icon: Icons.grid_view),
-      (label: 'CARİ SORGULA', route: '/customers', icon: Icons.people),
+      (
+        label: 'Satış',
+        route: '/sale/new',
+        icon: Icons.point_of_sale,
+        primary: true,
+      ),
+      (
+        label: 'Stok Girişi',
+        route: '/purchase/new',
+        icon: Icons.inventory,
+        primary: true,
+      ),
+      (
+        label: 'Tahsilat',
+        route: '/collection/new',
+        icon: Icons.payments,
+        primary: true,
+      ),
+      (
+        label: 'Stok Sorgula',
+        route: '/stock',
+        icon: Icons.grid_view,
+        primary: false,
+      ),
+      (
+        label: 'Cari Sorgula',
+        route: '/customers',
+        icon: Icons.people,
+        primary: false,
+      ),
     ];
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 12,
-        children: [
-          for (final action in actions)
-            SizedBox(
-              width: 160,
-              height: 64,
-              child: FilledButton.tonalIcon(
-                onPressed: () => context.push(action.route),
-                icon: Icon(action.icon),
-                label: Text(action.label, textAlign: TextAlign.center),
-              ),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Dar telefonda iki, geniş ekranda üç sütun.
+          final columns = constraints.maxWidth > 560 ? 3 : 2;
+          const gap = 12.0;
+          final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+
+          return Wrap(
+            spacing: gap,
+            runSpacing: gap,
+            children: [
+              for (final action in actions)
+                SizedBox(
+                  width: width,
+                  child: _ActionTile(
+                    label: action.label,
+                    icon: action.icon,
+                    primary: action.primary,
+                    onTap: () => context.push(action.route),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Hızlı işlem kartı. Yüksekliği sabit, içi tipografik: ikon üstte küçük,
+/// etiket altta — buton değil, tezgâhtaki bir etiket gibi durur.
+class _ActionTile extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool primary;
+  final VoidCallback onTap;
+
+  const _ActionTile({
+    required this.label,
+    required this.icon,
+    required this.primary,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final foreground = primary ? scheme.onPrimary : scheme.onSurface;
+
+    return Material(
+      color: primary ? scheme.primary : scheme.surfaceContainerLowest,
+      borderRadius: BorderRadius.circular(AppTheme.radius),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.radius),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppTheme.radius),
+            border: primary ? null : Border.all(color: scheme.outlineVariant),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 22, color: foreground),
+                const SizedBox(height: 14),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(color: foreground),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-        ],
+          ),
+        ),
       ),
     );
   }
@@ -219,3 +326,9 @@ class _DashboardCards extends StatelessWidget {
     );
   }
 }
+
+/// Karşılama satırındaki isim (kurulum sihirbazında girilir).
+final userNameProvider = FutureProvider.autoDispose<String>((ref) async {
+  final settings = await ref.watch(settingsRepositoryProvider.future);
+  return settings.userName();
+});

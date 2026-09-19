@@ -150,6 +150,9 @@ final class SettingsRepository {
   Future<int> offsiteWarnDays() async =>
       int.tryParse(await _get('backup_offsite_warn_days') ?? '3') ?? 3;
 
+  Future<void> setOffsiteWarnDays(int days) =>
+      _set('backup_offsite_warn_days', '$days');
+
   Future<bool> backupWifiOnly() async =>
       await _get('backup_wifi_only') != 'false';
   Future<void> setBackupWifiOnly(bool value) =>

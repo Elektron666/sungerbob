@@ -11,6 +11,8 @@ import '../../providers/app_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../home/home_screen.dart' show dashboardProvider;
+import '../../documents/pdf_share.dart';
+import 'quote_form_screen.dart';
 
 /// Teklifler (SPEC §10 · FLOWS §5).
 ///
@@ -25,6 +27,11 @@ class QuotesScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Teklifler')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _newQuote(context, ref),
+        icon: const Icon(Icons.add),
+        label: const Text('Yeni teklif'),
+      ),
       body: quotes.when(
         loading: () => const LoadingState(),
         error: (e, _) =>
@@ -38,6 +45,7 @@ class QuotesScreen extends ConsumerWidget {
                     'edilince tek dokunuşla satışa dönüşür.',
               )
             : ListView.separated(
+                padding: const EdgeInsets.only(bottom: 88),
                 itemCount: list.length,
                 separatorBuilder: (_, _) => const Divider(height: 1),
                 itemBuilder: (context, i) {
@@ -46,29 +54,81 @@ class QuotesScreen extends ConsumerWidget {
                       q.status == QuoteStatus.draft ||
                       q.status == QuoteStatus.sent ||
                       q.status == QuoteStatus.accepted;
-                  return ListTile(
-                    title: Text('${q.docNo} · ${q.customerTitle}'),
-                    subtitle: Text(
-                      '${TrFormat.date(DateTime.fromMillisecondsSinceEpoch(q.docDate))}'
-                      ' · ${_statusLabel(q.status)}'
-                      '${q.validUntil == null ? "" : " · geçerlilik ${TrFormat.date(DateTime.fromMillisecondsSinceEpoch(q.validUntil!))}"}',
-                      style: context.labelStyle,
-                    ),
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          TrFormat.moneyWithCurrency(q.grandTotal),
-                          style: context.numberStyle,
+                  // Tutar ile düğme `trailing` içinde alt alta duruyordu ve
+                  // ListTile'ın 56 px'ine sığmıyordu. Tutar başlık satırının
+                  // sağında, eylem kendi satırında.
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ListTile(
+                        title: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                q.customerTitle,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              TrFormat.moneyWithCurrency(q.grandTotal),
+                              style: context.numberStyle,
+                            ),
+                          ],
                         ),
-                        if (convertible)
-                          TextButton(
-                            onPressed: () => _convert(context, ref, q.id),
-                            child: const Text('Satışa çevir'),
-                          ),
-                      ],
-                    ),
+                        subtitle: Text(
+                          '${q.docNo} · '
+                          '${TrFormat.date(DateTime.fromMillisecondsSinceEpoch(q.docDate))}'
+                          ' · ${QuoteStatus.label(q.status)}'
+                          '${q.validUntil == null ? "" : " · geçerlilik ${TrFormat.date(DateTime.fromMillisecondsSinceEpoch(q.validUntil!))}"}',
+                          style: context.labelStyle,
+                        ),
+                        // Durum elle işaretlenemiyordu; liste sonsuza kadar
+                        // "Taslak" görünüyordu. Menü YALNIZCA izin verilen
+                        // geçişleri gösterir (Faz 6'daki evrak kuralı gibi):
+                        // yapılamayacak seçeneği sunup hata vermek kötü
+                        // tasarımdır.
+                        trailing: _statusMenu(context, ref, q),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                        child: Row(
+                          children: [
+                            // Teklifin işi müşteriye gitmek; PDF'i
+                            // paylaşamayan bir teklif ekranı yarımdır.
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => _sharePdf(context, ref, q.id),
+                                icon: const Icon(
+                                  Icons.share_outlined,
+                                  size: 18,
+                                ),
+                                label: const Text(
+                                  'PDF paylaş',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                            if (convertible) ...[
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: FilledButton.icon(
+                                  onPressed: () => _convert(context, ref, q.id),
+                                  icon: const Icon(
+                                    Icons.point_of_sale,
+                                    size: 18,
+                                  ),
+                                  label: const Text(
+                                    'Satışa çevir',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),
@@ -76,14 +136,67 @@ class QuotesScreen extends ConsumerWidget {
     );
   }
 
-  static String _statusLabel(String status) => switch (status) {
-    QuoteStatus.draft => 'Taslak',
-    QuoteStatus.sent => 'Gönderildi',
-    QuoteStatus.accepted => 'Kabul edildi',
-    QuoteStatus.rejected => 'Reddedildi',
-    QuoteStatus.expired => 'Süresi doldu',
-    _ => 'Satışa çevrildi',
-  };
+  Future<void> _sharePdf(
+    BuildContext context,
+    WidgetRef ref,
+    String quoteId,
+  ) async {
+    final db = await ref.read(databaseProvider.future);
+    final quote = await db.select(db.salesQuotes).get();
+    final docNo = quote.firstWhere((q) => q.id == quoteId).docNo;
+    final bytes = await buildQuotePdf(db, quoteId);
+    if (!context.mounted) return;
+    await sharePdf(
+      context,
+      fileName: pdfFileName('Teklif', docNo),
+      bytes: bytes,
+    );
+  }
+
+  Future<void> _newQuote(BuildContext context, WidgetRef ref) async {
+    final created = await Navigator.of(context)
+        .push<bool>(MaterialPageRoute(builder: (_) => const QuoteFormScreen()));
+    if (created == true) ref.invalidate(quotesProvider);
+  }
+
+  /// İzin verilen durum geçişleri; hiçbiri yoksa menü hiç çizilmez.
+  Widget? _statusMenu(BuildContext context, WidgetRef ref, QuoteRow q) {
+    final allowed = QuoteStatus.transitions[q.status] ?? const <String>[];
+    if (allowed.isEmpty) return null;
+
+    return PopupMenuButton<String>(
+      tooltip: 'Durumu değiştir',
+      icon: const Icon(Icons.more_vert),
+      itemBuilder: (_) => [
+        for (final status in allowed)
+          PopupMenuItem(value: status, child: Text(QuoteStatus.label(status))),
+      ],
+      onSelected: (status) => _setStatus(context, ref, q.id, status),
+    );
+  }
+
+  Future<void> _setStatus(
+    BuildContext context,
+    WidgetRef ref,
+    String quoteId,
+    String status,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final db = await ref.read(databaseProvider.future);
+      await QuoteRepository(db).setStatus(
+        quoteId: quoteId,
+        status: status,
+        ctx: OperationContext(commandType: 'QUOTE_STATUS'),
+      );
+      ref.invalidate(quotesProvider);
+      messenger.showSnackBar(
+        SnackBar(content: Text('Teklif: ${QuoteStatus.label(status)}')),
+      );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
 
   Future<void> _convert(
     BuildContext context,

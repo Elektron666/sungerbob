@@ -19,9 +19,15 @@ import 'common.dart';
 class InStockVariant {
   final String variantId;
   final String productName;
+
+  /// Sünger için "200×100×5", ince malzeme için boş — ölçüsü yoktur (D-22).
   final String label;
   final int pieces;
   final Volume volume;
+
+  /// Ürünün birimi (`ProductUnit`). Miktar hep aynı kolonda durduğu için
+  /// ekranda doğru birimi yazmak buna bağlı.
+  final String unit;
 
   const InStockVariant({
     required this.variantId,
@@ -29,7 +35,27 @@ class InStockVariant {
     required this.label,
     required this.pieces,
     required this.volume,
+    this.unit = ProductUnit.m3,
   });
+
+  bool get isFoam => ProductUnit.hasDimensions(unit);
+
+  /// Listede görünen tam ad: "Beyaz Sünger · 200×100×5" veya "Tutkal".
+  String get title => label.isEmpty ? productName : '$productName · $label';
+
+  /// "12 adet · 2,8 m³" / ince malzemede yalnızca "50 kg".
+  String get quantityText => isFoam
+      ? '${TrFormat.pieces(pieces)} · ${TrFormat.volume(volume)}'
+      : TrFormat.quantity(volume, unit);
+
+  /// Bu üründen [count] kadarını ürünün kendi birimiyle yazar:
+  /// süngerde "5 adet", tutkalda "5 kg".
+  String amount(int count) =>
+      isFoam ? TrFormat.pieces(count) : '$count ${ProductUnit.label(unit)}';
+
+  /// Miktar alanlarının etiketi: "Adet" / "Miktar (kg)".
+  String get amountLabel =>
+      isFoam ? 'Adet' : 'Miktar (${ProductUnit.label(unit)})';
 }
 
 final inStockVariantsProvider = FutureProvider.autoDispose
@@ -42,6 +68,7 @@ final inStockVariantsProvider = FutureProvider.autoDispose
                 ..orderBy([(p) => OrderingTerm.asc(p.name)]))
               .get();
       final names = {for (final p in products) p.id: p.name};
+      final units = {for (final p in products) p.id: p.unit};
 
       final variants = await db.select(db.productVariants).get();
       final result = <InStockVariant>[];
@@ -53,17 +80,21 @@ final inStockVariantsProvider = FutureProvider.autoDispose
         );
         if (stock.pieces == 0) continue;
 
+        final unit = units[variant.productId] ?? ProductUnit.m3;
         result.add(
           InStockVariant(
             variantId: variant.id,
             productName: names[variant.productId] ?? '—',
-            label: TrFormat.dimensions(
-              variant.width,
-              variant.height,
-              variant.thickness,
-            ),
+            label: ProductUnit.hasDimensions(unit)
+                ? TrFormat.dimensions(
+                    variant.width,
+                    variant.height,
+                    variant.thickness,
+                  )
+                : '',
             pieces: stock.pieces,
             volume: stock.volume,
+            unit: unit,
           ),
         );
       }
@@ -142,12 +173,8 @@ class _VariantSheetState extends ConsumerState<_VariantSheet> {
                   itemBuilder: (context, i) {
                     final v = filtered[i];
                     return ListTile(
-                      title: Text('${v.productName} · ${v.label}'),
-                      subtitle: Text(
-                        '${TrFormat.pieces(v.pieces)} · '
-                        '${TrFormat.volume(v.volume)}',
-                        style: context.labelStyle,
-                      ),
+                      title: Text(v.title),
+                      subtitle: Text(v.quantityText, style: context.labelStyle),
                       onTap: () => Navigator.of(context).pop(v),
                     );
                   },
@@ -165,10 +192,7 @@ class _VariantSheetState extends ConsumerState<_VariantSheet> {
     final needle = normalizeTurkish(query);
     if (needle.isEmpty) return list;
     return list
-        .where(
-          (v) =>
-              normalizeTurkish('${v.productName} ${v.label}').contains(needle),
-        )
+        .where((v) => normalizeTurkish(v.title).contains(needle))
         .toList();
   }
 }

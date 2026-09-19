@@ -56,6 +56,18 @@ final class QuoteAlreadyConvertedException implements Exception {
   String toString() => 'Bu teklif zaten satışa dönüştürülmüş (satış $saleId).';
 }
 
+/// Teklif durumu izin verilmeyen bir duruma taşınmak istendi.
+final class InvalidQuoteTransitionException implements Exception {
+  final String from;
+  final String to;
+  const InvalidQuoteTransitionException(this.from, this.to);
+
+  @override
+  String toString() =>
+      '${QuoteStatus.label(from)} durumundaki teklif '
+      '"${QuoteStatus.label(to)}" yapılamaz.';
+}
+
 /// Fiyat teklifi (SPEC §15).
 ///
 /// **Teklif oluşturulması stoktan ürün DÜŞMEZ.** Stok yalnızca satışa
@@ -136,11 +148,24 @@ final class QuoteRepository {
       });
 
   /// Durum değiştirir (gönderildi, kabul, ret).
+  ///
+  /// Geçiş kuralı `QuoteStatus.transitions`'ta; kural burada da denetlenir
+  /// çünkü ekranın izin verilmeyeni göstermemesi, iş kuralının kendisi
+  /// değildir.
   Future<void> setStatus({
     required String quoteId,
     required String status,
     required OperationContext ctx,
   }) => db.runOperation(ctx, () async {
+    final quote = await (db.select(
+      db.salesQuotes,
+    )..where((q) => q.id.equals(quoteId))).getSingle();
+
+    final allowed = QuoteStatus.transitions[quote.status] ?? const [];
+    if (!allowed.contains(status)) {
+      throw InvalidQuoteTransitionException(quote.status, status);
+    }
+
     await (db.update(db.salesQuotes)..where((q) => q.id.equals(quoteId))).write(
       SalesQuotesCompanion(status: Value(status)),
     );

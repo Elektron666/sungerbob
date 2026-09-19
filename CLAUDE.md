@@ -124,7 +124,9 @@ Tamamı `docs/ARCHITECTURE.md` ve `docs/BRIEF.md` Bölüm 3'te.
 | **Faz 4 — Analiz ve raporlar** | ✅ müşteri/ürün analizi, kârlılık, CSV |
 | **Faz 5 — Yayına alma** | ✅ kılavuzlar, imzalama, performans ölçümü |
 
-**275 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
+**417 test geçiyor**, `flutter analyze` temiz, `dart format` uygulandı.
+Şema sürümü **2** (ürün birimi); `drift_schemas/` altında v1 ve v2 anlık
+görüntüsü, `test/data/generated_migrations/` altında üretilmiş yardımcı var.
 
 Faz 1'de hazır olanlar:
 
@@ -170,6 +172,14 @@ Faz 5 sonrası eklenenler:
 - `ui/screens/ops/` — teklifler (satışa çevirme), kesim emirleri (gönder /
   dönüş al), sayım (taslak → onay), fire
 - `ui/widgets/variant_picker.dart` — stoktaki varyantı seçtiren ortak sayfa
+- `data/repo/party_repository.dart` + `ui/screens/master/` — müşteri ve
+  tedarikçi kartı açma; seçiciler boşken bile kart açtırır (SK-21)
+- `ui/theme/app_theme.dart` — sıcak minimalist palet (elle yazılmış, tohumdan
+  türetilmiyor), Inter + Lora tipografi, kontrast testli (K-03)
+- `ui/content/daily_quote.dart` — **Günün Sözü** (imza öğesi), gün bazında
+  sabit, tamamı Türk atasözü
+- `ui/widgets/signature.dart` — Günün Sözü kartı, karşılama satırı, tasarım
+  imzası
 - `ui/screens/settings/drive_screen.dart` — cihaz dışı yedek
 - `ui/startup.dart` — kilit açıldıktan sonra bildirim kurulumu ve açılış yedeği
 - `data/notifications/notification_service.dart` — `flutter_local_notifications`
@@ -177,6 +187,108 @@ Faz 5 sonrası eklenenler:
 - `data/backup/backup_password_store.dart` — yedek şifresi güvenli depoda
 - `data/repo/settings_repository.dart` — PIN karması, maliyet yöntemi kilidi
 
-**Kalan işler:** Google Drive API istemcisi (SK-12 — kullanıcıdan OAuth
-istemci kimliği bekleniyor), teklif oluşturma formu (liste ve satışa çevirme
-hazır; yeni teklif şimdilik hızlı satış ekranından geçiyor).
+Faz 6'da eklenenler (K-05 — paranın hareketi):
+
+- `ui/screens/finance/payment_screen.dart` — tedarikçiye ödeme, güncel borç
+  görünür
+- `ui/screens/finance/accounts_screen.dart` — kasa/banka, hesap açma, virman
+- `ui/screens/finance/instruments_screen.dart` — çek & senet portföyü,
+  yalnızca izin verilen durum geçişleri
+- `ui/screens/search/search_screen.dart` — ölü `/search` bağlantısı kapatıldı
+- `data/repo/price_memory.dart` — "bu müşteriye en son kaça sattın" ipucu
+
+Faz 7'de eklenenler (K-06 — ince malzeme):
+
+- `products.unit` — `M3` / `ADET` / `KG` / `KUTU` / `LITRE` / `METRE` (D-22).
+  Miktar süngerin m³ kolonunda durur, yalnızca anlamı değişir; **maliyet
+  motoruna dokunulmadı.** m³ toplamları `unit = 'M3'` ile filtrelenir.
+- `data/repo/product_repository.dart` + `ui/screens/master/products_screen.dart`
+  — ürün kartı açma; ölçüsüz üründe tek varyant kendiliğinden kurulur
+- Şema v2: `products` ve `product_variants` migration'da yeniden kurulur —
+  `ADD COLUMN` tablo kısıtı ekleyemez (D-24)
+- Tablo `CHECK` metinleri literal SQL; enum uyumunu
+  `test/data/schema_constraints_test.dart` koruyor (D-23)
+- Alış, satış, stok, fire, sayım ekranları birim farkındalığına açıldı:
+  ölçü alanları yalnızca süngerde görünür, etiketler ürünün kendi birimini
+  yazar ("Miktar (kg)", "TL/kg")
+
+Faz 8'de eklenenler (K-07 — iade):
+
+- `ui/screens/sale/sale_return_screen.dart` — `Satışlar → belge → İade al`.
+  Kalem başına iade miktarı; artı tuşu tavanda kilitlenir (iade satılandan
+  fazla olamaz), daha önce iade alınmışsa tavan kalan miktardır.
+- `ReturnRepository.returnableLines` — "neyi, en fazla kaç tane" sorgusu
+- Satışlar listesinde ve belge detayında iade tutarı görünüyor
+- Satış iptali **eklenmedi**: düzeltmenin doğru yolu iadedir (D-25)
+
+Faz 9'da eklenenler (K-08 — teklif yazma):
+
+- `ui/screens/ops/quote_form_screen.dart` — çok kalemli teklif; ölçü
+  serbest, teklif stoğa dokunmaz (D-26)
+- `ui/widgets/product_picker.dart` — alış ve teklifin ortak ürün seçicisi
+
+Faz 10'da eklenenler (K-09 — fiyat listesi):
+
+- `ui/screens/master/price_lists_screen.dart` — baz TL/m³ + yuvarlama →
+  **önizleme** → yürürlüğe alma. Önizleme görülmeden kaydedilemez (D-27);
+  eski versiyon silinmez, arşivlenir.
+- `PriceMemory.activeListPrice` + satış ekranında **liste fiyatı** ipucu;
+  son satış fiyatının yanında durur, ikisi de dokununca doldurur (D-28)
+
+Faz 11'de eklenenler (K-10 — bekçiler):
+
+- `test/ui/routes_test.dart` — kaynağı tarayıp gidilen her rotanın tanımlı
+  olduğunu doğrular (D-29). İlk koşuşta vade bildirimlerinin iki ölü
+  rotasını buldu; ikisi de tanımlanıp işe yarar hâle getirildi.
+- `test/ui/screens_smoke_test.dart` — 28 ekranı boş veritabanıyla 360×640 ve
+  411×891'de çizer (D-30). Test yazı tipi cihazdakinden geniş olduğu için
+  **temkinli** bir sınırdır; büyük yazı tipi ayarına da güvence verir.
+
+Faz 12'de eklenenler (K-11 — belge paylaşımı):
+
+- `ui/documents/pdf_share.dart` — dört PDF belgesi nihayet arayüze bağlandı:
+  satış fişi (Satışlar → belge), teklif (Teklifler), kesim emri (Kesim
+  Emirleri), cari ekstre (Cari Ekstre başlığı). Hepsi WhatsApp'a
+  paylaşılabiliyor (BRIEF §5).
+- Firma bilgisi Ayarlar'dan okunur; logo dosyası silinmişse belge logosuz
+  üretilir. Kesim emri fiyat içermez (D-31).
+
+Faz 13'te eklenenler (K-12 — ayarlar uygulanıyor):
+
+- **Hata düzeltmesi:** satış, alış ve teklif KDV oranını koda gömülü %20
+  tutuyordu; artık `documentDefaultsProvider` üzerinden Ayarlar'dan okunuyor
+  (D-32). Kullanıcı %10 seçtiğinde belgeler gerçekten %10 hesaplıyor.
+- Ayarlar'daki "KDV oranı" ve "Varsayılan fiyat modu" artık değiştirilebiliyor
+  (eskiden yalnızca gösteriliyordu).
+- Alış ve teklif fiyat alanının altında "KDV hariç" yazıyor.
+
+Faz 14'te eklenenler (K-13 — SK-22 kapatıldı):
+
+- Alışta **son alış fiyatı** ipucu (satıştakinin karşılığı)
+- Teklif durumu: `Teklifler` listesindeki menüden gönderildi/kabul/ret.
+  Geçiş kuralı hem ekranda hem repository'de (D-33); `CONVERTED` elle
+  işaretlenemez.
+- Tahsilat iptali: `Cari Ekstre` → tahsilat satırı → iptal. Sebep zorunlu
+  (D-34), ters kayıt oluşur, kasa hareketi de tersine döner.
+- Sonradan gelen masraf: `Alışlar → belge → Masraf ekle`. Stokta kalana
+  düşen pay maliyeti artırır, satılmışa düşen pay dönem maliyet farkı olur.
+  `PurchaseExpenseKind` enum'u ve şema bekçisi eklendi.
+- `Raporlar → Müşteriler` — ciro, brüt kâr, borç, en çok aldığı çeşit ve
+  **ortalama ödeme süresi**; CSV olarak paylaşılabiliyor.
+
+Faz 15'te eklenenler (K-14 — üçüncü bekçi ve parmak izi):
+
+- `test/data/unused_api_test.dart` — `lib/data/repo` ve `documents`
+  içindeki her genel metodun bir çağıranı olduğunu doğrular (D-35).
+  İstisnalar gerekçeleriyle `allowed` haritasında; liste "bilinen
+  eksikler"in kendiliğinden güncellenen kaydı.
+- `data/auth/biometric_auth.dart` + kilit ekranı — **parmak izi ile açma**
+  (BRIEF §5). PIN her zaman çalışır, başarısız okuma yanlış PIN sayılmaz,
+  ayar açılırken parmak gerçekten okutulur (D-36).
+- Ayarlar'da cihaz dışı yedek uyarı eşiği değiştirilebiliyor; eşiğin iki
+  yerden okunması birleştirildi.
+
+**Kalan işler:**
+
+- Google Drive API istemcisi (SK-12 — OAuth istemci kimliği bekleniyor)
+- Ekranı olmayan iş kuralı **kalmadı** (bekçi bunu artık kendi kolluyor).

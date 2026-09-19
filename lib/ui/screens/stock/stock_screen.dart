@@ -97,6 +97,14 @@ class _StockTab extends ConsumerWidget {
     required this.onSelect,
   });
 
+  /// Seçili ürünün birimi; liste boşsa m³ varsayılır.
+  String get _selectedUnit => products
+      .firstWhere(
+        (p) => p.id == selectedProductId,
+        orElse: () => products.first,
+      )
+      .unit;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final matrix = ref.watch(
@@ -119,7 +127,11 @@ class _StockTab extends ConsumerWidget {
             itemBuilder: (_, i) {
               final product = products[i];
               return ChoiceChip(
-                label: Text(product.name),
+                label: Text(
+                  product.unit == ProductUnit.m3
+                      ? product.name
+                      : '${product.name} · ${ProductUnit.label(product.unit)}',
+                ),
                 selected: product.id == selectedProductId,
                 onSelected: (_) => onSelect(product.id),
               );
@@ -141,7 +153,7 @@ class _StockTab extends ConsumerWidget {
                         ? 'Kesime gönderilen mal burada görünür.'
                         : 'Stok girişi yaparak ekleyebilirsiniz.',
                   )
-                : _Matrix(cells: cells),
+                : _Matrix(cells: cells, unit: _selectedUnit),
           ),
         ),
       ],
@@ -151,11 +163,39 @@ class _StockTab extends ConsumerWidget {
 
 class _Matrix extends StatelessWidget {
   final List<StockCell> cells;
+  final String unit;
 
-  const _Matrix({required this.cells});
+  const _Matrix({required this.cells, required this.unit});
 
   @override
   Widget build(BuildContext context) {
+    // İnce malzemenin ölçüsü yoktur; matris "0×0 / 0 cm" başlıklarıyla
+    // anlamsız olurdu. Tek satırlık miktar kartı gösterilir (D-22).
+    if (!ProductUnit.hasDimensions(unit)) {
+      var total = Volume.zero;
+      for (final c in cells) {
+        total += c.volume;
+      }
+      return Center(
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Stokta', style: context.labelStyle),
+                const SizedBox(height: 8),
+                Text(
+                  TrFormat.quantity(total, unit),
+                  style: context.bigNumberStyle,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     // Ölçü (en×boy) satır, kalınlık sütun.
     final sizes = <String>{};
     final thicknesses = <int>{};

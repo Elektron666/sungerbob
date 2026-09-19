@@ -56,17 +56,19 @@ class _WasteScreenState extends ConsumerState<WasteScreen> {
     return showDialog<int>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(variant.label),
+        title: Text(variant.title),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Stokta ${TrFormat.pieces(variant.pieces)}'),
+            Text('Stokta ${variant.amount(variant.pieces)}'),
             const SizedBox(height: 16),
             TextField(
               controller: controller,
               autofocus: true,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Fire adedi'),
+              decoration: InputDecoration(
+                labelText: 'Fire miktarı (${variant.amountLabel})',
+              ),
             ),
           ],
         ),
@@ -173,11 +175,8 @@ class _WasteScreenState extends ConsumerState<WasteScreen> {
                     itemBuilder: (context, i) {
                       final line = _lines[i];
                       return ListTile(
-                        title: Text(
-                          '${line.variant.productName} · '
-                          '${line.variant.label}',
-                        ),
-                        subtitle: Text(TrFormat.pieces(line.pieces)),
+                        title: Text(line.variant.title),
+                        subtitle: Text(line.variant.amount(line.pieces)),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete_outline),
                           onPressed: () => setState(() => _lines.removeAt(i)),
@@ -197,17 +196,30 @@ class _WasteScreenState extends ConsumerState<WasteScreen> {
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(16),
+              // İki düğme dar telefonda yan yana sığmıyordu. Artık kalan
+              // alanı paylaşıyorlar; metin sığmazsa kırpılır, düğme
+              // ekrandan taşmaz.
               child: Row(
                 children: [
-                  OutlinedButton.icon(
-                    onPressed: _saving ? null : _addLine,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Satır ekle'),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _saving ? null : _addLine,
+                      icon: const Icon(Icons.add),
+                      label: const Text(
+                        'Satır ekle',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
-                  const Spacer(),
-                  FilledButton(
-                    onPressed: (_saving || _lines.isEmpty) ? null : _save,
-                    child: const Text('Fireyi kaydet'),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: (_saving || _lines.isEmpty) ? null : _save,
+                      child: const Text(
+                        'Fireyi kaydet',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
                 ],
               ),

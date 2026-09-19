@@ -9,15 +9,16 @@ import '../../../data/repo/cutting_repository.dart';
 import '../../../data/repo/stock_queries.dart';
 import '../../../data/repo/unit_of_work.dart';
 import '../../../data/repo/variant_helper.dart';
+import '../../documents/pdf_share.dart';
 import '../../../domain/core/money.dart';
 import '../../../domain/core/quantity.dart';
 import '../../format/tr_format.dart';
 import '../../providers/app_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/party_picker.dart';
 import '../../widgets/variant_picker.dart';
 import '../home/home_screen.dart' show dashboardProvider;
-import '../purchase/purchase_screen.dart' show suppliersProvider;
 import '../stock/stock_screen.dart' show productsProvider;
 
 /// Kesim emirleri (BRIEF §5 · FLOWS §9).
@@ -71,8 +72,19 @@ class CuttingScreen extends ConsumerWidget {
                       ' · ${TrFormat.volume(order.sourceVolumeTotal)}',
                       style: context.labelStyle,
                     ),
-                    trailing: open
-                        ? TextButton(
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Kesimhaneye gidecek ölçü listesi. Kâğıda basılır
+                        // ya da WhatsApp'tan gönderilir; fiyat içermez.
+                        IconButton(
+                          tooltip: 'Kesim emrini paylaş',
+                          icon: const Icon(Icons.share_outlined),
+                          onPressed: () =>
+                              _sharePdf(context, ref, order.id, order.docNo),
+                        ),
+                        if (open)
+                          TextButton(
                             onPressed: () => Navigator.of(context).push(
                               MaterialPageRoute<void>(
                                 builder: (_) =>
@@ -80,12 +92,29 @@ class CuttingScreen extends ConsumerWidget {
                               ),
                             ),
                             child: const Text('Dönüş al'),
-                          )
-                        : null,
+                          ),
+                      ],
+                    ),
                   );
                 },
               ),
       ),
+    );
+  }
+
+  Future<void> _sharePdf(
+    BuildContext context,
+    WidgetRef ref,
+    String orderId,
+    String docNo,
+  ) async {
+    final db = await ref.read(databaseProvider.future);
+    final bytes = await buildCuttingOrderPdf(db, orderId);
+    if (!context.mounted) return;
+    await sharePdf(
+      context,
+      fileName: pdfFileName('KesimEmri', docNo),
+      bytes: bytes,
     );
   }
 
@@ -286,7 +315,6 @@ class _SendToCuttingScreenState extends ConsumerState<SendToCuttingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final suppliers = ref.watch(suppliersProvider);
     final batches = ref.watch(cuttableBatchesProvider);
 
     return Scaffold(
@@ -295,31 +323,9 @@ class _SendToCuttingScreenState extends ConsumerState<SendToCuttingScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: suppliers.when(
-              loading: () => const LinearProgressIndicator(),
-              error: (e, _) => ErrorState(error: e),
-              data: (list) {
-                final cutters = list
-                    .where((s) => s.type == SupplierType.cutter)
-                    .toList();
-                if (cutters.isEmpty) {
-                  return const EmptyState(
-                    icon: Icons.factory_outlined,
-                    title: 'Kesimhane tanımlı değil',
-                    description:
-                        'Önce tipi "Kesimhane" olan bir tedarikçi ekleyin.',
-                  );
-                }
-                return DropdownButtonFormField<String>(
-                  initialValue: _cutterId,
-                  decoration: const InputDecoration(labelText: 'Kesimhane'),
-                  items: [
-                    for (final s in cutters)
-                      DropdownMenuItem(value: s.id, child: Text(s.title)),
-                  ],
-                  onChanged: (v) => setState(() => _cutterId = v),
-                );
-              },
+            child: CutterPicker(
+              value: _cutterId,
+              onChanged: (v) => setState(() => _cutterId = v),
             ),
           ),
           Expanded(

@@ -24,7 +24,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Raporlar'),
@@ -34,6 +34,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               Tab(text: 'Kârlılık'),
               Tab(text: 'Satış grafiği'),
               Tab(text: 'Ürünler'),
+              Tab(text: 'Müşteriler'),
               Tab(text: 'Vadeler'),
             ],
           ),
@@ -43,6 +44,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             _ProfitabilityTab(),
             _PeriodTab(),
             _ProductTab(),
+            _CustomerTab(),
             _DueTab(),
           ],
         ),
@@ -402,6 +404,124 @@ class _ProductTab extends ConsumerWidget {
   }
 }
 
+// ---------------------------------------------------------- müşteri analizi
+
+/// Bütün müşterilerin analizi, cirosu büyükten küçüğe.
+///
+/// `customerAnalysis` Faz 4'te yazılmıştı ama hiçbir ekrandan
+/// çağrılmıyordu (SK-22): "hangi müşteri ne kadar aldı, ne kadar kâr
+/// bıraktı, ne kadar geç ödüyor" sorusunun cevabı yoktu.
+final customerAnalysisProvider =
+    FutureProvider.autoDispose<List<CustomerAnalysis>>((ref) async {
+      final db = await ref.watch(databaseProvider.future);
+      final customers = await (db.select(
+        db.customers,
+      )..where((c) => c.isActive.equals(true))).get();
+
+      final result = <CustomerAnalysis>[];
+      for (final customer in customers) {
+        result.add(await db.customerAnalysis(customer.id));
+      }
+
+      // Hiç alışveriş yapmamış cariyi raporda göstermek gürültüdür.
+      result.removeWhere((a) => a.totalSales.isZero && a.currentDebt.isZero);
+      result.sort((a, b) => b.totalSales.stored.compareTo(a.totalSales.stored));
+      return result;
+    });
+
+class _CustomerTab extends ConsumerWidget {
+  const _CustomerTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final data = ref.watch(customerAnalysisProvider);
+    final hideCost = ref.watch(hideCostProvider);
+
+    return data.when(
+      loading: () => const LoadingState(),
+      error: (e, _) => ErrorState(
+        error: e,
+        onRetry: () => ref.invalidate(customerAnalysisProvider),
+      ),
+      data: (rows) => rows.isEmpty
+          ? const EmptyState(
+              icon: Icons.groups_outlined,
+              title: 'Henüz müşteri hareketi yok',
+              description: 'Satış girdikçe burası dolar.',
+            )
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                for (final c in rows)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            c.title,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          _MoneyRow(
+                            label: 'Ciro (KDV hariç)',
+                            value: c.totalSales,
+                          ),
+                          _MoneyRow(
+                            label: 'Brüt kâr',
+                            value: c.grossProfit,
+                            hidden: hideCost,
+                          ),
+                          _TextRow(
+                            label: 'Aldığı hacim',
+                            value: TrFormat.volume(c.totalVolume),
+                          ),
+                          _MoneyRow(
+                            label: 'Tahsil edilen',
+                            value: c.totalCollected,
+                          ),
+                          _MoneyRow(
+                            label: 'Güncel borç',
+                            value: c.currentDebt,
+                            emphasis: true,
+                          ),
+                          if (c.topProductName != null)
+                            _TextRow(
+                              label: 'En çok aldığı',
+                              value: c.topProductName!,
+                            ),
+                          _TextRow(
+                            label: 'Son satış',
+                            value: c.lastSaleAt == null
+                                ? '—'
+                                : TrFormat.date(c.lastSaleAt),
+                          ),
+                          // Toptancının asıl sorusu: parasını ne zaman
+                          // alıyor. Vade değil, gerçekleşen ödeme süresi.
+                          _TextRow(
+                            label: 'Ort. ödeme süresi',
+                            value: c.averagePaymentDays == null
+                                ? 'henüz kapanmış belge yok'
+                                : '${c.averagePaymentDays} gün',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      shareCustomerAnalysisCsv(context, rows: rows),
+                  icon: const Icon(Icons.table_view),
+                  label: const Text('CSV olarak paylaş'),
+                ),
+              ],
+            ),
+    );
+  }
+}
+
 // -------------------------------------------------------------- vade raporu
 
 final dueInstrumentsProvider = FutureProvider.autoDispose((ref) async {
@@ -479,15 +599,20 @@ class _MoneyRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 6),
+    // Etiket esner ve gerekirse kırpılır; rakam asla kırpılmaz. Uzun
+    // etiketler ve büyük yazı tipi ayarında satır taşıyordu.
     child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: emphasis
-              ? Theme.of(context).textTheme.titleSmall
-              : context.labelStyle,
+        Expanded(
+          child: Text(
+            label,
+            overflow: TextOverflow.ellipsis,
+            style: emphasis
+                ? Theme.of(context).textTheme.titleSmall
+                : context.labelStyle,
+          ),
         ),
+        const SizedBox(width: 12),
         SensitiveValue(
           hidden: hidden,
           value: TrFormat.moneyWithCurrency(value),
@@ -509,11 +634,27 @@ class _TextRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
+    // `_MoneyRow`'dan farkı: buradaki değer rakam değil **metin** olabilir
+    // (ürün adı, "henüz kapanmış belge yok"). Bu yüzden iki taraf da esner;
+    // para satırında rakam asla kırpılmaz, burada kırpılabilir.
     child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: context.labelStyle),
-        Text(value, style: context.numberStyle),
+        Expanded(
+          child: Text(
+            label,
+            overflow: TextOverflow.ellipsis,
+            style: context.labelStyle,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: context.numberStyle,
+          ),
+        ),
       ],
     ),
   );

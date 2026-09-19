@@ -75,7 +75,7 @@ class StockAdjustments extends Table {
 
   @override
   List<String> get customConstraints => [
-    "CHECK (reason_code IN (${WasteReason.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (reason_code IN ('HASARLI','KESIM_FIRESI','NEM','DIGER'))",
   ];
 }
 
@@ -137,7 +137,7 @@ class CuttingOrders extends Table {
 
   @override
   List<String> get customConstraints => [
-    "CHECK (status IN (${CuttingStatus.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (status IN ('PREPARING','AT_CUTTER','PARTIAL','COMPLETED','CANCELLED'))",
     // Hedef toplam m³ kaynağı aşamaz (BRIEF §5.3).
     'CHECK (result_volume_total <= source_volume_total)',
   ];

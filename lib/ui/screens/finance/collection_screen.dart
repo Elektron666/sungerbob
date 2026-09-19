@@ -7,6 +7,7 @@ import '../../../data/repo/collection_repository.dart';
 import '../../../data/repo/unit_of_work.dart';
 import '../../format/tr_format.dart';
 import '../../providers/app_providers.dart';
+import '../../widgets/party_picker.dart';
 import '../home/home_screen.dart';
 import 'customers_screen.dart';
 
@@ -91,7 +92,6 @@ class _CollectionScreenState extends ConsumerState<CollectionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final customers = ref.watch(customerBalancesProvider);
     final accounts = ref.watch(cashAccountsProvider);
 
     return Scaffold(
@@ -99,24 +99,11 @@ class _CollectionScreenState extends ConsumerState<CollectionScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          customers.when(
-            loading: () => const LinearProgressIndicator(),
-            error: (e, _) => Text('$e'),
-            data: (rows) => DropdownButtonFormField<String>(
-              initialValue: _customerId,
-              decoration: const InputDecoration(labelText: 'Müşteri'),
-              items: [
-                for (final row in rows)
-                  DropdownMenuItem(
-                    value: row.id,
-                    child: Text(
-                      '${row.title} · ${TrFormat.moneyWithCurrency(row.balance)}',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-              ],
-              onChanged: (id) => setState(() => _customerId = id),
-            ),
+          PartyPicker(
+            supplier: false,
+            label: 'Müşteri',
+            value: _customerId,
+            onChanged: (id) => setState(() => _customerId = id),
           ),
           const SizedBox(height: 16),
           TextField(

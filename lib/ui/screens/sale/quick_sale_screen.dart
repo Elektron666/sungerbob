@@ -2,13 +2,16 @@ import 'package:flutter/material.dart' hide Column;
 import 'package:flutter/material.dart' as m show Column;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../data/db/enums.dart';
 import '../../../data/repo/sale_repository.dart';
 import '../../../data/repo/unit_of_work.dart';
 import '../../../domain/costing/costing_engine.dart';
 import '../../../domain/core/quantity.dart';
 import '../../../domain/service/vat.dart';
 import '../../format/tr_format.dart';
+import '../../../data/repo/price_memory.dart';
 import '../../providers/app_providers.dart';
+import '../master/party_form.dart';
 import '../../theme/app_theme.dart';
 import '../finance/customers_screen.dart';
 import '../home/home_screen.dart';
@@ -31,9 +34,39 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
 
   CustomerRow? _customer;
   String? _productId;
+
+  /// Seçili ürünün birimi. Sünger m³ ile döner, ince malzeme kendi
+  /// birimiyle (D-22); ekrandaki her etiket buna bakar.
+  String _unit = ProductUnit.m3;
   StockCell? _variant;
   int _pieces = 1;
+
+  bool get _isFoam => ProductUnit.hasDimensions(_unit);
+
+  /// Ayarlardaki varsayılanlar (KDV oranı ve fiyat modu). Kullanıcı bu
+  /// belgede değiştirebilir ama başlangıç değeri **ayardan** gelir: koda
+  /// gömülü %20, Ayarlar'da %10 seçen kullanıcıyı sessizce yanıltıyordu
+  /// (D-32).
   PriceMode _priceMode = PriceMode.excl;
+  Rate _vatRate = Rate.percent('20');
+  bool _defaultsApplied = false;
+
+  /// Kullanıcı fiyat modunu bu belgede kendi eliyle değiştirdi mi?
+  ///
+  /// Ayar veritabanından **asenkron** gelir; ilk çizimde henüz yoktur.
+  /// Kullanıcı o arada moda dokunduysa, ayar geldiğinde seçimini geri almak
+  /// olmaz — girdiği rakamın anlamını habersiz değiştirirdi.
+  bool _priceModeTouched = false;
+
+  /// Ayar okunduğunda bir kez uygulanır; sonrasında kullanıcının bu belgede
+  /// yaptığı değişiklik korunur.
+  void _applyDefaults(DocumentDefaults? defaults) {
+    if (defaults == null || _defaultsApplied) return;
+    _defaultsApplied = true;
+    _vatRate = defaults.vatRate;
+    if (!_priceModeTouched) _priceMode = defaults.priceMode;
+  }
+
   final _priceController = TextEditingController();
   bool _saving = false;
   String? _error;
@@ -59,7 +92,7 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
       mode: _priceMode,
       volume: _volume,
       unitPrice: price,
-      vatRate: Rate.percent('20'),
+      vatRate: _vatRate,
     );
   }
 
@@ -91,7 +124,7 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
               pieces: _pieces,
               volume: _volume,
               unitPriceM3: price,
-              vatRate: Rate.percent('20'),
+              vatRate: _vatRate,
             ),
           ],
         ),
@@ -156,6 +189,7 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _applyDefaults(ref.watch(documentDefaultsProvider).value);
     final hideCost = ref.watch(hideCostProvider);
     final line = _line;
 
@@ -171,7 +205,10 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
                 ButtonSegment(value: PriceMode.incl, label: Text('Dahil')),
               ],
               selected: {_priceMode},
-              onSelectionChanged: (s) => setState(() => _priceMode = s.first),
+              onSelectionChanged: (s) => setState(() {
+                _priceMode = s.first;
+                _priceModeTouched = true;
+              }),
             ),
           ),
         ],
@@ -186,8 +223,9 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
           const SizedBox(height: 24),
           _ProductChips(
             selectedId: _productId,
-            onSelected: (id) => setState(() {
+            onSelected: (id, unit) => setState(() {
               _productId = id;
+              _unit = unit;
               _variant = null;
             }),
           ),
@@ -195,6 +233,7 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
             const SizedBox(height: 16),
             _VariantPicker(
               productId: _productId!,
+              unit: _unit,
               selected: _variant,
               onSelected: (v) => setState(() {
                 _variant = v;
@@ -205,6 +244,7 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
           if (_variant != null) ...[
             const SizedBox(height: 24),
             _PieceStepper(
+              label: _isFoam ? 'Adet' : 'Miktar (${ProductUnit.label(_unit)})',
               value: _pieces,
               max: _variant!.pieces,
               onChanged: (v) => setState(() => _pieces = v),
@@ -215,14 +255,41 @@ class _QuickSaleScreenState extends ConsumerState<QuickSaleScreen> {
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
-              decoration: const InputDecoration(
-                labelText: 'TL/m³',
+              decoration: InputDecoration(
+                labelText: ProductUnit.priceLabel(_unit),
                 helperText: 'Virgül veya nokta kullanabilirsiniz',
               ),
               onChanged: (_) => setState(() {}),
             ),
+            // Fiyatı yazarken en çok gereken bilgi: bu müşteriye en son
+            // kaça satmıştın. Doldurmaz, yalnızca hatırlatır — otomatik
+            // doldurmak zam yapılması gereken yerde eski fiyatı sessizce
+            // tekrarlardı.
+            if (_customer case final customer?)
+              _LastPriceHint(
+                customerId: customer.id,
+                productId: _productId!,
+                unit: _unit,
+                onUse: (price) => setState(
+                  () => _priceController.text = TrFormat.unitPrice(price),
+                ),
+              ),
+            // Liste fiyatı "bugünkü fiyatım ne", son satış "bu müşteriye ne
+            // demiştim" sorusunu yanıtlar. İkisi de yalnızca ipucudur.
+            _ListPriceHint(
+              productId: _productId!,
+              unit: _unit,
+              onUse: (price) => setState(
+                () => _priceController.text = TrFormat.unitPrice(price),
+              ),
+            ),
             const SizedBox(height: 24),
-            _SummaryCard(volume: _volume, line: line, hideCost: hideCost),
+            _SummaryCard(
+              volume: _volume,
+              unit: _unit,
+              line: line,
+              hideCost: hideCost,
+            ),
           ],
           if (_error != null) ...[
             const SizedBox(height: 16),
@@ -259,6 +326,8 @@ class _CustomerPicker extends ConsumerWidget {
 
   const _CustomerPicker({required this.selected, required this.onSelected});
 
+  static const _newCustomer = '__yeni_musteri__';
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final customers = ref.watch(customerBalancesProvider);
@@ -267,8 +336,17 @@ class _CustomerPicker extends ConsumerWidget {
       loading: () => const LinearProgressIndicator(),
       error: (e, _) => Text('$e'),
       data: (rows) => DropdownButtonFormField<String>(
-        initialValue: selected?.id,
-        decoration: const InputDecoration(labelText: 'Müşteri'),
+        initialValue: rows.any((r) => r.id == selected?.id)
+            ? selected?.id
+            : null,
+        isExpanded: true,
+        decoration: InputDecoration(
+          labelText: 'Müşteri',
+          helperText: rows.isEmpty
+              ? 'Henüz müşteri yok — listeden ekleyin'
+              : null,
+        ),
+        hint: const Text('Müşteri seçin'),
         items: [
           for (final row in rows)
             DropdownMenuItem(
@@ -278,9 +356,35 @@ class _CustomerPicker extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+          // Liste boşken satış yapılamıyordu; kart açmanın yolu buradan.
+          const DropdownMenuItem(
+            value: _newCustomer,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add, size: 18),
+                SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    'Yeni müşteri ekle',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
-        onChanged: (id) {
+        onChanged: (id) async {
           if (id == null) return;
+          if (id == _newCustomer) {
+            final created = await openPartyForm(context, supplier: false);
+            if (created == null) return;
+            ref.invalidate(customerBalancesProvider);
+            final refreshed = await ref.read(customerBalancesProvider.future);
+            final row = refreshed.where((r) => r.id == created).firstOrNull;
+            if (row != null) onSelected(row);
+            return;
+          }
           onSelected(rows.firstWhere((r) => r.id == id));
         },
       ),
@@ -290,7 +394,10 @@ class _CustomerPicker extends ConsumerWidget {
 
 class _ProductChips extends ConsumerWidget {
   final String? selectedId;
-  final ValueChanged<String> onSelected;
+
+  /// Ürün kimliği ile birlikte birimini de verir — ekranın geri kalanı
+  /// etiketleri buna göre yazar.
+  final void Function(String id, String unit) onSelected;
 
   const _ProductChips({required this.selectedId, required this.onSelected});
 
@@ -307,9 +414,13 @@ class _ProductChips extends ConsumerWidget {
         children: [
           for (final product in list)
             ChoiceChip(
-              label: Text(product.name),
+              label: Text(
+                product.unit == ProductUnit.m3
+                    ? product.name
+                    : '${product.name} · ${ProductUnit.label(product.unit)}',
+              ),
               selected: product.id == selectedId,
-              onSelected: (_) => onSelected(product.id),
+              onSelected: (_) => onSelected(product.id, product.unit),
             ),
         ],
       ),
@@ -319,11 +430,13 @@ class _ProductChips extends ConsumerWidget {
 
 class _VariantPicker extends ConsumerWidget {
   final String productId;
+  final String unit;
   final StockCell? selected;
   final ValueChanged<StockCell> onSelected;
 
   const _VariantPicker({
     required this.productId,
+    required this.unit,
     required this.selected,
     required this.onSelected,
   });
@@ -358,11 +471,19 @@ class _VariantPicker extends ConsumerWidget {
               for (final cell in cells)
                 RadioListTile<String>(
                   value: cell.variantId,
+                  // İnce malzemenin ölçüsü yoktur; "0×0×0" yazmak yerine
+                  // stoktaki miktarı başlığa alıyoruz (D-22).
                   title: Text(
-                    '${cell.sizeLabel}×${TrFormat.volumeBare(Volume(cell.thickness.stored * 10000))}',
+                    ProductUnit.hasDimensions(unit)
+                        ? '${cell.sizeLabel}×'
+                              '${TrFormat.volumeBare(Volume(cell.thickness.stored * 10000))}'
+                        : 'Stok: ${TrFormat.quantity(cell.volume, unit)}',
                   ),
                   subtitle: Text(
-                    '${TrFormat.pieces(cell.pieces)} · ${TrFormat.volume(cell.volume)}',
+                    ProductUnit.hasDimensions(unit)
+                        ? '${TrFormat.pieces(cell.pieces)} · '
+                              '${TrFormat.volume(cell.volume)}'
+                        : TrFormat.quantity(cell.volume, unit),
                   ),
                 ),
             ],
@@ -374,11 +495,13 @@ class _VariantPicker extends ConsumerWidget {
 }
 
 class _PieceStepper extends StatelessWidget {
+  final String label;
   final int value;
   final int max;
   final ValueChanged<int> onChanged;
 
   const _PieceStepper({
+    required this.label,
     required this.value,
     required this.max,
     required this.onChanged,
@@ -388,7 +511,7 @@ class _PieceStepper extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text('Adet', style: context.labelStyle),
+        Text(label, style: context.labelStyle),
         const Spacer(),
         IconButton.filledTonal(
           onPressed: value > 1 ? () => onChanged(value - 1) : null,
@@ -415,11 +538,13 @@ class _PieceStepper extends StatelessWidget {
 
 class _SummaryCard extends StatelessWidget {
   final Volume volume;
+  final String unit;
   final VatLine? line;
   final bool hideCost;
 
   const _SummaryCard({
     required this.volume,
+    required this.unit,
     required this.line,
     required this.hideCost,
   });
@@ -431,7 +556,11 @@ class _SummaryCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: m.Column(
           children: [
-            _row(context, 'Hacim', TrFormat.volume(volume)),
+            _row(
+              context,
+              ProductUnit.hasDimensions(unit) ? 'Hacim' : 'Miktar',
+              TrFormat.quantity(volume, unit),
+            ),
             if (line != null) ...[
               _row(context, 'KDV hariç', TrFormat.moneyWithCurrency(line!.net)),
               _row(context, 'KDV', TrFormat.moneyWithCurrency(line!.vat)),
@@ -456,10 +585,18 @@ class _SummaryCard extends StatelessWidget {
     bool bold = false,
   }) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
+    // Dar telefonda "GENEL TOPLAM" + büyük tutar satıra sığmıyordu.
+    // Kısalacak olan etikettir; rakam asla kırpılmaz.
     child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: bold ? null : context.labelStyle),
+        Expanded(
+          child: Text(
+            label,
+            style: bold ? null : context.labelStyle,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 12),
         Text(
           value,
           style: bold
@@ -470,3 +607,95 @@ class _SummaryCard extends StatelessWidget {
     ),
   );
 }
+
+/// "Son satış: 3.500,0000 TL/m³ · 12.09.2026" — dokununca fiyatı doldurur.
+class _LastPriceHint extends ConsumerWidget {
+  final String customerId;
+  final String productId;
+  final String unit;
+  final ValueChanged<UnitPrice> onUse;
+
+  const _LastPriceHint({
+    required this.customerId,
+    required this.productId,
+    required this.unit,
+    required this.onUse,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hint = ref.watch(
+      lastSalePriceProvider((customerId: customerId, productId: productId)),
+    );
+
+    return hint.maybeWhen(
+      data: (value) => value == null
+          ? const SizedBox.shrink()
+          : Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => onUse(value.unitPrice),
+                icon: const Icon(Icons.history, size: 16),
+                label: Text(
+                  'Son satış: '
+                  '${TrFormat.unitPriceFor(value.unitPrice, unit)} · '
+                  '${TrFormat.date(value.date)}',
+                ),
+              ),
+            ),
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+/// "Liste fiyatı: 3.500,0000 TL/m³" — dokununca fiyatı doldurur.
+class _ListPriceHint extends ConsumerWidget {
+  final String productId;
+  final String unit;
+  final ValueChanged<UnitPrice> onUse;
+
+  const _ListPriceHint({
+    required this.productId,
+    required this.unit,
+    required this.onUse,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hint = ref.watch(listPriceProvider(productId));
+
+    return hint.maybeWhen(
+      data: (value) => value == null
+          ? const SizedBox.shrink()
+          : Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => onUse(value),
+                icon: const Icon(Icons.sell_outlined, size: 16),
+                label: Text(
+                  'Liste fiyatı: ${TrFormat.unitPriceFor(value, unit)}',
+                ),
+              ),
+            ),
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+final listPriceProvider = FutureProvider.autoDispose.family<UnitPrice?, String>(
+  (ref, productId) async {
+    final db = await ref.watch(databaseProvider.future);
+    return PriceMemory(db).activeListPrice(productId);
+  },
+);
+
+final lastSalePriceProvider = FutureProvider.autoDispose
+    .family<PriceHint?, ({String customerId, String productId})>((
+      ref,
+      args,
+    ) async {
+      final db = await ref.watch(databaseProvider.future);
+      return PriceMemory(
+        db,
+      ).lastSalePrice(customerId: args.customerId, productId: args.productId);
+    });

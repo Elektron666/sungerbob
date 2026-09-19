@@ -8,6 +8,41 @@ abstract final class LocationCode {
   static const all = [mainWarehouse, cutting];
 }
 
+/// Ürünün satış ve stok birimi.
+///
+/// Sünger m³ ile döner; **ince malzeme** (çivi, yapıştırıcı, zikzak yay,
+/// tela) adet, kilo, kutu, litre veya metre ile. Birim ürün kartında
+/// sabittir ve ilk stok hareketinden sonra değiştirilemez — geçmiş
+/// hareketlerin birimi değişirse maliyet anlamını yitirir.
+abstract final class ProductUnit {
+  /// Metreküp — sünger. Varsayılan.
+  static const m3 = 'M3';
+  static const piece = 'ADET';
+  static const kilogram = 'KG';
+  static const box = 'KUTU';
+  static const litre = 'LITRE';
+  static const metre = 'METRE';
+
+  static const all = [m3, piece, kilogram, box, litre, metre];
+
+  /// Ölçü (en/boy/kalınlık) yalnızca m³ ürünlerde sorulur.
+  static bool hasDimensions(String unit) => unit == m3;
+
+  /// Ekranlarda gösterilen kısa ad.
+  static String label(String unit) => switch (unit) {
+    m3 => 'm³',
+    piece => 'adet',
+    kilogram => 'kg',
+    box => 'kutu',
+    litre => 'lt',
+    metre => 'm',
+    _ => unit.toLowerCase(),
+  };
+
+  /// "TL/m³", "TL/adet" gibi birim fiyat etiketi.
+  static String priceLabel(String unit) => 'TL/${label(unit)}';
+}
+
 abstract final class VariantKind {
   static const plate = 'PLAKA';
   static const block = 'BLOK';
@@ -94,6 +129,31 @@ abstract final class QuoteStatus {
   static const expired = 'EXPIRED';
   static const converted = 'CONVERTED';
   static const all = [draft, sent, accepted, rejected, expired, converted];
+
+  /// Elle yapılabilecek durum geçişleri (SPEC §15).
+  ///
+  /// `CONVERTED` bu haritada yok: satışa çevirme ayrı bir iş işlemidir,
+  /// stok ve cari hareketi üretir; durum elle işaretlenerek atlanamaz.
+  /// `EXPIRED` de yok — geçerlilik tarihi geçince sistem kendisi koyar.
+  static const transitions = <String, List<String>>{
+    draft: [sent],
+    sent: [accepted, rejected],
+    accepted: [],
+    rejected: [],
+    expired: [],
+    converted: [],
+  };
+
+  /// Ekranda görünen Türkçe ad.
+  static String label(String status) => switch (status) {
+    draft => 'Taslak',
+    sent => 'Gönderildi',
+    accepted => 'Kabul edildi',
+    rejected => 'Reddedildi',
+    expired => 'Süresi doldu',
+    converted => 'Satışa çevrildi',
+    _ => status,
+  };
 }
 
 abstract final class CuttingStatus {
@@ -191,6 +251,23 @@ abstract final class RoundingRule {
   static const nearest5 = 'NEAREST_5';
   static const nearest10 = 'NEAREST_10';
   static const all = [none, nearest1, nearest5, nearest10];
+}
+
+/// Alış masrafı türü (nakliye, hamaliye, diğer).
+///
+/// Elle yazılmış `'NAKLIYE'` metinleriyle dolaşıyordu; enum'a alındı ki
+/// şema kısıtı ile kod aynı listeden beslensin (D-23).
+abstract final class PurchaseExpenseKind {
+  static const freight = 'NAKLIYE';
+  static const handling = 'HAMALIYE';
+  static const other = 'DIGER';
+  static const all = [freight, handling, other];
+
+  static String label(String kind) => switch (kind) {
+    freight => 'Nakliye',
+    handling => 'Hamaliye',
+    _ => 'Diğer',
+  };
 }
 
 abstract final class AllocationKey {

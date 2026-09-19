@@ -4,14 +4,19 @@ import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sungerbob/data/db/app_database.dart';
+import 'package:sungerbob/data/db/enums.dart';
 import 'package:sungerbob/data/db/triggers.dart';
+import 'package:drift/drift.dart' show Variable;
+
+import 'package:drift_dev/api/migrations_native.dart';
+
+import 'generated_migrations/schema.dart';
 
 /// Migration ve sıfırdan kurulum testleri (ARCHITECTURE §11).
 ///
-/// Sürüm 1 ilk sürüm olduğu için henüz yükseltme adımı yok; bu testler
-/// şemanın sıfırdan tutarlı kurulduğunu ve trigger'ların yerinde olduğunu
-/// doğrular. Sürüm 2 geldiğinde `drift_schemas/` anlık görüntüleriyle
-/// üretilen yükseltme testleri buraya eklenir.
+/// Sıfırdan kurulumun yanı sıra **v1 → v2 yükseltmesi** de sınanır:
+/// telefonundaki veriyle uygulamayı güncelleyen kullanıcı, verisini
+/// kaybetmemelidir.
 void main() {
   group('Sıfırdan kurulum', () {
     late AppDatabase db;
@@ -29,8 +34,8 @@ void main() {
 
     tearDown(() async => db.close());
 
-    test('şema sürümü 1', () {
-      expect(db.schemaVersion, 1);
+    test('şema sürümü 2', () {
+      expect(db.schemaVersion, 2);
     });
 
     test('bütün tablolar oluşturuldu', () async {
@@ -156,6 +161,113 @@ void main() {
 
       final json = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
       expect(json['_meta']?['version'], isNotNull);
+    });
+  });
+
+  group('v1 → v2 yükseltmesi (ürün birimi)', () {
+    late SchemaVerifier verifier;
+
+    setUpAll(() {
+      verifier = SchemaVerifier(GeneratedHelper());
+    });
+
+    test('şema v1\'den v2\'ye sorunsuz yükselir', () async {
+      final connection = await verifier.startAt(1);
+      final db = AppDatabase(connection);
+      await verifier.migrateAndValidate(db, 2);
+      await db.close();
+    });
+
+    test('yükseltmede mevcut ürünler kaybolmaz ve birimi M3 olur', () async {
+      // v1 şemasıyla bir ürün yaz — o sürümde `unit` sütunu yok.
+      final upgraded = AppDatabase(await verifier.startAt(1));
+      await upgraded.customStatement(
+        "INSERT INTO products (id, code, name, name_normalized, "
+        'price_coefficient, critical_stock_pieces, is_active) '
+        "VALUES ('p1', 'TEST', 'Test Sünger', 'test sunger', 10000, 0, 1)",
+      );
+
+      // Açılış migration'ı tetikler.
+      await upgraded.customSelect('SELECT 1').get();
+      final rows = await upgraded
+          .customSelect(
+            'SELECT id, unit FROM products WHERE id = ?',
+            variables: [Variable.withString('p1')],
+          )
+          .get();
+
+      expect(rows, hasLength(1), reason: 'yükseltmede ürün kayboldu');
+      expect(
+        rows.single.read<String>('unit'),
+        ProductUnit.m3,
+        reason: 'eski ürünler sünger; birimi m³ olmalı',
+      );
+      await upgraded.close();
+    });
+
+    test('yükseltilen tablolar taze kurulumla birebir aynı', () async {
+      // Asıl güvence: telefonunda v1 taşıyan kullanıcı ile bugün uygulamayı
+      // ilk kez kuran kullanıcı **aynı** veritabanına sahip olmalı.
+      final upgraded = AppDatabase(await verifier.startAt(1));
+      await upgraded.customSelect('SELECT 1').get();
+      final fresh = AppDatabase(NativeDatabase.memory());
+      await fresh.customSelect('SELECT 1').get();
+
+      Future<String> tableSql(AppDatabase d, String name) async {
+        final row = await d
+            .customSelect(
+              "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?",
+              variables: [Variable.withString(name)],
+            )
+            .getSingle();
+        return row.read<String>('sql');
+      }
+
+      for (final table in ['products', 'product_variants']) {
+        expect(
+          await tableSql(upgraded, table),
+          await tableSql(fresh, table),
+          reason: '$table yükseltmede taze kurulumdan farklı oluştu',
+        );
+      }
+
+      await upgraded.close();
+      await fresh.close();
+    });
+
+    test('yükseltilen veritabanı ölçüsüz varyantı kabul eder', () async {
+      // İnce malzemenin ölçüsü yoktur; v1'in ölçü kısıtı bunu engelliyordu.
+      final upgraded = AppDatabase(await verifier.startAt(1));
+      await upgraded.customStatement(
+        "INSERT INTO products (id, code, name, name_normalized, "
+        'price_coefficient, critical_stock_pieces, is_active, unit) '
+        "VALUES ('p2', 'TUTKAL', 'Tutkal', 'tutkal', 10000, 0, 1, 'KG')",
+      );
+      await upgraded.customStatement(
+        'INSERT INTO product_variants (id, product_id, width, height, '
+        'thickness, kind, unit_volume, critical_stock_pieces, is_active) '
+        "VALUES ('v2', 'p2', 0, 0, 0, 'PLAKA', 1000000, 0, 1)",
+      );
+      final rows = await upgraded
+          .customSelect("SELECT id FROM product_variants WHERE id = 'v2'")
+          .get();
+      expect(rows, hasLength(1));
+      await upgraded.close();
+    });
+
+    test('yükseltilen veritabanı geçersiz birimi reddeder', () async {
+      // `ADD COLUMN` tablo kısıtı ekleyemediği için tablo yeniden kuruluyor;
+      // bu test o kararın gerçekten işe yaradığını doğrular.
+      final upgraded = AppDatabase(await verifier.startAt(1));
+      await expectLater(
+        upgraded.customStatement(
+          "INSERT INTO products (id, code, name, name_normalized, "
+          'price_coefficient, critical_stock_pieces, is_active, unit) '
+          "VALUES ('p3', 'X', 'X', 'x', 10000, 0, 1, 'SAKA_BIRIM')",
+        ),
+        throwsA(isA<Exception>()),
+      );
+      await upgraded.close();
     });
   });
 }

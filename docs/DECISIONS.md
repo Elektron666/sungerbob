@@ -291,6 +291,819 @@ hatırlatmamaktan kötüdür.
 GSON kural dosyası v19'dan itibaren paketin kendisiyle geliyor; ayrıca
 ProGuard kuralı gerekmiyor.
 
+### SK-18 · PIN tuş takımı basışları düşürüyordu — widget artık değer biriktirmiyor
+
+**Kullanıcının bildirdiği hata:** kurulum sihirbazında PIN girilebiliyor ama
+"Devam" açılmıyordu; kurulum tamamlanamıyordu.
+
+**Kök neden:** `PinPad` durumsuzdu ve yeni değeri `value + digit` ile, yani
+kendisine **dışarıdan verilen** değerden hesaplıyordu. Kullanıcı hızlı
+bastığında iki dokunuş arasında kare çizilmiyor; ikinci dokunuş bayat bir
+`value` okuyup yanlış sonucu üretiyordu. Sonuç: haneler sessizce kayboluyor
+veya doğrulama alanına yazılıyor, ekran kilitleniyordu.
+
+Testle birebir doğrulandı:
+
+| Basış hızı | Sonuç (eski sürüm) |
+|---|---|
+| Her dokunuştan sonra kare çizilerek | çalışıyor |
+| Art arda, kare beklemeden | **kilitleniyor** |
+
+İlk testim yalnızca yavaş yolu deniyordu; bu yüzden hata CI'den geçti.
+**Ders: bir tuş takımı testi gerçek kullanımı, yani art arda dokunuşu
+denemelidir.**
+
+**Düzeltme:** `PinPad` artık yalnızca **hangi tuşa basıldığını** bildiriyor
+(`onDigit` / `onBackspace`). Yeni değeri, güncel durumu elinde tutan çağıran
+taraf hesaplıyor; bayat değer aritmetiği kalmadı.
+
+**Bunun ortaya çıkardığı üç kusur daha:**
+
+1. **0 ve geri silme tuşu kısa ekranda katlanıyordu** — yatay veya küçük
+   ekranda 4. sıra ekranın altında kalıyordu. Ne 0'lı PIN girilebiliyor ne de
+   yanlış düzeltilebiliyordu. Tuş takımı artık ekran alçakken sıkışık moda
+   geçiyor; test 1058×564'te tüm tuşların ekran içinde kaldığını doğruluyor.
+2. **Geri silme ilk PIN'in tamamını siliyordu.** Artık yalnızca son haneyi
+   siler; doğrulama boşken bir adım geriye döner.
+3. **Kapalı "Devam" düğmesi sebebini söylemiyordu.** Artık eksik ne ise
+   yanında yazıyor ("Kullanıcı adı girin", "PIN'i bir kez daha girin"…).
+   Ayrıca **"PIN'i sıfırla"** düğmesi eklendi: kullanıcı hiçbir durumda
+   çıkmazda kalmamalı.
+
+PIN aşaması (belirleme / doğrulama) artık `pin.length` gibi dolaylı bir
+işaretten çıkarılmıyor, açık bir alanda tutuluyor.
+
+## K-03 · Tasarım dili: sıcak minimalizm
+
+BRIEF §7 "sade, premium, kurumsal; nötr tonlar, tek vurgu rengi" diyor.
+Referans olarak mobilya vitrinlerinin dili alındı: kâğıt tonunda zemin, doğal
+malzeme renkleri, ince çizgiler, bol boşluk. Ekran bir muhasebe tablosu değil,
+**düzenli bir tezgâh** gibi görünmeli — çünkü kullanıcı güne buradan başlıyor.
+
+### Palet
+
+Renkler `ColorScheme.fromSeed` ile türetilmiyor, **elle** yazıldı: tohumdan
+üretilen Material paleti mor/mavi tarafa kayıyor ve istenen sıcaklığı vermiyor.
+
+| Rol | Açık | Koyu | Neden |
+|---|---|---|---|
+| Zemin | `#FBF9F6` | `#16130F` | Saf beyaz/siyah değil; kâğıt ve is tonu |
+| Vurgu | `#6E5843` | `#DCBD9B` | Ceviz. Tek vurgu rengi kuralı |
+| İkincil | `#6B7263` | `#B9C0AE` | Adaçayı — olumlu durum |
+| Üçüncül | `#9A6C3C` | `#E2B784` | Pirinç — kâr, ince süs çizgileri |
+| Hata | `#8F3A2C` | `#F0B0A2` | Kiremit; ekranın sıcaklığını bozmayan kırmızı |
+
+Zeminin kırmızı kanalı maviden yüksek olmak zorunda — test bunu doğruluyor,
+böylece palet ileride soğuk griye kaymaz.
+
+**Kontrast test ediliyor:** her iki temada da gövde metni, düğme yüzeyi ve
+hata rengi için WCAG AA (4.5:1) sınanıyor. Estetik uğruna okunabilirlik
+feda edilemez; depoda telefona bakan bir kullanıcı için bu konfor değil,
+kullanılabilirlik meselesi.
+
+### Tipografi
+
+- **Inter** — arayüz, rakamlar, etiketler. BRIEF §2 zaten adını veriyor.
+  Rakamlar tabular figürle: sütunlarda kayma olmaz.
+- **Lora** — yalnızca **iki yerde**: ekran başlıkları (display seviyesi) ve
+  Günün Sözü. Serif her yere serpilirse ciddiyetini kaybeder; kısıtlı
+  kullanım onu vurgu yapar.
+
+Fontlar **gömülü**: uygulama tamamen çevrimdışı, `google_fonts` gibi çalışma
+anında indiren bir çözüm kabul edilemez. Latin + Türkçe + ₺ aralığına budandı:
+1,9 MB → **528 KB**.
+
+### Günün Sözü — imza öğesi
+
+Ana sayfada rakamlardan **önce** durur: kullanıcı güne sayıyla değil bir
+cümleyle başlar.
+
+- **Gün bazında sabit**, rastgele değil. Sabah gördüğü sözü akşam bulamayan
+  kullanıcı için rastgelelik hoş değil, dağınıktır. Seçim tarihten türetilir;
+  kayıt tutulmaz, rastgele sayı üretilmez — saf ve test edilebilir.
+- **Tamamı Türk atasözü.** Kişiye atfedilen söz bilerek kullanılmadı:
+  dolaşımdaki alıntıların büyük bölümü yanlış kişiye mal edilmiş oluyor ve
+  uygulamanın her gün birine yanlış söz yakıştırması kabul edilemez.
+  Atasözünün kaynağı ortak kültürdür, yanlış atıf riski yoktur.
+- Konular işe göre seçildi: emek, sabır, ölçü, dürüst ticaret, itibar,
+  tutumluluk. 42 söz — bir aydan uzun süre tekrar etmez, test bunu doğruluyor.
+
+Listeyi genişletmek için `lib/ui/content/daily_quote.dart` içindeki diziye
+satır eklemek yeterli; testler tekrar ve boş kaynak kontrolünü kendisi yapar.
+
+### İmza
+
+`DesignSignature` — ana sayfanın en altında, kurulum sihirbazının son
+adımında ve Ayarlar → Hakkında'da: **"Tasarım · Fatih Özdemir"**. Sessiz
+tutuldu; göz onu ararsa bulur, aramazsa rahatsız etmez.
+
+### SK-19 · Alt bardaki ipucu tuş takımını ekrandan taşırıyordu
+
+Kullanıcı kurulumu **yine** bitiremediğini bildirdi. Adım adım testler
+geçiyordu; sekiz adımı baştan sona süren bir test yazılınca hata çıktı ve
+yalnızca **dar ekranlarda** görüldü:
+
+| Ekran | Eski sonuç |
+|---|---|
+| 411×891 dikey telefon | geçiyor |
+| 1058×564 yatay | geçiyor |
+| **360×640 dar telefon** | **kilitleniyor** |
+| **320×568 çok küçük** | **kilitleniyor** |
+
+**Kök neden ölçümle bulundu.** Tuş takımının kutusu ilk basıştan sonra
+444 px'ten 236 px'e düşüyordu:
+
+```
+"1"e basmadan önce  → PinPad kutusu y 68–512  (444 px)
+"1"e bastıktan sonra → PinPad kutusu y 68–304  (236 px)
+```
+
+Sebep: "Devam" düğmesinin **yanındaki** ipucu yazısı. İlk basışla birlikte
+alt barda "PIN'i sıfırla" düğmesi beliriyor, ipucu dar bir sütuna sıkışıp
+altı satıra sarıyor, alt bar şişiyor ve tuş takımının alt sıraları görünür
+alandan çıkıyordu. Kullanıcı 0'a ve geri silmeye basamıyor, PIN tamamlanmıyor,
+"Devam" kapalı kalıyordu.
+
+**Üç düzeltme:**
+
+1. **İpucu kendi satırında ve sabit yükseklikte.** Tek satır, taşarsa
+   kısaltılır. Alt barın yüksekliği artık hiçbir koşulda değişmiyor.
+2. **Kullanıcı adı ile PIN ayrı adımlara bölündü.** Sihirbazda bir ekranda
+   tek iş sorulur; tuş takımı da kalan alanın tamamını alır. Adım sayısı
+   8 → 9.
+3. **PIN adımı kaydırmaya bağımlı değil.** Kalan alanı doldurur, tuşlar
+   ona göre 48–72 dp arasında ölçeklenir (BRIEF §7 dokunma alanı alt sınırı).
+
+**Testteki asıl kusur:** ilk sürüm `warnIfMissed: false` kullanıyordu, yani
+**ıskalayan dokunuşlar sessizce yutuluyordu** — ekran dışında kalan tuş
+sırası testten böyle kaçtı. Artık ıskalama testi düşürür ve akış dört farklı
+ekran boyutunda baştan sona sürülür.
+
+### SK-20 · Demo giriş
+
+Kullanıcı isteği: kurulumu atlayıp uygulamayı hemen görebilmek.
+
+Başlangıç ekranına **"Demo ile hızlı gir"** eklendi. Sekiz adımı sormadan
+gerçek bir kurulum yapar: PIN `0000`, yedek şifresi `demo1234`, kullanıcı
+"Demo". Hepsi Ayarlar'dan değiştirilebilir.
+
+**Sahte veri üretmez.** CLAUDE.md'nin "mock veri yok" kuralı burada da
+geçerli: kayıt defteri boş açılır. Demo diye uydurma satış ve cari yazmak,
+sonradan gerçek kayıtlarla karışma riski taşır — ve bu uygulamada hareketler
+append-only olduğu için temizlenmeleri ters hareket gerektirirdi. Test, demo
+girişten sonra `sales`, `purchases`, `customer_ledger`, `stock_movements` ve
+`inventory_batches` tablolarının boş olduğunu doğruluyor.
+
+### SK-21 · Cari kartı açacak ekran yoktu — uygulama hiçbir iş yapamıyordu
+
+**Kullanıcı bildirimi:** "Stok girişinde tedarikçi seçin kısmında hiçbir şey
+yapılmıyor."
+
+**Kök neden, tek satırda:** seed yalnızca ürün ve kasa/banka hesabı
+oluşturuyordu. **Tedarikçi ve müşteri kartı yoktu ve uygulamada bunları
+açacak hiçbir ekran yoktu.** Alış tedarikçi, satış müşteri ister; ikisi de
+boş olduğu için:
+
+| Ekran | Durum |
+|---|---|
+| Stok girişi | tedarikçi listesi boş → kaydedilemiyor |
+| Hızlı satış | müşteri listesi boş → satış yapılamıyor |
+| Tahsilat | müşteri listesi boş |
+| Kesime gönder | kesimhane listesi boş |
+
+Alış ekranı boş listede **"Önce bir tedarikçi ekleyin"** yazan ölü bir kart
+gösteriyordu; eklemenin yolu yoktu. Fazlar "tamam" sayılmıştı çünkü iş
+kuralları ve testleri hazırdı — ama **kullanıcı hiçbirine erişemiyordu.**
+
+**Ders:** iş mantığının testten geçmesi, ekranın kullanılabilir olduğunu
+göstermez. Bir akış ancak **sıfırdan, boş veritabanıyla** baştan sona
+sürülebiliyorsa tamamdır.
+
+**Eklenenler:**
+
+- `data/repo/party_repository.dart` — müşteri ve tedarikçi kartı açma.
+  Kod (`code`) kullanıcıya sorulmaz, unvandan türetilir
+  (`Öz Sünger A.Ş.` → `OZSUNGERAS`); çakışırsa sonuna sayı eklenir. Elle kod
+  girdirmek hem yavaş hem çakışmaya açıktır. Türkçe arama için normalize
+  kopya da yazılır.
+- `ui/screens/master/party_form.dart` — tek zorunlu alan **unvan**. Geri
+  kalanı sonradan girilebilir; ilk kaydı yaparken kullanıcıyı uzun formda
+  bekletmek işi durdurur. Kaydet düğmesi kalıcı alt barda, doğrulama hatası
+  alanın kendisinde.
+- `ui/widgets/party_picker.dart` — seçici **boşken bile "Yeni ... ekle"**
+  gösterir. Kullanıcı hiçbir noktada çıkmaza düşmez. Alış, satış, tahsilat
+  ve kesim ekranlarının dördü de buna bağlandı.
+- `ui/screens/master/parties_screen.dart` — tedarikçi listesi, Menü'den.
+  Müşteri ekranına da kart açma düğmesi eklendi.
+
+Testler artık **boş veritabanından başlayıp** kart açmayı ve stok girişi
+ekranındaki açılır listeden kart açıp seçmeyi doğruluyor.
+
+### SK-22 · Ekranı olmayan iş kuralları (kalan liste)
+
+Faz 13'ün taraması, `lib/data` içinde yazılmış ama arayüzden hiç
+çağrılmayan şunları gösterdi. Hiçbiri hata değil; hepsi eksik:
+
+| Yetenek | Nerede | İş karşılığı |
+|---|---|---|
+| `QuoteRepository.setStatus` | teklif | Teklif "gönderildi / kabul / ret" işaretlenemiyor; liste hep "Taslak" görünüyor |
+| `PurchaseRepository.addLateExpense` | alış | Nakliye faturası sonradan geldiğinde parti maliyetine eklenemiyor |
+| `ReversalRepository.cancelCollection` | tahsilat | Yanlış girilen tahsilat ters kayıtla düzeltilemiyor |
+| `AnalyticsQueries.customerAnalysis` | rapor | "Hangi müşteri ne kadar aldı, ne kadar kâr bıraktı" raporu yok |
+| `PriceMemory.lastPurchasePrice` | alış | Satışta olan "son fiyat" ipucu alışta yok |
+
+**Durum: kapandı (Faz 14, K-13).** Beşi de arayüze bağlandı.
+
+## K-04 · Ürün gözden geçirmesi: neyin eksik olduğu
+
+Kullanıcı "çok karmaşık ve düzensiz" dedi ve haklıydı. Hataları tek tek
+kovalamayı bırakıp uygulamanın tamamına bakınca asıl tablo çıktı: **sekiz
+repository'nin iş mantığı ve testleri hazırdı ama hiç ekranı yoktu.**
+
+| Eksik | Kullanıcı için anlamı |
+|---|---|
+| **Satışlar listesi** | Satış kaydediliyor, bir daha görülemiyor |
+| **Alışlar listesi** | Aynısı |
+| Ödeme (tedarikçiye) | Mal alınıyor ama borç ödenemiyor |
+| Çek & Senet | Toptan süngercilikte olmazsa olmaz |
+| Kasa & Banka | Paranın nerede olduğu görünmüyor |
+| Fiyat listeleri | — |
+| İade | — |
+| Satış iptali | Yanlış kayıt düzeltilemiyor |
+
+**"Dün kime ne sattım?" sorusunun cevabı olmayan bir defter, defter
+değildir.** Bu turda ilk ikisi kapatıldı.
+
+### Yapılanlar
+
+**Satışlar ve Alışlar** (`ui/screens/documents/`) — tek ekran deseni ikisine
+de hizmet eder: liste + kalem detayı + toplamlar. İptal edilmiş belge üstü
+çizili görünür. Satış ve alış başlıkları tek sorguda cari adıyla birleşik
+çekilir; liste 200 satırla sınırlı, en yeni üstte.
+
+**Menü gruplandı** — 13 düz satır "karmaşık ve düzensiz" hissinin doğrudan
+kaynağıydı. Başlıklar işin ritmine göre: Kayıtlar · Depo · Cari · Yedekleme ·
+Kurulum.
+
+**İlk adımlar kartı** (`ui/widgets/first_steps.dart`) — ilk açılışta her
+ekran boş bir durum gösteriyor ve kullanıcı nereden başlayacağını
+bilmiyordu. Kart dört adımı işin doğal sırasıyla verir: tedarikçi → stok →
+müşteri → satış. Her adım ilgili ekrana götürür, tamamlananlar üstü çizilir,
+**hepsi bitince kart tamamen kaybolur.** Kalıcı bir öğretici değil, yalnızca
+başlangıç iskelesi.
+
+### Yol boyunca çıkan üç gerçek hata
+
+1. **Alış ekranında 66 piksel taşma** (411 px genişlikte). Özet satırında
+   uzun etiket ve uzun tutar yan yana sığmıyordu. Etiket artık esner ve
+   kısalır, rakam esnemez — kısaltılacaksa etiket kısaltılır.
+2. **"Tedarikçi, ürün, ölçü, adet ve fiyat gerekli"** — hepsini tek torbaya
+   koyan bir mesaj, hangisinin eksik olduğunu bulduramıyordu. Artık eksik
+   olan adıyla söylenir ("Sünger çeşidi seçin").
+3. **Açılır menüdeki "Yeni ... ekle" satırı taşıyordu**; ikon + metin dar
+   menüde sığmıyordu.
+
+### Çekirdek döngü testi
+
+`test/ui/core_loop_test.dart` — **boş veritabanından** başlar, hiçbir veri
+hazırlamaz, hiçbir repository'yi doğrudan çağırmaz: yalnızca ekranlara
+dokunur. Tedarikçi kartını açılır listeden açar, ölçü ve fiyatı girer,
+kaydeder ve 2,8 m³'ün gerçekten stoğa düştüğünü doğrular.
+
+Bu testin var olma sebebi SK-21'in dersi: **iş mantığının testten geçmesi,
+ekranın kullanılabilir olduğunu göstermez.** Bir akış ancak sıfırdan, boş
+veritabanıyla baştan sona sürülebiliyorsa tamamdır.
+
+## K-05 · Faz 6 — paranın hareketi ve günlük kolaylıklar
+
+Faz 6'nın sınırı şu soruyla çizildi: **para nereden girip nereye çıkıyor ve
+adam bunu telefondan görebiliyor mu?** K-04'te satış/alış kayıtları
+görünür olmuştu; halkanın kapanması için paranın kendisi eksikti.
+
+### Ödeme (tedarikçiye)
+
+Tahsilatın aynadaki görüntüsü: para dışarı çıkar, tedarikçi borcu azalır.
+Eşleştirme en eski borçtan başlar, repository tarafında.
+
+Ekranda **güncel borç** tedarikçi seçilir seçilmez görünür — tutarı yazarken
+en çok gereken bilgi bu. Eksik alan adıyla söylenir ("Kasa/banka hesabı
+seçin"), toplu bir "şunlar gerekli" mesajı değil.
+
+### Kasa & Banka
+
+"Kasada ne var?" sorusunun tek cevabı. Toplam mevcut en üstte, hesaplar
+altında. Hesap açma ve **virman** buradan; virmanda para yer değiştirir,
+cari bakiyeler etkilenmez — ekran bunu açıkça yazar.
+
+Hesap kodu kullanıcıya sorulmaz, addan türetilir (cari kartlarla aynı kural).
+
+### Çek & Senet
+
+Toptan süngercilikte para büyük ölçüde evrakla döner. Portföy toplamı üstte;
+**vadesi geçen kırmızı, bir hafta içinde doleni amber.**
+
+Durum geçişleri iş kuralıyla sınırlı (`enums.dart`): portföydeki bir çek
+bankaya verilebilir veya ciro edilebilir ama doğrudan "tahsil edildi"
+yapılamaz. **Ekran yalnızca izin verilen geçişleri gösterir** — kullanıcıya
+yapamayacağı seçeneği sunup sonra hata vermek kötü tasarımdır. Tahsil ve
+ödemede hangi hesaba işleneceği sorulur; tek hesap varsa sorulmaz.
+
+### Arama — ölü bağlantı
+
+Ana sayfadaki büyüteç `/search`'e gidiyordu ama **o rota tanımlı değildi**;
+düğme hiçbir şey yapmıyordu. Rotaları taradım: bir tane daha vardı — arama
+sonuçları `/sales/:id` ve `/suppliers/:id`'ye yönlendiriyordu, ikisi de yok.
+Var olan liste ekranlarına bağlandı.
+
+Arama Türkçe normalize kopyalar üzerinden: "sisli" yazınca "Şişli" bulunur.
+
+### Son fiyat hafızası — işi asıl kolaylaştıran şey
+
+Toptan süngercide fiyat müşteriye göre değişir ve pazarlık telefonda,
+ayaküstü yapılır. "Bu müşteriye en son kaça satmıştım?" için eski fişe
+bakmak zaman kaybı.
+
+Fiyat alanının altında **son satış fiyatı ve tarihi** çıkar; dokununca
+alana yazar.
+
+**Otomatik doldurulmaz.** Zam yapılması gereken yerde eski fiyatı sessizce
+tekrarlamak, kullanıcının parasına mal olur. İpucu hatırlatır, karar vermez.
+
+Test, başka müşterinin fiyatının sızmadığını da doğruluyor.
+
+### Kendi kuralımın beni durdurduğu yer
+
+Arama sonucundaki bakiyeyi repository içinde biçimlendirmiştim
+(`toStringAsFixed`). `no_double_test` bunu yakaladı: yuvarlama ve
+biçimlendirme tek yerde olmalı, veri katmanı para formatlamaz.
+
+Doğrusu yapıldı: `SearchHit` tutarı `Money` olarak taşır, biçimlendirme
+arayüzde. Kural zayıflatılmadı — Faz 1'de fire başlığında da aynı şey
+olmuştu ve orada da kod düzeltilmişti.
+
+## K-06 · Faz 7 — ince malzeme (çivi, yapıştırıcı, zikzak yay)
+
+Kullanıcının sorusu netti: *"İnce malzeme ile alakalı bir şey var mı? Müşteri
+kendi ürün ekleyebilir mi? Çivi, yapıştırıcı vs gibi?"*
+
+Cevap ikisine de **hayır**dı. Uygulama 12 sünger çeşidiyle kuruluyordu ve
+ürün kartı açacak ekran yoktu; dahası şema **her ürünün sünger olduğunu**
+varsayıyordu: `product_variants` tablosundaki `CHECK (width > 0 AND
+height > 0 AND thickness > 0)` ölçüsüz bir malı doğrudan reddediyordu.
+Toptan süngercide çivi, yapıştırıcı ve zikzak yay sünger kadar sık satılır.
+
+### D-22 · Ürün birimi: miktar aynı kolonda, birim ürün kartında — **Karar**
+
+`products.unit` eklendi (`M3`, `ADET`, `KG`, `KUTU`, `LITRE`, `METRE`).
+
+**Maliyet motoruna dokunulmadı.** İnce malzemenin miktarı da süngerin m³'ünü
+tutan kolonda durur — sadece anlamı "ürünün kendi birimi"dir; `unit_cost_m3`
+de "birim başına maliyet" olur. Çarpma işlemi birebir aynı olduğu için FIFO,
+ağırlıklı ortalama, masraf dağıtımı ve sabitlenmiş satış maliyeti değişmeden
+çalışır. Ayrı bir "miktar" kolonu açmak, maliyet motorunu ikiye bölmek
+demekti; bedeli fayda değil risktir.
+
+Bunun bedeli iki yerde ödenir ve ikisi de kapatıldı:
+
+1. **m³ toplamları filtrelenir.** Ana sayfadaki "toplam stok m³" artık
+   `p.unit = 'M3'` koşuluyla hesaplanır — 50 kg tutkalı 11 m³ süngere
+   eklemek rakamı anlamsız kılardı. Testi: `TUTKAL m³ TOPLAMINA KARIŞMAZ`.
+2. **Ekranlar birimi sorar.** Ölçü alanları yalnızca m³ üründe görünür;
+   miktar, birim fiyat ve özet etiketleri ürünün kendi birimini yazar
+   (`50 kg`, `TL/kg`). Stok matrisi ölçüsüz üründe "0×0 / 0 cm" başlıklarıyla
+   anlamsız olacağı için tek satırlık miktar kartına dönüşür.
+
+Varyant ölçü kısıtı **gevşetilmedi**, doğru kuralı ifade edecek biçimde
+değiştirildi: *ya üçü de dolu (sünger) ya da üçü de sıfır (ince malzeme).*
+Yarısı dolu bir ölçü hâlâ hatadır ve veritabanı tarafından reddedilir.
+
+**Bilinen sınır:** miktar tamsayıdır (50 kg, 12 kutu). Yarım kilo tutkal
+girilemez; kesirli miktar, parti modelinde adet ile miktarı birbirinden
+ayırmayı gerektirir. İşletme malı teneke/kutu/çuval alıp sattığı sürece
+gerekmiyor — gerekirse ayrı bir faz işidir.
+
+### D-23 · Şema kısıtları literal SQL, enum uyumu testle korunur — **Karar**
+
+`CHECK (type IN (...))` metinleri Dart enum listesinden **interpolasyonla**
+üretiliyordu. Bu okunaklıydı ama `drift_dev schema dump` anlık görüntüye
+**yalnızca literal metinleri** yazıyor — const interpolasyon bile düşüyor.
+Sonuç: `drift_schemas/` dosyaları 22 tablonun enum kısıtlarını hiç
+görmüyordu, yani migration doğrulaması bu kısıtlar konusunda kördü. Sorun
+v2'de ortaya çıktı: yeniden kurulan tablo, anlık görüntüdeki "eksik" tabloyla
+uyuşmuyordu.
+
+Kısıtlar literal SQL'e çevrildi. Üretilen şemanın **bayt bayt aynı kaldığı**
+dönüşüm öncesi/sonrası `sqlite_master` karşılaştırmasıyla doğrulandı.
+`drift_schema_v1.json`, v1 kodundan (74e72ac) aynı dönüşümle yeniden
+üretildi; eski dosyadan tek farkı, daha önce düşen kısıtların eklenmiş
+olmasıdır — yani anlık görüntü artık gerçekte sahada duran v1 şemasını
+anlatıyor.
+
+Literal metnin riski, enum'a değer eklenip SQL'in unutulmasıdır.
+`test/data/schema_constraints_test.dart` her CHECK'i Dart listesiyle
+karşılaştırır; ayrışma test zamanında, kullanıcı kaydete bastığı anda değil,
+yakalanır.
+
+### D-24 · `products` yükseltmede yeniden kurulur — **Karar**
+
+`ALTER TABLE ADD COLUMN` tablo kısıtı ekleyemez. Sütunu ekleyip geçseydik,
+v1'den yükselen telefonda `unit` denetimsiz kalırdı: taze kurulumda
+veritabanının reddettiği bir değer, yükseltilmiş cihazda sessizce yazılırdı.
+Bu yüzden `products` ve `product_variants` `TableMigration` ile yeniden
+kuruluyor.
+
+Migration testi artık üç şeyi doğruluyor: veri kaybolmuyor, **yükseltilen
+tabloların `CREATE TABLE` metni taze kurulumunkiyle birebir aynı**, ve
+yükseltilmiş veritabanı ölçüsüz varyantı kabul edip geçersiz birimi
+reddediyor.
+
+### Ürün ekranı
+
+`Menü → Depo → Ürünler`. Sünger çeşitleri ve ince malzeme ayrı başlıklarda;
+ince malzeme boşken ne işe yaradığını anlatan bir cümle durur (boş ekran,
+mock veri değil). Birim seçilince form kendini toplar: m³'te fiyat katsayısı
+sorulur, diğerlerinde ölçü ve katsayı hiç görünmez.
+
+Ekranın çalıştığını `test/ui/core_loop_test.dart` içindeki
+**"ince malzeme: yapıştırıcı kartı aç, kiloyla stoğa gir"** testi uçtan uca
+sürüyor: boş veritabanı → ürün kartı → tedarikçi → 50 kg alış → stok 50 kg,
+ana sayfadaki m³ toplamı sıfır. SK-21'in dersi burada da geçerli: iş
+mantığının testten geçmesi ekranın kullanılabilir olduğunu göstermez.
+
+## K-07 · Faz 8 — iade: müşteri malı geri getirdiğinde
+
+K-04'ün eksik listesinde **İade** ve **Satış iptali** yan yana duruyordu.
+İş kuralı Faz 1'den beri hazırdı, Altın Senaryo'da test ediliyordu — ama
+ekranı yoktu. Müşteri iki plakayı geri getirdiğinde kullanıcı defterde
+hiçbir şey yapamıyordu; elinde kalan tek "çözüm" satışı silmekti, ki
+append-only defterde o zaten mümkün değil.
+
+### D-25 · Düzeltme yolu iadedir, iptal değil — **Karar (D-12'nin devamı)**
+
+Satış iptali repository'de de yoktu ve **eklenmedi.** Mal geri geldiğinde
+doğru kayıt, orijinal satışı silmek ya da iptal etmek değil, ayrı bir iade
+belgesi kesmektir: satış olduğu gibi durur, mal aynı maliyetle (orijinal
+tüketimin tersinden, son tüketilen partiden başlayarak) stoğa döner, cariye
+alacak yazılır. Ciro ve kâr raporları da böylece gerçeği anlatır — iptal
+edilen satış, hiç olmamış gibi görünürdü.
+
+### Ekran
+
+`Satışlar → belge → İade al`. Menüde ayrı bir giriş yok: iade bir satışın
+üstünde durur, kendi başına anlamı yoktur; kullanıcı da onu "şu satıştan"
+diye arar.
+
+Her kalem için iade miktarı artı/eksi ile girilir ve **artı tuşu tavanda
+kilitlenir**: iade satılandan fazla olamaz kuralı veritabanında zaten var,
+ama kullanıcıya hatayı yaptırıp sonra söylemek yerine yaptırmamak daha iyi.
+Daha önce iade alınmış kalemlerde tavan kalan miktardır.
+
+`ReturnRepository.returnableLines` eklendi. Kalan miktar hesabı ekranda
+yeniden yazılabilirdi; aynı kuralın iki yerde durması, ikisinin ayrışmasının
+başlangıcıdır.
+
+### Liste görünürlüğü
+
+Satışlar listesinde ve belge detayında iade tutarı görünür
+("… · 1.400,00 ₺ iade"). Satış tutarı değişmediği için bu bilgi olmadan
+liste yanıltırdı: 4.200 ₺ görünen satışın 1.400 ₺'si geri gelmişti.
+
+### Yol boyunca çıkan gerçek hata
+
+İade testi yazılırken satış özet kartındaki "GENEL TOPLAM" satırının dar
+telefonda **14 piksel taştığı** ortaya çıktı. Etiket artık `Expanded` ve
+gerekirse kırpılıyor; rakam asla kırpılmıyor. Ekran testi olmasa bu hata
+kullanıcının telefonunda bulunacaktı — SK-21'in dersi burada da geçerli.
+
+## K-08 · Faz 9 — teklif yazma
+
+Teklif listesi ve "satışa çevir" Faz 3'ten beri hazırdı. Teklifi **yazacak**
+ekran yoktu; yani liste hiç dolmuyordu ve "satışa çevir" düğmesi hiç
+görünmüyordu. Bir daha aynı hata: ekranı olmayan iş mantığı, olmayan
+özelliktir.
+
+### D-26 · Teklifte ölçü serbesttir — **Karar**
+
+Satışta ölçü stoktan seçilir; teklifte seçilmez. Müşteri elde olmayan bir
+ölçüyü sorabilir ve ona da fiyat verilir — teklifin işi zaten bu. Bu yüzden
+kalem girişi alış ekranınınkiyle aynıdır: çeşit + en/boy/kalınlık + adet +
+fiyat. Ölçü ilk kez giriliyorsa varyant kaydederken açılır
+(`ensureVariant`), teklif reddedilse bile ana veride kalır — varyant bir
+ölçü tanımıdır, stok değildir.
+
+Teklif **stoğa dokunmaz**; testi bunu açıkça doğruluyor: teklif
+kaydedildikten sonra stok 10 adette kalır, ancak satışa çevrilince 7'ye
+düşer.
+
+### Ortak `ProductPicker`
+
+Alış ve teklif ekranı aynı soruyla başlıyordu. Ayrı ayrı yazılsalardı
+birinde birim farkındalığı (D-22) olur, ötekinde unutulurdu; seçici
+`lib/ui/widgets/product_picker.dart`'a çıkarıldı.
+
+### Yol boyunca çıkan gerçek hata
+
+Teklif listesinde tutar ile "Satışa çevir" düğmesi `trailing` içinde alt
+alta duruyordu ve `ListTile`'ın 56 piksellik yüksekliğine sığmıyordu —
+**16 piksel taşma**. Tutar artık başlık satırının sağında, eylem kendi
+satırında. Faz 8'deki 14 piksellik taşma gibi, bu da yalnızca ekran testi
+yazıldığı için bulundu.
+
+## K-09 · Faz 10 — fiyat listesi: zam yapmak
+
+Son ekransız iş mantığı buydu. Baz TL/m³ × ürün katsayısı hesabı,
+yuvarlama kuralı ve eski versiyonu arşivleme Faz 1'den beri hazırdı ama
+kullanıcı fiyat listesi **oluşturamıyordu** — yani hiç kullanılmamıştı. Bu
+aynı zamanda ana sayfadaki "stok satış değeri" kartını da ölü bırakıyordu:
+o kart yürürlükteki listeye bakar, liste hiç yoktu.
+
+### D-27 · Önizleme onaydan önce zorunlu — **Karar (BRIEF §5)**
+
+Kaydet düğmesi, önizleme görülmeden açılmıyor. Zam tek bir sayı girilerek
+yapılır ama **listedeki her ürünün fiyatını aynı anda** değiştirir;
+kullanıcının "hangi çeşit kaça çıkıyor" sorusunu onaylamadan önce görmesi
+gerekir. Önizleme eski fiyatı, yeni fiyatı ve değişim yüzdesini yan yana
+koyar; düşen fiyat kırmızı yazılır — zam beklenirken düşen bir fiyat
+gözden kaçmamalı.
+
+Önizleme her tuş vuruşunda değil, "Önizle" denince hesaplanır. 12 ürünü her
+karakterde yeniden hesaplamak, kullanıcıya hiçbir şey kazandırmadan ekranı
+titretirdi.
+
+### D-28 · Satış ekranında iki ayrı fiyat ipucu — **Karar**
+
+Fiyat alanının altında artık iki satır olabilir:
+
+- **Son satış** — "bu müşteriye ne demiştim"
+- **Liste fiyatı** — "bugünkü fiyatım ne"
+
+İkisi de yalnızca ipucudur, dokununca doldurur; kendiliğinden doldurmaz
+(K-05'teki gerekçe aynen geçerli). İkisi farklı olduğunda pazarlığın nerede
+bittiği görünür hâle gelir — toptan süngercide asıl bilgi budur.
+
+## K-10 · Faz 11 — bekçiler: ölü bağlantı ve taşma
+
+Bu tur yeni özellik değil, **aynı hatayı bir daha yapmayı imkânsız kılmak**
+üzerineydi. İki hata sınıfı tekrar tekrar çıkıyordu ve ikisi de tesadüfen
+bulunuyordu.
+
+### D-29 · Ölü bağlantı testi kaynağı tarar — **Karar**
+
+Ana sayfadaki büyüteç bir zamanlar `/search`'e gidiyordu ama rota tanımlı
+değildi: düğme hiçbir şey yapmıyordu. Arama sonuçları da olmayan iki rotaya
+bağlıydı. Elle tutulan bir rota listesi bunu yakalayamaz — yeni düğme
+eklerken listeye eklemeyi unutursun.
+
+`test/ui/routes_test.dart` artık `lib/` içindeki bütün
+`context.push('/…')`, `context.go('/…')` ve menü tablolarındaki
+`route: '/…'` metinlerini tarayıp hepsinin yönlendiricide karşılığı
+olduğunu doğruluyor.
+
+**İlk koşuşta iki gerçek ölü bağlantı buldu:** vade bildirimleri
+`/instruments/:id` ve `/sales/:id` rotalarına gidiyordu, ikisi de tanımsızdı.
+Yani "yarın tahsil edilecek evrak" bildirimine dokunan kullanıcı
+"sayfa bulunamadı" ekranına düşüyordu. Rotalar tanımlandı ve gerçekten işe
+yarayacak biçimde bağlandı: satış bildirimi doğrudan o belgenin detayını
+açar, evrak bildirimi doğru sekmeyi (Alınan/Verilen) seçer.
+
+### D-30 · Her ekran iki telefon boyutunda çizilir — **Karar**
+
+`test/ui/screens_smoke_test.dart` 28 ekranı boş veritabanıyla 360×640 ve
+411×891 boyutlarında çiziyor. Flutter taşmayı test sırasında hata saydığı
+için ekranı çizmek tek başına yeterli bekçi. Boş veritabanı aynı zamanda
+"ekranlar boş durumla açılır" kuralını da sınıyor.
+
+İlk koşuşta Fire ekranındaki alt düğme satırı (110 px) ve rapor
+ekranındaki tutar satırları (60 px) taştı; ikisi de esnek hâle getirildi.
+
+**Dürüstlük notu — bu ölçüler cihazdaki ölçüler değil.** `flutter test`
+gerçek yazı tipini yüklemez; her karakter em boyutunda bir kare olarak
+çizilir, yani metinler cihazdakinden kabaca iki kat geniş görünür. Dolayısıyla:
+
+- Testte taşmayan bir ekran cihazda **kesinlikle** taşmaz.
+- Testte taşan bir ekran cihazda taşıyor olmayabilir.
+
+Bu bekçi bilerek **temkinli** tarafta duruyor: yazı tipi ayarını büyütmüş
+bir kullanıcının (bu uygulamanın kullanıcısı için hiç uzak ihtimal değil)
+gördüğü genişliklere yakın bir sınır koyuyor. Aynı sebeple K-07 ve K-08'de
+"dar telefonda taşıyordu" diye anlatılan 14 ve 16 piksellik taşmalar da
+cihazda doğrulanmış değildi; testte görüldü. Yapılan düzeltmeler (etiketin
+esnemesi, rakamın kırpılmaması) her iki durumda da doğru düzeltmedir, ama
+hata tanımı bu kadar kesin anlatılmamalıydı.
+
+## K-11 · Faz 12 — belgeler nihayet paylaşılabiliyor
+
+Faz 11'in bekçileri ölü bağlantıyı ve taşmayı yakalıyordu. Elle yapılan
+gözden geçirme bir tanesini daha buldu: **`PdfDocuments` hiçbir ekrandan
+çağrılmıyordu.** Dört belge (satış fişi, teklif, kesim emri, cari ekstre)
+Faz 3'te yazılmış, testleri de vardı — ama kullanıcı hiçbirine
+ulaşamıyordu. BRIEF §5'in "WhatsApp'a doğrudan paylaşılır" sözü boşta
+duruyordu.
+
+**Paylaşılamayan bir belge, olmayan bir belgedir.** Bu, SK-21'in ve
+K-04'ün aynı dersi: iş mantığının testten geçmesi, kullanıcının o işi
+yapabildiğini göstermez. Bekçi testleri rotayı ve taşmayı yakalıyor ama
+"yazılmış ama hiç çağrılmamış kod"u yakalamıyor — bu tur onu elle aradım.
+
+### Nereye bağlandı
+
+| Belge | Nereden |
+|---|---|
+| Satış fişi | Satışlar → belge → **Fişi paylaş** |
+| Fiyat teklifi | Teklifler → **PDF paylaş** |
+| Kesim emri | Kesim Emirleri → paylaş simgesi |
+| Cari ekstre | Cari Ekstre ekranı → başlıktaki paylaş simgesi |
+
+`lib/ui/documents/pdf_share.dart` tek yerde toplandı: firma bilgisi
+Ayarlar'dan okunur (logo dosyası silinmişse belge logosuz üretilir),
+kalemler veritabanından çekilir, ölçüsüz malzemede ölçü yazılmaz (D-22).
+
+### D-31 · Kesim emri fiyat içermez — **Karar (zaten öyleydi, korundu)**
+
+Kesimhanenin görmesi gereken yalnızca ölçü ve adettir. Alış fiyatını
+kesimhaneye göstermek işletmenin aleyhinedir; belge bu yüzden fiyatsız
+üretiliyor ve öyle kalıyor.
+
+### Test
+
+`test/ui/pdf_share_test.dart` belgeleri **veritabanındaki gerçek kayıttan**
+üretiyor ve çıktının `%PDF-` ile başladığını doğruluyor; ayrıca paylaş
+düğmelerinin ekranda durduğunu kontrol ediyor. Paylaşım sayfasının kendisi
+platform işi olduğu için çağrılmıyor.
+
+## K-12 · Faz 13 — ayarlar nihayet uygulanıyor
+
+Faz 12'nin dersini ("yazılmış ama hiç çağrılmamış kod") sistematik aramaya
+çevirdim: `lib/data` içindeki genel metotlardan hangileri uygulamanın geri
+kalanında hiç geçmiyor? Liste kısa ama içinde **para hesabını bozan bir
+hata** vardı.
+
+### D-32 · KDV oranı ayardan okunur — **Hata düzeltmesi**
+
+Satış, alış ve teklif ekranlarının üçü de KDV oranını `Rate.percent('20')`
+olarak **koda gömülü** tutuyordu. `SettingsRepository.defaultVatRate()`
+yazılmıştı, kurulum sihirbazı da oranı soruyordu — ama hiçbir ekran onu
+okumuyordu. Kullanıcı %10 seçse bile her belge %20 hesaplıyordu ve bunu
+söyleyen hiçbir uyarı yoktu.
+
+Bu, arayüzün eksikliği değil **yanlış rakam** üretmesidir: fatura tutarı,
+cari bakiye ve KDV beyanı yanlış çıkardı.
+
+`documentDefaultsProvider` eklendi; üç ekran da oranı (ve satış ekranı fiyat
+modunu) buradan alıyor. Ayar okunana kadar %20 varsayılıyor — eski davranış,
+yani ayar hiç yazılmamışsa hiçbir şey değişmiyor.
+
+Testi doğrudan rakama bakıyor: oran %10'a çekilince 7.000 TL'lik alışın KDV'si
+1.400 değil **700** çıkmalı; 980 TL'lik satışınki 98 olmalı.
+
+### Ayarlar artık değiştirilebiliyor
+
+"KDV oranı" ve "Varsayılan fiyat modu" satırları yalnızca **gösteriliyordu**;
+kurulum sihirbazından sonra değiştirmenin yolu yoktu. İkisi de artık
+dokunulabilir ve değişiklik anında belgelere yansıyor
+(`documentDefaultsProvider` tazeleniyor).
+
+### Alış ve teklif fiyatı KDV hariçtir, ekran bunu yazıyor
+
+İkisinde de fiyat modunu değiştirecek bir düğme yok ve belge KDV hariç
+kaydediliyor. Varsayılanı sessizce KDV dahile çevirmek, girilen rakamın
+anlamını kullanıcıya sormadan değiştirirdi; onun yerine fiyat alanının
+altına "KDV hariç" yazıldı.
+
+### Tarama sonucunun geri kalanı
+
+Aynı taramanın gösterdiği, ekranı olmayan diğer iş kuralları — teklif durumu
+(gönderildi/kabul/ret), sonradan gelen nakliye faturası, tahsilat iptali,
+müşteri analizi — **SK-22** olarak kaydedildi; hata değil, eksik.
+
+## K-13 · Faz 14 — SK-22'nin kapatılması
+
+Faz 13'ün taraması beş iş kuralının ekransız kaldığını göstermişti. Sırayı
+"günlük işi en çok kolaylaştıran önce" diye kurdum; beşi de kapandı.
+
+### Alışta son fiyat ipucu
+
+Satış ekranındaki "bu müşteriye en son kaça sattın" ipucunun alış
+karşılığı. Doldurmaz, hatırlatır: fabrika zam yapmışsa eski fiyatı sessizce
+tekrarlamak **yanlış maliyet** yazdırırdı — satıştaki gerekçenin aynısı,
+sonucu daha ağır.
+
+### D-33 · Teklif durumu: kural iki yerde birden — **Karar**
+
+Durum menüsü yalnızca izin verilen geçişi gösterir (taslak → gönderildi →
+kabul/ret), ama kural **repository'de de** denetlenir ve
+`InvalidQuoteTransitionException` atar. Ekranın izin verilmeyeni
+göstermemesi, iş kuralının kendisi değildir; ikinci bir ekran ya da bir
+otomasyon aynı metodu çağırdığında kural yine tutmalı.
+
+`CONVERTED` elle işaretlenemez: satışa çevirme stok ve cari hareketi üreten
+ayrı bir iş işlemidir, durum atlanarak elde edilemez. `EXPIRED` de elle
+konmaz — geçerlilik tarihi geçince sistem koyar.
+
+### D-34 · Tahsilat iptali sebebi zorunlu — **Karar**
+
+Sebep, ters kaydın açıklamasına yazılır ve ekstrede görünür. "Neden iptal
+edilmiş?" sorusunun cevabı defterin kendisinde durmalı; ayrı bir yere not
+almak zorunda kalan kullanıcı, o notu almaz.
+
+İptal edilmiş tahsilatta seçenek **hiç sunulmuyor** — hatayı yaptırıp sonra
+"zaten iptal edilmiş" demek yerine.
+
+### Sonradan gelen masraf
+
+Fabrikadan mal gelir, nakliye faturası bir hafta sonra gelir. O anda
+partinin bir kısmı satılmış olabilir; ekran ne olacağını açıkça yazıyor:
+stokta kalana düşen pay maliyeti artırır, satılmış kısma düşen pay dönem
+maliyet farkı olur, **geçmiş satışın kârı değişmez**.
+
+Testi rakama bakıyor: 2,8 m³'lük partiye 280 TL nakliye eklenince gerçek
+maliyet 2.500 → 2.600 TL/m³ çıkıyor, çıplak maliyet 2.500'de kalıyor
+(fabrikaya ödenen para o kadardı).
+
+Yol boyunca: masraf türleri (`'NAKLIYE'`) elle yazılmış metinlerdi.
+`PurchaseExpenseKind` enum'una alındı ve D-23'ün bekçisine eklendi.
+
+### Müşteri analizi
+
+`Raporlar → Müşteriler`. Ciro, brüt kâr, aldığı hacim, tahsilat, güncel
+borç, en çok aldığı çeşit, son satış ve **ortalama ödeme süresi**. Sonuncusu
+toptancının asıl sorusudur: vade kaç gün değil, parasını gerçekte kaç günde
+alıyor.
+
+Hiç hareketi olmayan cari listeye alınmıyor — boş satır rapor değildir.
+
+### `_TextRow` düzeltmesi
+
+Rapor satırlarında etiket esniyordu ama değer esnemiyordu; değer bir ürün
+adı ya da "henüz kapanmış belge yok" gibi bir cümle olabildiği için satır
+taşıyordu. Artık iki taraf da esniyor. **Para satırında rakam hâlâ
+kırpılmıyor** — orada kırpılan bilgi yanlış okunur.
+
+## K-14 · Faz 15 — üçüncü bekçi ve parmak izi
+
+Bu gecenin en pahalı iki hatasını (PDF'lerin hiç çağrılmaması, KDV oranının
+koda gömülü olması) **elle tarayarak** buldum. Elle tarama ölçeklenmez.
+
+### D-35 · "Hiç çağrılmayan iş kuralı" testi — **Karar**
+
+`test/data/unused_api_test.dart`, `lib/data/repo` ve `lib/data/documents`
+içindeki her genel metodun `lib/` içinde **kendi dosyası dışından** bir
+çağıranı olduğunu doğrular.
+
+Ölçüt bilerek gevşek: yalnızca `lib/data` içinden çağrılan bir metot
+(`writeAudit`, `nextDocumentNumber`) altyapıdır, sorun değil. Aranan,
+**hiçbir yerden** çağrılmayandır — iki gerçek hatanın ikisi de öyleydi.
+
+İstisnalar `allowed` haritasında ve her birinin **gerekçesi yazılı**.
+Gerekçe yazılamıyorsa orada eksik bir ekran vardır; liste böylece
+"bilinen eksikler"in kendiliğinden güncellenen kaydı oluyor.
+
+Bu, Faz 11'in iki bekçisinin (ölü rota, taşma) üçüncüsü. Üçü birlikte şu
+soruyu kapatıyor: *yazdım, test ettim, ama kullanıcı ona ulaşabiliyor mu?*
+
+### D-36 · Parmak izi kilit açmayı **kolaylaştırır**, kilidi değiştirmez
+
+İlk koşuşta bekçinin bulduğu: `local_auth` bağımlılık listesindeydi,
+`isBiometricEnabled` ayarı yazılıydı, BRIEF §5 "local_auth + PIN" diyordu
+— ama hiçbir yerden çağrılmıyordu. Kilit yalnızca PIN'di ve paket boşuna
+taşınıyordu.
+
+Kurallar:
+
+- **PIN her zaman açık kalır.** Parmak okunmazsa, cihazdaki kayıt
+  silinirse ya da donanım bozulursa kullanıcı defterine erişemez duruma
+  düşmemeli. Parmak izi bir kolaylıktır, ikinci bir kilit değil.
+- **Başarısız okuma yanlış PIN sayılmaz** — deneme sayacını artırmaz.
+  Parmağını okutamamak, şifreyi bilmemek değildir.
+- **Ayarı açarken parmak gerçekten okutulur.** Okunmayan bir biyometriyle
+  ayarı açık bırakmak, kullanıcıya çalışmayan bir söz vermektir.
+- Cihazda kullanılabilir biyometri yoksa düğme **hiç görünmez**.
+- `biometricOnly: true` — cihazın kendi PIN'i sorulmaz; uygulamanın PIN'i
+  ayrı, ikisi karışırsa kullanıcı hangi dört haneyi gireceğini bilemez.
+
+Gerçek biyometri testte çalıştırılamadığı için doğrulayıcı bir arayüzün
+(`BiometricAuth`) arkasına alındı; testler karar mantığını sınıyor.
+
+**Android tarafında iki şey eksikti ve hiçbir test bunu göremezdi:**
+
+- `MainActivity : FlutterActivity` idi. `local_auth` parmak izi ekranını
+  androidx `BiometricPrompt` ile açar ve bu bir `FragmentActivity` ister;
+  düz `FlutterActivity` ile çağrı cihazda `no_fragment_activity` hatasıyla
+  düşerdi. `FlutterFragmentActivity` yapıldı.
+- Manifest'te `USE_BIOMETRIC` izni yoktu.
+
+İkisi de yalnızca gerçek cihazda ortaya çıkacak hatalardı. Birim testi
+Dart tarafını doğruluyor ama platform yapılandırmasını göremiyor — bu
+sınırı bilerek not ediyorum.
+
+### Ayarlar: cihaz dışı yedek uyarı eşiği
+
+Salt okunurdu, artık değiştirilebiliyor (1/3/7/14 gün). Bunu yaparken
+eşiğin **iki ayrı yerden** okunduğu ortaya çıktı: `SettingsRepository`
+üzerinden ve `BackupService` içinde ham sorguyla. İkincisi birinciyi
+kullanacak biçimde birleştirildi — ayarın anahtarını iki yerde yazmak,
+ikisinin ayrışmasının başlangıcıdır.
+
 ## K-02 · Performans ölçümü (BRIEF §9 Faz 5)
 
 "50.000 satış satırıyla ana sayfa ve raporların makul sürede açıldığını ölç."

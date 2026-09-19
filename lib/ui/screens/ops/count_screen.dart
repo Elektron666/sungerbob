@@ -298,9 +298,9 @@ class _CountRowState extends State<_CountRow> {
     final diff = _value == null ? null : _value! - widget.variant.pieces;
 
     return ListTile(
-      title: Text('${widget.variant.productName} · ${widget.variant.label}'),
+      title: Text(widget.variant.title),
       subtitle: Text(
-        'Sistemde ${TrFormat.pieces(widget.variant.pieces)}'
+        'Sistemde ${widget.variant.amount(widget.variant.pieces)}'
         '${diff == null || diff == 0 ? "" : " · fark ${diff > 0 ? "+" : ""}$diff"}',
         style: context.labelStyle,
       ),

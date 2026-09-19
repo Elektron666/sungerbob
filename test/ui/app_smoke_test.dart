@@ -7,6 +7,7 @@ import 'package:sungerbob/ui/app_router.dart';
 import 'package:sungerbob/ui/format/tr_format.dart';
 import 'package:sungerbob/ui/providers/app_providers.dart';
 import 'package:sungerbob/ui/shell.dart';
+import 'package:sungerbob/ui/widgets/signature.dart';
 
 /// Duman testi: uygulamanın tamamının derlendiğini ve açıldığını doğrular.
 ///
@@ -42,17 +43,32 @@ void main() {
     expect(find.byIcon(Icons.add), findsOneWidget);
   });
 
+  testWidgets('ana sayfa Günün Sözü ve imzayı taşır', (tester) async {
+    await tester.pumpWidget(_unlockedApp());
+    await tester.pump();
+
+    expect(find.text('GÜNÜN SÖZÜ'), findsOneWidget);
+
+    // İmza listenin en altında; tembel liste onu ancak görünürken kurar.
+    await tester.scrollUntilVisible(
+      find.byType(DesignSignature),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.byType(DesignSignature), findsOneWidget);
+  });
+
   testWidgets('hızlı işlem sayfası SPEC §22 butonlarını gösteriyor', (
     tester,
   ) async {
     await tester.pumpWidget(_unlockedApp());
     await tester.pump();
 
-    expect(find.text('+ SATIŞ'), findsOneWidget);
-    expect(find.text('+ STOK GİRİŞİ'), findsOneWidget);
-    expect(find.text('+ TAHSİLAT'), findsOneWidget);
-    expect(find.text('STOK SORGULA'), findsOneWidget);
-    expect(find.text('CARİ SORGULA'), findsOneWidget);
+    expect(find.text('Satış'), findsOneWidget);
+    expect(find.text('Stok Girişi'), findsOneWidget);
+    expect(find.text('Tahsilat'), findsOneWidget);
+    expect(find.text('Stok Sorgula'), findsOneWidget);
+    expect(find.text('Cari Sorgula'), findsOneWidget);
   });
 
   testWidgets('kurulum bitmeden ana sayfa gösterilmez', (tester) async {
@@ -70,16 +86,41 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: MenuScreen()));
     await tester.pump();
 
-    expect(find.text('Teklifler'), findsOneWidget);
-    expect(find.text('Kesim Emirleri'), findsOneWidget);
-    expect(find.text('Sayım'), findsOneWidget);
-    expect(find.text('Fire'), findsOneWidget);
-    expect(find.text('Raporlar'), findsOneWidget);
-    expect(find.text('Açılış İşlemleri'), findsOneWidget);
-    expect(find.text('Yedek Al'), findsOneWidget);
-    expect(find.text('Yedekten Yükle'), findsOneWidget);
-    expect(find.text('Yedekler'), findsOneWidget);
-    expect(find.text('Ayarlar'), findsOneWidget);
+    // Menü ekrana sığmıyor. Baştan sona bir kez kaydırıp görünen bütün
+    // etiketleri topluyoruz: böylece test menüdeki **sıraya** bağlı kalmaz —
+    // yeni bir giriş eklendiğinde kırılan bu testti.
+    final seen = <String>{};
+    void collect() {
+      for (final w in tester.widgetList<Text>(find.byType(Text))) {
+        final data = w.data;
+        if (data != null) seen.add(data);
+      }
+    }
+
+    collect();
+    for (var i = 0; i < 20; i++) {
+      await tester.drag(find.byType(ListView), const Offset(0, -200));
+      await tester.pump();
+      collect();
+    }
+
+    for (final label in const [
+      'Ürünler',
+      'Fiyat Listeleri',
+      'Tedarikçiler',
+      'Teklifler',
+      'Kesim Emirleri',
+      'Sayım',
+      'Fire',
+      'Raporlar',
+      'Açılış İşlemleri',
+      'Yedek Al',
+      'Yedekten Yükle',
+      'Yedekler',
+      'Ayarlar',
+    ]) {
+      expect(seen, contains(label), reason: '$label menüde yok');
+    }
   });
 
   test('yönlendirici kurulabiliyor ve rotalar tanımlı', () {

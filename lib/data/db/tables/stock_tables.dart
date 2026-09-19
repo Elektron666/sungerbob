@@ -1,7 +1,6 @@
 import 'package:drift/drift.dart';
 
 import '../converters.dart';
-import '../enums.dart';
 import 'master_tables.dart';
 
 /// Stok ve maliyet tabloları (ERD §4).
@@ -47,7 +46,7 @@ class InventoryBatches extends Table {
 
   @override
   List<String> get customConstraints => [
-    "CHECK (source_type IN (${BatchSourceType.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (source_type IN ('PURCHASE','OPENING','CUTTING','SALE_RETURN','TRANSFER'))",
     'CHECK (in_pieces > 0 AND in_volume > 0)',
     // Negatif stok yasağının veritabanı tarafındaki güvencesi (BRIEF §3.8).
     'CHECK (remaining_pieces >= 0 AND remaining_volume >= 0)',
@@ -95,12 +94,12 @@ class StockMovements extends Table {
 
   @override
   List<String> get customConstraints => [
-    "CHECK (type IN (${MovementType.all.map((e) => "'$e'").join(',')}))",
+    "CHECK (type IN ('PURCHASE_IN','SALE_OUT','SALE_RETURN_IN','PURCHASE_RETURN_OUT','COUNT_IN','COUNT_OUT','WASTE_OUT','TRANSFER_OUT','TRANSFER_IN','CUTTING_OUT','CUTTING_IN','OPENING_IN','REVERSAL'))",
     'CHECK (pieces <> 0)',
     // Yön ile tip tutarlılığı.
-    "CHECK ((type IN (${MovementType.inbound.map((e) => "'$e'").join(',')}) AND pieces > 0)"
-        " OR (type IN (${MovementType.outbound.map((e) => "'$e'").join(',')}) AND pieces < 0)"
-        " OR type = '${MovementType.reversal}')",
+    "CHECK ((type IN ('PURCHASE_IN','SALE_RETURN_IN','COUNT_IN','TRANSFER_IN','CUTTING_IN','OPENING_IN') AND pieces > 0)"
+        " OR (type IN ('SALE_OUT','PURCHASE_RETURN_OUT','COUNT_OUT','WASTE_OUT','TRANSFER_OUT','CUTTING_OUT') AND pieces < 0)"
+        " OR type = 'REVERSAL')",
   ];
 }
 

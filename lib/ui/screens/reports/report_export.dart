@@ -94,6 +94,45 @@ Future<void> shareProductAnalysisCsv(
   ),
 );
 
+/// Müşteri analizi CSV'si.
+///
+/// Defteri muhasebeciye ya da ortağa göndermenin en kolay yolu; ekranı
+/// fotoğraflamak yerine dosya paylaşılır.
+Future<void> shareCustomerAnalysisCsv(
+  BuildContext context, {
+  required List<CustomerAnalysis> rows,
+}) => _share(
+  context,
+  fileName: 'musteri_analizi.csv',
+  csv: CsvExport.build(
+    headers: const [
+      'Müşteri',
+      'Ciro (TL, KDV hariç)',
+      'Brüt kâr (TL)',
+      'Aldığı hacim (m³)',
+      'Tahsil edilen (TL)',
+      'Güncel borç (TL)',
+      'En çok aldığı',
+      'Son satış',
+      'Ort. ödeme süresi (gün)',
+    ],
+    rows: [
+      for (final r in rows)
+        [
+          r.title,
+          TrFormat.money(r.totalSales),
+          TrFormat.money(r.grossProfit),
+          TrFormat.volumeBare(r.totalVolume),
+          TrFormat.money(r.totalCollected),
+          TrFormat.money(r.currentDebt),
+          r.topProductName ?? '',
+          r.lastSaleAt == null ? '' : TrFormat.date(r.lastSaleAt),
+          r.averagePaymentDays?.toString() ?? '',
+        ],
+    ],
+  ),
+);
+
 Future<void> _share(
   BuildContext context, {
   required String fileName,

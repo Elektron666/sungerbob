@@ -7,9 +7,12 @@ import 'package:go_router/go_router.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/db/enums.dart';
 import '../../../data/repo/stock_queries.dart';
+import '../../../data/repo/unit_of_work.dart';
 import '../../../domain/core/money.dart';
 import '../../format/tr_format.dart';
+import '../../documents/pdf_share.dart';
 import '../../providers/app_providers.dart';
+import '../master/party_form.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 
@@ -30,6 +33,14 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Cari')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          await openPartyForm(context, supplier: false);
+          ref.invalidate(customerBalancesProvider);
+        },
+        icon: const Icon(Icons.person_add_alt),
+        label: const Text('Yeni müşteri'),
+      ),
       body: m.Column(
         children: [
           Padding(
@@ -191,7 +202,18 @@ class CustomerLedgerScreen extends ConsumerWidget {
     final data = ref.watch(customerLedgerProvider(customerId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Cari Ekstre')),
+      appBar: AppBar(
+        title: const Text('Cari Ekstre'),
+        actions: [
+          // Ekstreyi müşteriye göndermek tahsilatın ilk adımı; "sana şu
+          // kadar borcun var" demenin en kibar yolu belgedir.
+          IconButton(
+            tooltip: 'Ekstreyi paylaş',
+            icon: const Icon(Icons.share_outlined),
+            onPressed: () => _shareStatement(context, ref),
+          ),
+        ],
+      ),
       body: data.when(
         loading: () => const LoadingState(),
         error: (e, _) => ErrorState(error: e),
@@ -243,13 +265,40 @@ class CustomerLedgerScreen extends ConsumerWidget {
                     '${TrFormat.date(DateTime.fromMillisecondsSinceEpoch(entry.occurredAt))}'
                     '${entry.docNo != null ? " · ${entry.docNo}" : ""}',
                   ),
-                  trailing: Text(
-                    TrFormat.moneyWithCurrency(entry.amount),
-                    style: context.numberStyle.copyWith(
-                      color: entry.amount.isNegative
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
-                    ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        TrFormat.moneyWithCurrency(entry.amount),
+                        style: context.numberStyle.copyWith(
+                          color: entry.amount.isNegative
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                        ),
+                      ),
+                      // Yanlış girilen tahsilatın düzeltileceği yer burası:
+                      // kullanıcı hatayı ekstrede görür (SK-22).
+                      if (entry.docType == LedgerDocType.collection &&
+                          entry.docId != null &&
+                          value.cancellableCollectionIds.contains(entry.docId))
+                        PopupMenuButton<void>(
+                          tooltip: 'Tahsilat işlemleri',
+                          icon: const Icon(Icons.more_vert),
+                          itemBuilder: (_) => [
+                            PopupMenuItem(
+                              onTap: () => _cancelCollection(
+                                context,
+                                ref,
+                                collectionId: entry.docId!,
+                                label:
+                                    '${entry.docNo ?? ""} '
+                                    '${TrFormat.moneyWithCurrency(entry.amount)}',
+                              ),
+                              child: const Text('Tahsilatı iptal et'),
+                            ),
+                          ],
+                        ),
+                    ],
                   ),
                 ),
             ],
@@ -271,15 +320,106 @@ class CustomerLedgerScreen extends ConsumerWidget {
   };
 }
 
+extension on CustomerLedgerScreen {
+  /// Tahsilat iptali — silme değil **ters kayıt** (D-11).
+  ///
+  /// Sebep zorunlu: ters kaydın açıklamasına yazılır ve ekstrede görünür.
+  /// "Neden iptal edilmiş?" sorusunun cevabı defterin kendisinde durmalı.
+  Future<void> _cancelCollection(
+    BuildContext context,
+    WidgetRef ref, {
+    required String collectionId,
+    required String label,
+  }) async {
+    final controller = TextEditingController();
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Tahsilatı iptal et'),
+        content: m.Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label),
+            const SizedBox(height: 12),
+            const Text(
+              'Tahsilat silinmez; ters kayıt oluşur ve ikisi de ekstrede '
+              'görünür.',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'İptal sebebi',
+                hintText: 'Ör. yanlış müşteriye girildi',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final text = controller.text.trim();
+              if (text.isEmpty) return;
+              Navigator.of(context).pop(text);
+            },
+            child: const Text('İptal et'),
+          ),
+        ],
+      ),
+    );
+    if (reason == null) return;
+
+    if (!context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final repo = await ref.read(reversalRepositoryProvider.future);
+      await repo.cancelCollection(
+        collectionId: collectionId,
+        reason: reason,
+        ctx: OperationContext(commandType: 'COLLECTION_CANCEL'),
+      );
+      ref.invalidate(customerLedgerProvider(customerId));
+      ref.invalidate(customerBalancesProvider);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Tahsilat iptal edildi')),
+      );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  Future<void> _shareStatement(BuildContext context, WidgetRef ref) async {
+    final db = await ref.read(databaseProvider.future);
+    final bytes = await buildCustomerStatement(db, customerId);
+    if (!context.mounted) return;
+    await sharePdf(
+      context,
+      fileName: pdfFileName('CariEkstre', customerId),
+      bytes: bytes,
+    );
+  }
+}
+
 final class CustomerLedgerView {
   final Customer customer;
   final List<CustomerLedgerEntry> entries;
   final Money balance;
 
+  /// Henüz iptal edilmemiş tahsilat kimlikleri. İptal edilmiş bir tahsilatı
+  /// yeniden iptal ettirmeye çalışmak yerine seçeneği hiç göstermiyoruz.
+  final Set<String> cancellableCollectionIds;
+
   const CustomerLedgerView({
     required this.customer,
     required this.entries,
     required this.balance,
+    this.cancellableCollectionIds = const {},
   });
 }
 
@@ -297,9 +437,18 @@ final customerLedgerProvider = FutureProvider.autoDispose
                 ..orderBy([(l) => OrderingTerm.desc(l.occurredAt)]))
               .get();
 
+      final collections =
+          await (db.select(db.collections)..where(
+                (c) =>
+                    c.customerId.equals(customerId) &
+                    c.status.equals(DocStatus.active),
+              ))
+              .get();
+
       return CustomerLedgerView(
         customer: customer,
         entries: entries,
         balance: await db.customerBalance(customerId),
+        cancellableCollectionIds: {for (final c in collections) c.id},
       );
     });

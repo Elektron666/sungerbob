@@ -23,6 +23,10 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
   int _attempts = 0;
   bool _busy = false;
 
+  /// Parmak izi ekran açılır açılmaz bir kez denenir; kullanıcı iptal
+  /// ederse tekrar tekrar sorulmaz, düğme elinin altında durur.
+  bool _biometricTried = false;
+
   /// 5 yanlış denemeden sonra 30 saniye beklenir.
   static const _lockAfter = 5;
   static const _cooldown = Duration(seconds: 30);
@@ -33,6 +37,40 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
     if (until == null) return Duration.zero;
     final left = until.difference(DateTime.now());
     return left.isNegative ? Duration.zero : left;
+  }
+
+  void _digit(String digit) {
+    if (_pin.length >= PinPad.pinLength || _busy) return;
+    setState(() {
+      _pin += digit;
+      _error = null;
+    });
+    if (_pin.length == PinPad.pinLength) _verify();
+  }
+
+  void _backspace() {
+    if (_pin.isEmpty) return;
+    setState(() {
+      _pin = _pin.substring(0, _pin.length - 1);
+      _error = null;
+    });
+  }
+
+  /// Parmak izi ile açma. Başarısızlık **hata değildir**: kullanıcı PIN'e
+  /// döner, deneme sayacı da artmaz — parmağını okutamamak yanlış PIN
+  /// girmek değildir.
+  Future<void> _tryBiometric({bool auto = false}) async {
+    if (_busy || _remainingBlock > Duration.zero) return;
+    if (auto && _biometricTried) return;
+    _biometricTried = true;
+
+    final ready = await ref.read(biometricReadyProvider.future);
+    if (!ready || !mounted) return;
+
+    final ok = await ref.read(biometricAuthProvider).authenticate();
+    if (!mounted || !ok) return;
+
+    ref.read(appLockProvider.notifier).unlock();
   }
 
   Future<void> _verify() async {
@@ -78,22 +116,40 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Ekran açılır açılmaz bir kez dene; hazır değilse sessizce geçer.
+    final ready = ref.watch(biometricReadyProvider).value ?? false;
+    if (ready) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _tryBiometric(auto: true),
+      );
+    }
+
     return Scaffold(
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             child: _busy
                 ? const LoadingState()
-                : PinPad(
-                    title: 'PIN',
-                    subtitle: 'Devam etmek için PIN girin',
-                    value: _pin,
-                    errorText: _error,
-                    onChanged: (v) => setState(() {
-                      _pin = v;
-                      if (v.isEmpty) _error = null;
-                    }),
-                    onCompleted: _verify,
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      PinPad(
+                        title: 'PIN',
+                        subtitle: 'Devam etmek için PIN girin',
+                        value: _pin,
+                        errorText: _error,
+                        onDigit: _digit,
+                        onBackspace: _backspace,
+                      ),
+                      if (ready) ...[
+                        const SizedBox(height: 8),
+                        TextButton.icon(
+                          onPressed: () => _tryBiometric(),
+                          icon: const Icon(Icons.fingerprint),
+                          label: const Text('Parmak izi ile aç'),
+                        ),
+                      ],
+                    ],
                   ),
           ),
         ),
@@ -124,6 +180,23 @@ class _PinDialogState extends ConsumerState<_PinDialog> {
   String _pin = '';
   String? _error;
 
+  void _digit(String digit) {
+    if (_pin.length >= PinPad.pinLength) return;
+    setState(() {
+      _pin += digit;
+      _error = null;
+    });
+    if (_pin.length == PinPad.pinLength) _verify();
+  }
+
+  void _backspace() {
+    if (_pin.isEmpty) return;
+    setState(() {
+      _pin = _pin.substring(0, _pin.length - 1);
+      _error = null;
+    });
+  }
+
   Future<void> _verify() async {
     final settings = await ref.read(settingsRepositoryProvider.future);
     final ok = await settings.verifyPin(_pin);
@@ -146,11 +219,8 @@ class _PinDialogState extends ConsumerState<_PinDialog> {
         subtitle: 'Maliyetleri göstermek için PIN girin',
         value: _pin,
         errorText: _error,
-        onChanged: (v) => setState(() {
-          _pin = v;
-          if (v.isEmpty) _error = null;
-        }),
-        onCompleted: _verify,
+        onDigit: _digit,
+        onBackspace: _backspace,
       ),
     ),
     actions: [
